@@ -1,0 +1,551 @@
+<!DOCTYPE html>
+<html lang="en" class="dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Recorder Toolbar — Prototype</title>
+  <style>
+    /* ── Design tokens (dark only) ─────────────────────────────── */
+    :root {
+      --font-family-primary: 'SF Pro Display', 'SF Pro Icons', 'Helvetica Neue', Helvetica, Arial, sans-serif;
+      --font-family-mono: ui-monospace, 'SF Mono', Menlo, Monaco, monospace;
+
+      --color-bg-primary:   #000000;
+      --color-bg-secondary: #161617;
+      --color-bg-tertiary:  #1D1D1F;
+
+      --color-text-primary:   #F5F5F7;
+      --color-text-secondary: #E8E8ED;
+      --color-text-tertiary:  #86868B;
+
+      --color-highlight-1: #FFFFFF29;
+      --color-highlight-2: #FFFFFF3D;
+
+      --color-accent-blue:  #2997FF;
+      --color-accent-green: #30D158;
+      --color-accent-amber: #FF9500;
+      --color-accent-red:   #FF3037;
+
+      --shadow-medium: 0 8px 16px 0 #0000007A;
+      --shadow-large:  0 12px 32px 0 #000000B8;
+
+      --nav-height: 52px;
+      --content-max: 680px;
+      --radius-sm: 6px;
+      --radius-md: 10px;
+      --radius-lg: 16px;
+      --radius-pill: 9999px;
+    }
+
+    /* ── Reset ─────────────────────────────────────────────────── */
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    html { scroll-behavior: smooth; -webkit-text-size-adjust: 100%; }
+    body {
+      font-family: var(--font-family-primary);
+      font-size: 17px;
+      line-height: 24px;
+      color: var(--color-text-primary);
+      background: var(--color-bg-primary);
+      -webkit-font-smoothing: antialiased;
+    }
+    a { color: inherit; text-decoration: none; }
+
+    /* ── Nav ───────────────────────────────────────────────────── */
+    .nav {
+      position: sticky;
+      top: 0;
+      z-index: 200;
+      height: var(--nav-height);
+      display: flex;
+      align-items: center;
+      padding: 0 24px;
+      gap: 24px;
+      border-bottom: 1px solid var(--color-highlight-1);
+      backdrop-filter: blur(20px);
+      -webkit-backdrop-filter: blur(20px);
+      background: color-mix(in srgb, var(--color-bg-primary) 72%, transparent);
+    }
+    .nav-wordmark {
+      font-size: 17px;
+      font-weight: 600;
+      letter-spacing: -0.01em;
+      white-space: nowrap;
+    }
+    .nav-links {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      margin-left: auto;
+      list-style: none;
+    }
+    .nav-links a {
+      font-size: 14px;
+      font-weight: 500;
+      color: var(--color-text-tertiary);
+      transition: color 150ms ease;
+      white-space: nowrap;
+    }
+    .nav-links a:hover { color: var(--color-text-primary); }
+
+    /* ── Hero ──────────────────────────────────────────────────── */
+    .hero {
+      padding: 100px 24px 80px;
+      text-align: center;
+      border-bottom: 1px solid var(--color-highlight-1);
+    }
+    .hero-eyebrow {
+      font-size: 12px;
+      font-weight: 600;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      color: var(--color-accent-blue);
+      margin-bottom: 12px;
+    }
+    .hero-headline {
+      font-size: 40px;
+      font-weight: 700;
+      line-height: 1.1;
+      letter-spacing: -0.03em;
+      color: var(--color-text-primary);
+      margin-bottom: 16px;
+    }
+    .hero-sub {
+      font-size: 17px;
+      line-height: 24px;
+      color: var(--color-text-secondary);
+      max-width: 480px;
+      margin: 0 auto 48px;
+    }
+
+    /* ── Preview card ──────────────────────────────────────────── */
+    .preview-card {
+      display: block;
+      max-width: 760px;
+      margin: 0 auto;
+      border-radius: var(--radius-lg);
+      overflow: hidden;
+      border: 1px solid var(--color-highlight-1);
+      background: var(--color-bg-secondary);
+      transition: border-color 150ms ease, transform 150ms ease, box-shadow 150ms ease;
+    }
+    .preview-card:hover {
+      border-color: var(--color-highlight-2);
+      transform: translateY(-2px);
+      box-shadow: var(--shadow-medium);
+    }
+    .preview-screenshot {
+      width: 100%;
+      display: block;
+      background: var(--color-bg-tertiary);
+      /* Placeholder colour shown until a real screenshot is added */
+      min-height: 300px;
+    }
+    .preview-screenshot img {
+      width: 100%;
+      height: auto;
+      display: block;
+    }
+    .preview-card-info {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 16px;
+      padding: 14px 18px;
+      border-top: 1px solid var(--color-highlight-1);
+    }
+    .preview-card-label {
+      font-size: 14px;
+      font-weight: 600;
+      color: var(--color-text-primary);
+    }
+    .preview-card-meta {
+      font-size: 12px;
+      color: var(--color-text-tertiary);
+    }
+
+    /* ── Download button ───────────────────────────────────────── */
+    .download-btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 7px;
+      padding: 8px 18px;
+      border-radius: var(--radius-pill);
+      background: var(--color-accent-blue);
+      color: #fff;
+      font-size: 14px;
+      font-weight: 500;
+      line-height: 20px;
+      transition: opacity 150ms ease;
+      white-space: nowrap;
+    }
+    .download-btn:hover { opacity: 0.85; }
+    .download-btn svg { flex-shrink: 0; }
+
+    /* ── Section ───────────────────────────────────────────────── */
+    .section {
+      padding: 80px 24px;
+      border-bottom: 1px solid var(--color-highlight-1);
+    }
+    .section:last-of-type { border-bottom: none; }
+    .section-inner {
+      max-width: var(--content-max);
+      margin: 0 auto;
+    }
+    .section-header { margin-bottom: 32px; }
+
+    .section-label {
+      font-size: 12px;
+      font-weight: 600;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      color: var(--color-accent-blue);
+      margin-bottom: 8px;
+    }
+    .section-title {
+      font-size: 24px;
+      font-weight: 600;
+      letter-spacing: -0.02em;
+      color: var(--color-text-primary);
+      margin-bottom: 10px;
+    }
+    .section-body {
+      font-size: 17px;
+      line-height: 26px;
+      color: var(--color-text-secondary);
+    }
+
+    /* ── Badge row ─────────────────────────────────────────────── */
+    .badge-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+      margin: 20px 0;
+    }
+    .badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      padding: 3px 10px;
+      border-radius: var(--radius-pill);
+      font-size: 12px;
+      font-weight: 500;
+      line-height: 18px;
+    }
+    .badge--default {
+      background: var(--color-highlight-2);
+      color: var(--color-text-secondary);
+    }
+    .badge--mono {
+      background: var(--color-highlight-1);
+      color: var(--color-text-tertiary);
+      font-family: var(--font-family-mono);
+      font-size: 11px;
+    }
+    .badge--blue {
+      background: color-mix(in srgb, var(--color-accent-blue) 15%, transparent);
+      color: var(--color-accent-blue);
+    }
+    .badge--green {
+      background: color-mix(in srgb, var(--color-accent-green) 12%, transparent);
+      color: var(--color-accent-green);
+    }
+    .badge--amber {
+      background: color-mix(in srgb, var(--color-accent-amber) 15%, transparent);
+      color: var(--color-accent-amber);
+    }
+    .badge-icon { font-size: 11px; }
+
+    /* ── Spec table ────────────────────────────────────────────── */
+    .spec-table {
+      width: 100%;
+      border-collapse: collapse;
+      margin: 24px 0;
+      font-size: 14px;
+    }
+    .spec-table tr {
+      border-top: 1px solid var(--color-highlight-1);
+    }
+    .spec-table tr:last-child {
+      border-bottom: 1px solid var(--color-highlight-1);
+    }
+    .spec-table td {
+      padding: 10px 0;
+      vertical-align: top;
+    }
+    .spec-table td:first-child {
+      width: 140px;
+      color: var(--color-text-tertiary);
+      font-weight: 500;
+      flex-shrink: 0;
+    }
+    .spec-table td:last-child { color: var(--color-text-secondary); }
+
+    /* ── Flow steps ────────────────────────────────────────────── */
+    .flow-list {
+      list-style: none;
+      margin: 20px 0;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+    .flow-list li {
+      display: flex;
+      gap: 14px;
+      align-items: flex-start;
+      font-size: 15px;
+      line-height: 22px;
+      color: var(--color-text-secondary);
+    }
+    .flow-num {
+      flex-shrink: 0;
+      width: 22px;
+      height: 22px;
+      border-radius: var(--radius-pill);
+      background: var(--color-highlight-2);
+      color: var(--color-text-tertiary);
+      font-size: 11px;
+      font-weight: 600;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin-top: 1px;
+    }
+    .flow-list strong { color: var(--color-text-primary); font-weight: 600; }
+    code {
+      font-family: var(--font-family-mono);
+      font-size: 12px;
+      background: var(--color-highlight-1);
+      padding: 1px 5px;
+      border-radius: 4px;
+      color: var(--color-text-secondary);
+    }
+
+    /* ── Footer ────────────────────────────────────────────────── */
+    .footer {
+      padding: 40px 24px;
+      text-align: center;
+      font-size: 13px;
+      color: var(--color-text-tertiary);
+    }
+    .footer a { color: var(--color-accent-blue); }
+    .footer a:hover { text-decoration: underline; }
+
+    /* ── Responsive ────────────────────────────────────────────── */
+    @media (max-width: 600px) {
+      .hero-headline { font-size: 28px; }
+      .preview-card-info { flex-direction: column; align-items: flex-start; }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Nav -->
+  <nav class="nav">
+    <span class="nav-wordmark">Recorder Toolbar</span>
+    <ul class="nav-links">
+      <li><a href="#overview">Overview</a></li>
+      <li><a href="#flow">Flow</a></li>
+      <li><a href="#specs">Specs</a></li>
+      <li><a href="https://github.com/tomo-at/recorder-toolbar" target="_blank">GitHub ↗</a></li>
+    </ul>
+  </nav>
+
+  <!-- Hero -->
+  <section class="hero">
+    <p class="hero-eyebrow">macOS · Swift · UX Prototype</p>
+    <h1 class="hero-headline">Screen Recorder Toolbar</h1>
+    <p class="hero-sub">
+      Native Swift toolbar for exploring recording type selection,
+      device configuration, and countdown UX — no actual recording.
+    </p>
+
+    <!-- Preview card -->
+    <a class="preview-card" href="https://github.com/tomo-at/recorder-toolbar" target="_blank">
+      <div class="preview-screenshot">
+        <!-- Replace src with an actual screenshot when available -->
+        <!-- <img src="screenshot.png" alt="Recorder Toolbar screenshot"> -->
+        <div style="display:flex;align-items:center;justify-content:center;height:300px;color:var(--color-text-tertiary);font-size:14px;">
+          Screenshot — add <code>docs/screenshot.png</code>
+        </div>
+      </div>
+      <div class="preview-card-info">
+        <div>
+          <div class="preview-card-label">Variation 1 — Toolbar UI</div>
+          <div class="preview-card-meta">Swift Package · macOS 13+</div>
+        </div>
+        <a class="download-btn"
+           href="https://github.com/tomo-at/recorder-toolbar/archive/refs/heads/main.zip"
+           onclick="event.stopPropagation()">
+          <svg width="14" height="14" viewBox="0 0 14 14" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <path d="M7 1v8M4 6l3 3 3-3M2 11h10" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>
+          Download source
+        </a>
+      </div>
+    </a>
+  </section>
+
+  <!-- Overview -->
+  <section class="section" id="overview">
+    <div class="section-inner">
+      <div class="section-header">
+        <p class="section-label">Overview</p>
+        <h2 class="section-title">What this prototype validates</h2>
+        <p class="section-body">
+          A floating <code>NSPanel</code> toolbar that sits above all windows on macOS.
+          The goal is to validate the full recording-setup flow —
+          type selection, window/display picking, camera & microphone configuration,
+          settings, and countdown — before committing to a production implementation.
+          No actual screen capture or recording takes place.
+        </p>
+      </div>
+
+      <div class="badge-row">
+        <span class="badge badge--mono">NSPanel</span>
+        <span class="badge badge--mono">NSVisualEffectView</span>
+        <span class="badge badge--mono">AVCaptureDevice</span>
+        <span class="badge badge--mono">CGWindowList</span>
+        <span class="badge badge--mono">SwiftUI</span>
+      </div>
+      <div class="badge-row">
+        <span class="badge badge--blue"><span class="badge-icon">🖥</span> macOS 13+</span>
+        <span class="badge badge--green"><span class="badge-icon">✓</span> No entitlements needed</span>
+        <span class="badge badge--amber"><span class="badge-icon">⚠︎</span> No real recording</span>
+      </div>
+    </div>
+  </section>
+
+  <!-- Flow -->
+  <section class="section" id="flow">
+    <div class="section-inner">
+      <div class="section-header">
+        <p class="section-label">Interaction flow</p>
+        <h2 class="section-title">States &amp; transitions</h2>
+        <p class="section-body">
+          The toolbar progresses through five states. Each state resizes the panel
+          and updates the controls shown.
+        </p>
+      </div>
+
+      <ol class="flow-list">
+        <li>
+          <span class="flow-num">1</span>
+          <span>
+            <strong>Type Select</strong> — Initial state. Choose
+            <strong>Display</strong>, <strong>Window</strong>, <strong>Area</strong>, or
+            <strong>Cam only</strong>. Hovering each button shows a preview overlay.
+            Clicking Display or Window activates a selection overlay
+            without changing the toolbar — the button highlights to show the active mode.
+          </span>
+        </li>
+        <li>
+          <span class="flow-num">2</span>
+          <span>
+            <strong>Window / Display overlay</strong> — A full-screen dim overlay appears.
+            The hovered window or display is highlighted with an orange border.
+            Click a target to confirm; the toolbar switches to the Record state.
+            Press <code>Esc</code> or re-click the same button to cancel.
+          </span>
+        </li>
+        <li>
+          <span class="flow-num">3</span>
+          <span>
+            <strong>Record state</strong> — Camera and microphone segments appear with device
+            pickers. A Settings panel opens above the Settings button and
+            shows Camera, Mic, and Countdown sub-panels on hover.
+            Press <strong>Record</strong> to begin.
+          </span>
+        </li>
+        <li>
+          <span class="flow-num">4</span>
+          <span>
+            <strong>Countdown</strong> — A full-screen number overlay counts down (3, 2, 1
+            or 1, depending on the Settings choice). The toolbar shrinks to 297 px.
+            Press <code>Esc</code> to cancel.
+          </span>
+        </li>
+        <li>
+          <span class="flow-num">5</span>
+          <span>
+            <strong>Recording</strong> — Toolbar shows a live timer,
+            <strong>Pause / Resume</strong>, <strong>Restart</strong>, and <strong>Stop</strong>.
+            Stopping returns to Type Select and hides all overlays.
+          </span>
+        </li>
+      </ol>
+    </div>
+  </section>
+
+  <!-- Specs -->
+  <section class="section" id="specs">
+    <div class="section-inner">
+      <div class="section-header">
+        <p class="section-label">Specifications</p>
+        <h2 class="section-title">Technical details</h2>
+      </div>
+
+      <table class="spec-table">
+        <tr>
+          <td>Framework</td>
+          <td>Swift Package, SwiftUI + AppKit</td>
+        </tr>
+        <tr>
+          <td>Platform</td>
+          <td>macOS 13 Ventura or later</td>
+        </tr>
+        <tr>
+          <td>Toolbar size</td>
+          <td>389 × 56 px (type/window/display) · 297 × 56 px (countdown/recording)</td>
+        </tr>
+        <tr>
+          <td>Settings panel</td>
+          <td>197 × 211 px, positioned above the Settings button</td>
+        </tr>
+        <tr>
+          <td>Camera preview</td>
+          <td>320 × 240 px popup, live <code>AVCaptureSession</code></td>
+        </tr>
+        <tr>
+          <td>Countdown options</td>
+          <td>None · 1s · 3s (configurable in Settings)</td>
+        </tr>
+        <tr>
+          <td>Key events</td>
+          <td>Global <code>NSEvent</code> monitor for Esc (toolbar is non-activating)</td>
+        </tr>
+        <tr>
+          <td>Window detection</td>
+          <td><code>CGWindowListCopyWindowInfo</code>, z-order aware, multi-monitor</td>
+        </tr>
+        <tr>
+          <td>Recording</td>
+          <td>Not implemented — prototype only</td>
+        </tr>
+      </table>
+
+      <h3 style="font-size:17px;font-weight:600;color:var(--color-text-primary);margin:32px 0 12px;letter-spacing:-0.01em;">
+        Build &amp; run
+      </h3>
+      <p style="font-size:15px;line-height:22px;color:var(--color-text-secondary);margin-bottom:12px;">
+        Requires Xcode 15+ or Swift 5.9+ CLI. No additional dependencies.
+      </p>
+      <pre style="background:var(--color-bg-secondary);border:1px solid var(--color-highlight-1);border-radius:var(--radius-md);padding:16px 18px;font-family:var(--font-family-mono);font-size:13px;color:var(--color-text-secondary);overflow-x:auto;line-height:1.7;"><span style="color:var(--color-text-tertiary)"># Clone &amp; build</span>
+git clone https://github.com/tomo-at/recorder-toolbar.git
+cd recorder-toolbar
+swift build
+
+<span style="color:var(--color-text-tertiary)"># Launch</span>
+.build/debug/RecorderToolbar</pre>
+    </div>
+  </section>
+
+  <!-- Footer -->
+  <footer class="footer">
+    <p>
+      <a href="https://github.com/tomo-at/recorder-toolbar" target="_blank">tomo-at/recorder-toolbar</a>
+      &nbsp;·&nbsp; Airtime Screen Recorder · UX Prototype
+    </p>
+  </footer>
+
+</body>
+</html>
