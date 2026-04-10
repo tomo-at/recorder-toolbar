@@ -1,14 +1,15 @@
 import AppKit
 import SwiftUI
 
+@MainActor
 class AppDelegate: NSObject, NSApplicationDelegate {
     var panel: NSPanel!
+    let state = ToolbarState()
 
     func applicationDidFinishLaunching(_ notification: Notification) {
         NSApp.setActivationPolicy(.accessory)
 
-        let toolbar = ToolbarView()
-        let hosting  = NSHostingView(rootView: toolbar)
+        let hosting = NSHostingView(rootView: ToolbarView(state: state))
         hosting.translatesAutoresizingMaskIntoConstraints = false
 
         panel = NSPanel(
@@ -17,25 +18,23 @@ class AppDelegate: NSObject, NSApplicationDelegate {
             backing: .buffered,
             defer: false
         )
-        panel.isFloatingPanel       = true
-        panel.level                 = .floating
-        panel.collectionBehavior    = [.canJoinAllSpaces, .fullScreenAuxiliary]
-        panel.backgroundColor       = .clear
-        panel.isOpaque              = false
-        panel.hasShadow             = true
+        panel.isFloatingPanel             = true
+        panel.level                       = .floating
+        panel.collectionBehavior          = [.canJoinAllSpaces, .fullScreenAuxiliary]
+        panel.backgroundColor             = .clear
+        panel.isOpaque                    = false
+        panel.hasShadow                   = true
         panel.isMovableByWindowBackground = true
-
-        // Force dark appearance
         panel.appearance = NSAppearance(named: .darkAqua)
 
         // Visual effect (vibrancy)
         let vfx = NSVisualEffectView()
-        vfx.blendingMode  = .behindWindow
-        vfx.material      = .underWindowBackground
-        vfx.state         = .active
-        vfx.wantsLayer    = true
-        vfx.layer?.cornerRadius = 10
-        vfx.layer?.masksToBounds = true
+        vfx.blendingMode       = .behindWindow
+        vfx.material           = .underWindowBackground
+        vfx.state              = .active
+        vfx.wantsLayer         = true
+        vfx.layer?.cornerRadius    = 10
+        vfx.layer?.masksToBounds   = true
 
         vfx.addSubview(hosting)
         NSLayoutConstraint.activate([
@@ -48,19 +47,19 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         panel.contentView = vfx
         panel.setContentSize(CGSize(width: 389, height: 68))
 
-        // Center horizontally near bottom of screen
+        // Position: horizontally centered, near bottom of screen
         if let screen = NSScreen.main {
             let sw = screen.visibleFrame.width
-            let sy = screen.visibleFrame.minY
             let x  = screen.visibleFrame.minX + (sw - 389) / 2
-            let y  = sy + 42
+            let y  = screen.visibleFrame.minY + 42
             panel.setFrameOrigin(NSPoint(x: x, y: y))
         }
 
         panel.orderFrontRegardless()
+
+        // Give ToolbarState a reference to the panel for overlay positioning
+        state.panel = panel
     }
 
-    func applicationShouldTerminateAfterLastWindowClosed(_ app: NSApplication) -> Bool {
-        false
-    }
+    func applicationShouldTerminateAfterLastWindowClosed(_ app: NSApplication) -> Bool { false }
 }

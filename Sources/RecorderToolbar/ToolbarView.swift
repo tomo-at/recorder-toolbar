@@ -2,7 +2,7 @@ import SwiftUI
 import AVFoundation
 
 struct ToolbarView: View {
-    @StateObject private var state = ToolbarState()
+    @ObservedObject var state: ToolbarState
 
     var body: some View {
         Group {

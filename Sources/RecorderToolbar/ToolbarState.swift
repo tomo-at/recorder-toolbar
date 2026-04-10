@@ -1,5 +1,6 @@
 import Foundation
 import Combine
+import AppKit
 
 enum AppState {
     case typeSelect
@@ -9,12 +10,32 @@ enum AppState {
 
 @MainActor
 class ToolbarState: ObservableObject {
-    @Published var appState: AppState = .typeSelect
+    @Published var appState: AppState = .typeSelect {
+        didSet { handleStateChange(to: appState) }
+    }
     @Published var paused = false
-
-    // Timer
     @Published var seconds: Int = 0
+
+    // Set by AppDelegate after panel creation
+    weak var panel: NSPanel?
+    let overlay = OverlayController()
+
     private var timer: AnyCancellable?
+
+    init() {
+        overlay.onSelect = { [weak self] in self?.startRecording() }
+        overlay.onCancel = { [weak self] in self?.appState = .typeSelect }
+    }
+
+    private func handleStateChange(to state: AppState) {
+        switch state {
+        case .windowSelect:
+            guard let panel else { return }
+            overlay.show(keepingAbove: panel)
+        case .typeSelect, .recording:
+            overlay.hide()
+        }
+    }
 
     func startRecording() {
         appState = .recording
@@ -35,13 +56,9 @@ class ToolbarState: ObservableObject {
         appState = .typeSelect
     }
 
-    func togglePause() {
-        paused = !paused
-    }
+    func togglePause() { paused = !paused }
 
     var timeString: String {
-        let m = seconds / 60
-        let s = seconds % 60
-        return String(format: "%02d:%02d", m, s)
+        String(format: "%02d:%02d", seconds / 60, seconds % 60)
     }
 }
