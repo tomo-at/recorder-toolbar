@@ -169,49 +169,68 @@ struct CameraThumb: NSViewRepresentable {
     func updateNSView(_ view: CameraPreviewView, context: Context) {
         view.start(deviceId: deviceId)
     }
+
+    static func dismantleNSView(_ nsView: CameraPreviewView, coordinator: ()) {
+        nsView.stop()
+    }
 }
 
 class CameraPreviewView: NSView {
     private var session: AVCaptureSession?
     private var previewLayer: AVCaptureVideoPreviewLayer?
     private var currentDeviceId: String?
+    // Serial queue ensures start/stop never race
+    private let sessionQ = DispatchQueue(label: "cam.session", qos: .userInitiated)
 
     override func layout() {
         super.layout()
         previewLayer?.frame = bounds
     }
 
-    func start(deviceId: String?) {
-        guard deviceId != currentDeviceId else { return }
-        currentDeviceId = deviceId
-
-        session?.stopRunning()
-        session = nil
+    func stop() {
         previewLayer?.removeFromSuperlayer()
         previewLayer = nil
+        currentDeviceId = nil
+        let s = session; session = nil
+        sessionQ.async { s?.stopRunning() }
+    }
 
-        guard let id = deviceId,
-              let device = AVCaptureDevice.devices().first(where: { $0.uniqueID == id }),
-              let input = try? AVCaptureDeviceInput(device: device) else { return }
+    func start(deviceId: String?) {
+        guard let id = deviceId, id != currentDeviceId else { return }
+        currentDeviceId = id
 
-        let s = AVCaptureSession()
-        if s.canAddInput(input) { s.addInput(input) }
+        // Remove old layer immediately; stop old session on queue
+        previewLayer?.removeFromSuperlayer()
+        previewLayer = nil
+        let old = session; session = nil
 
-        let layer = AVCaptureVideoPreviewLayer(session: s)
-        layer.videoGravity = .resizeAspectFill
-        layer.frame = bounds
+        sessionQ.async { [weak self] in
+            old?.stopRunning()
+            guard let self else { return }
 
-        // Mirror (front camera)
-        if device.position == .front {
-            layer.transform = CATransform3DMakeScale(-1, 1, 1)
-        }
+            let discovery = AVCaptureDevice.DiscoverySession(
+                deviceTypes: [.builtInWideAngleCamera, .external],
+                mediaType: .video, position: .unspecified)
+            guard let device = discovery.devices.first(where: { $0.uniqueID == id }),
+                  let input  = try? AVCaptureDeviceInput(device: device) else { return }
 
-        wantsLayer = true
-        self.layer?.addSublayer(layer)
-        previewLayer = layer
-        session = s
+            let s = AVCaptureSession()
+            if s.canAddInput(input) { s.addInput(input) }
 
-        DispatchQueue.global(qos: .userInitiated).async {
+            DispatchQueue.main.async { [weak self] in
+                guard let self, self.currentDeviceId == id else { return }
+                let layer = AVCaptureVideoPreviewLayer(session: s)
+                layer.videoGravity = .resizeAspectFill
+                layer.frame = self.bounds
+                if device.position == .front {
+                    layer.transform = CATransform3DMakeScale(-1, 1, 1)
+                }
+                self.wantsLayer = true
+                self.layer?.addSublayer(layer)
+                self.previewLayer = layer
+                self.session = s
+            }
+
             s.startRunning()
         }
     }

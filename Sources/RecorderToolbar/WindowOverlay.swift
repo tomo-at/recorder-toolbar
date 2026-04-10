@@ -1,38 +1,46 @@
 import AppKit
 import SwiftUI
 
-// ── Detected window data ────────────────────────────────────
+// ── Detected window (already converted to SwiftUI view coords) ──
 
-struct DetectedWindow: Equatable {
-    let pid: pid_t
+struct DisplayedWindow: Equatable {
     let appName: String
     let title: String
-    let bounds: CGRect   // CG screen coords: (0,0) = top-left, y increases downward
     let appIcon: NSImage?
+    let viewBounds: CGRect   // In SwiftUI overlay-window coordinates
 
     static func == (lhs: Self, rhs: Self) -> Bool {
-        lhs.pid == rhs.pid && lhs.bounds == rhs.bounds
+        lhs.appName == rhs.appName && lhs.viewBounds == rhs.viewBounds
     }
 }
 
-// ── Overlay controller ──────────────────────────────────────
+// ── Overlay controller ──────────────────────────────────────────
 
 @MainActor
 final class OverlayController: ObservableObject {
-    @Published var hovered: DetectedWindow?
+    @Published var displayed: DisplayedWindow?
 
     private var win: NSWindow?
     private var pollTimer: Timer?
     private var escMonitor: Any?
 
+    // Stored at show() time for coordinate conversion
+    private var overlayFrame: NSRect = .zero   // AppKit frame of the overlay window
+    private var primaryH: CGFloat = 0          // Height of primary screen (AppKit)
+
     var onSelect: (() -> Void)?
     var onCancel: (() -> Void)?
 
+    // MARK: – Public API
+
     func show(keepingAbove toolbar: NSPanel) {
-        guard let screen = NSScreen.main else { return }
+        // Cover ALL connected screens
+        let totalFrame = NSScreen.screens.reduce(NSRect.null) { $0.union($1.frame) }
+        primaryH = NSScreen.main?.frame.height ?? totalFrame.height
+        overlayFrame = totalFrame
 
         let w = NSWindow(
-            contentRect: screen.frame,
+            contentRect: totalFrame,
             styleMask: [.borderless],
             backing: .buffered,
             defer: false
@@ -49,18 +57,14 @@ final class OverlayController: ObservableObject {
         // Ensure toolbar stays above overlay
         toolbar.orderFrontRegardless()
 
-        // Poll mouse position at ~30fps (capture frame, not NSScreen, for Sendable)
-        let screenHeight = screen.frame.height
+        // Poll mouse @ 30 fps
         pollTimer = Timer.scheduledTimer(withTimeInterval: 1.0 / 30.0, repeats: true) { [weak self] _ in
-            Task { @MainActor in self?.refresh(screenHeight: screenHeight) }
+            Task { @MainActor in self?.refresh() }
         }
 
-        // Escape key monitor
+        // Escape key
         escMonitor = NSEvent.addLocalMonitorForEvents(matching: .keyDown) { [weak self] event in
-            if event.keyCode == 53 {
-                Task { @MainActor in self?.cancel() }
-                return nil
-            }
+            if event.keyCode == 53 { Task { @MainActor in self?.cancel() }; return nil }
             return event
         }
     }
@@ -69,21 +73,46 @@ final class OverlayController: ObservableObject {
         pollTimer?.invalidate(); pollTimer = nil
         if let m = escMonitor { NSEvent.removeMonitor(m); escMonitor = nil }
         win?.close(); win = nil
-        hovered = nil
+        displayed = nil
     }
 
-    func selectCurrent() { if hovered != nil { onSelect?() } }
+    func selectCurrent() { if displayed != nil { onSelect?() } }
     func cancel()         { onCancel?() }
 
-    private func refresh(screenHeight: CGFloat) {
-        let pt = NSEvent.mouseLocation
-        // AppKit y is from bottom; CG y is from top
-        let cgPt = CGPoint(x: pt.x, y: screenHeight - pt.y)
-        let next = detectWindow(at: cgPt)
-        if next != hovered { hovered = next }
+    // MARK: – Coordinate conversion
+
+    /// Convert a CGWindow bounds rect (CG screen coords) to SwiftUI overlay-view coords.
+    /// AppKit ↔ CG:  cgY = primaryH - appKitY  →  appKitY = primaryH - cgY
+    /// AppKit → view: viewX = appKitX - overlayFrame.minX
+    ///                viewY = overlayFrame.maxY - appKitY
+    ///                     = overlayFrame.maxY - (primaryH - cgY)
+    ///                     = overlayFrame.maxY - primaryH + cgY
+    private func cgRectToView(_ r: CGRect) -> CGRect {
+        let vx = r.origin.x - overlayFrame.minX
+        let vy = overlayFrame.maxY - primaryH + r.origin.y
+        return CGRect(x: vx, y: vy, width: r.width, height: r.height)
     }
 
-    private func detectWindow(at cgPoint: CGPoint) -> DetectedWindow? {
+    /// Convert NSEvent.mouseLocation (AppKit global) to CG screen point.
+    private func mouseInCG() -> CGPoint {
+        let pt = NSEvent.mouseLocation
+        return CGPoint(x: pt.x, y: primaryH - pt.y)
+    }
+
+    // MARK: – Private
+
+    private func refresh() {
+        let cgPt  = mouseInCG()
+        let raw   = detectWindow(at: cgPt)
+        let next: DisplayedWindow? = raw.map { dw in
+            DisplayedWindow(appName: dw.appName, title: dw.title,
+                            appIcon: dw.appIcon,
+                            viewBounds: cgRectToView(dw.bounds))
+        }
+        if next != displayed { displayed = next }
+    }
+
+    private func detectWindow(at cgPoint: CGPoint) -> (appName: String, title: String, appIcon: NSImage?, bounds: CGRect)? {
         let skip: Set<String> = ["RecorderToolbar", "Dock", "Window Server",
                                   "SystemUIServer", "loginwindow"]
         let list = CGWindowListCopyWindowInfo(
@@ -92,8 +121,8 @@ final class OverlayController: ObservableObject {
 
         for info in list {
             guard
-                let bd  = info[kCGWindowBounds as String] as? [String: Any],
-                let r   = CGRect(dictionaryRepresentation: bd as CFDictionary),
+                let bd      = info[kCGWindowBounds as String] as? [String: Any],
+                let r       = CGRect(dictionaryRepresentation: bd as CFDictionary),
                 r.width > 100, r.height > 100,
                 r.contains(cgPoint),
                 let pid     = info[kCGWindowOwnerPID as String] as? pid_t,
@@ -103,32 +132,31 @@ final class OverlayController: ObservableObject {
 
             let title = info[kCGWindowName as String] as? String ?? ""
             let icon  = NSRunningApplication(processIdentifier: pid)?.icon
-            return DetectedWindow(pid: pid, appName: appName,
-                                  title: title, bounds: r, appIcon: icon)
+            return (appName, title, icon, r)
         }
         return nil
     }
 }
 
-// ── SwiftUI overlay view ────────────────────────────────────
+// ── SwiftUI overlay view ────────────────────────────────────────
 
 struct OverlayView: View {
     @ObservedObject var ctrl: OverlayController
 
     var body: some View {
         ZStack {
-            // Full-screen dark dim
-            Color.black.opacity(0.5)
-                .ignoresSafeArea()
+            Color.black.opacity(0.5).ignoresSafeArea()
 
-            if let w = ctrl.hovered {
+            if let w = ctrl.displayed {
+                let f = w.viewBounds
+
                 // Border around hovered window
                 RoundedRectangle(cornerRadius: 20)
                     .stroke(Color(red: 1.0, green: 0.427, blue: 0.298), lineWidth: 6)
-                    .frame(width: w.bounds.width, height: w.bounds.height)
-                    .position(x: w.bounds.midX, y: w.bounds.midY)
+                    .frame(width: f.width, height: f.height)
+                    .position(x: f.midX, y: f.midY)
 
-                // Frosted glass label panel
+                // Frosted glass label centred in the window
                 VStack(spacing: 8) {
                     if let icon = w.appIcon {
                         Image(nsImage: icon)
@@ -149,7 +177,7 @@ struct OverlayView: View {
                 .background(.ultraThinMaterial)
                 .clipShape(RoundedRectangle(cornerRadius: 32))
                 .environment(\.colorScheme, .dark)
-                .position(x: w.bounds.midX, y: w.bounds.midY)
+                .position(x: f.midX, y: f.midY)
             }
         }
         .contentShape(Rectangle())
