@@ -7,12 +7,13 @@ struct ToolbarView: View {
     var body: some View {
         Group {
             switch state.appState {
-            case .typeSelect:   TypeSelectView(state: state)
-            case .windowSelect: WindowSelectView(state: state)
-            case .recording:    RecordingView(state: state)
+            case .typeSelect:                   TypeSelectView(state: state)
+            case .windowSelect, .displaySelect: WindowSelectView(state: state)
+            case .countdown:                    CountdownToolbarView(state: state)
+            case .recording:                    RecordingView(state: state)
             }
         }
-        .frame(height: 68)
+        .frame(height: 56)
     }
 }
 
@@ -20,6 +21,7 @@ struct ToolbarView: View {
 
 struct TypeSelectView: View {
     @ObservedObject var state: ToolbarState
+    @State private var activeCamId: String?
 
     var body: some View {
         HStack(spacing: 0) {
@@ -32,19 +34,53 @@ struct TypeSelectView: View {
 
             // Segment strip
             HStack(spacing: 0) {
-                SegmentButton(icon: "display", label: "Display") {}
-                SegmentButton(icon: "macwindow", label: "Window") {
-                    state.appState = .windowSelect
+                SegmentButton(icon: "display", label: "Display",
+                              isActive: state.selectionMode == .display) {
+                    state.toggleSelecting(.display)
                 }
+                .onHover { h in preview(h ? .display : nil) }
+
+                SegmentButton(icon: "macwindow", label: "Window",
+                              isActive: state.selectionMode == .window) {
+                    state.toggleSelecting(.window)
+                }
+                .onHover { h in preview(h ? .window : nil) }
+
                 SegmentButton(icon: "rectangle.dashed", label: "Area") {}
-                SegmentButton(icon: "video.fill", label: "Cam only") {}
+                    .onHover { h in preview(h ? .area : nil) }
+
+                CamOnlySegment(activeId: activeCamId) { h in
+                    guard let panel = state.panel else { return }
+                    if h, let id = activeCamId {
+                        state.showCameraPreview(deviceId: id, above: panel)
+                    } else {
+                        state.hideCameraPreview()
+                    }
+                }
 
                 ToolbarDivider()
 
-                SegmentButton(icon: "gearshape.fill", label: "Options") {}
+                SegmentButton(icon: "gearshape.fill", label: "Settings") {
+                    // Settings button center x from toolbar left = 44(close) + 8(pad) + 64×4(segs) + 9(div) + 32(half btn) = 349
+                    if let panel = state.panel {
+                        state.settingsPanel.toggle(toolbar: panel,
+                                                   buttonCenterX: panel.frame.minX + 349)
+                    }
+                }
             }
-            .padding(.horizontal, 4)
+            .padding(.horizontal, 8)
         }
+        .task { await loadCameraDevice() }
+    }
+
+    private func loadCameraDevice() async {
+        activeCamId = AVCaptureDevice.cameraDevices().first?.uniqueID
+    }
+
+    private func preview(_ type: PreviewType?) {
+        guard let panel = state.panel else { return }
+        if let t = type { state.previewOverlay.show(t, keepingAbove: panel) }
+        else            { state.previewOverlay.hide() }
     }
 }
 
@@ -69,20 +105,36 @@ struct WindowSelectView: View {
             }
 
             HStack(spacing: 0) {
-                // Camera
-                CameraSegment(devices: cameraDevices, activeId: $activeCamId)
-                // Mic
-                MicSegment(devices: micDevices, activeId: $activeMicId)
+                // Camera + Mic (8px gap between them, 8px right padding)
+                HStack(spacing: 8) {
+                    CameraSegment(devices: cameraDevices, activeId: $activeCamId,
+                                  onHoverChanged: { h in
+                                      guard let panel = state.panel else { return }
+                                      if h, let id = activeCamId {
+                                          state.showCameraPreview(deviceId: id, above: panel)
+                                      } else {
+                                          state.hideCameraPreview()
+                                      }
+                                  })
+                    MicSegment(devices: micDevices, activeId: $activeMicId)
+                }
+                .padding(.trailing, 8)
 
                 ToolbarDivider()
 
-                SegmentButton(icon: "gearshape.fill", label: "Options") {}
+                SegmentButton(icon: "gearshape.fill", label: "Settings") {
+                    // Settings button center x from toolbar left = 44(close) + 64(cam) + 8(gap) + 64(mic) + 8(trail) + 9(div) + 32(half btn) = 229
+                    if let panel = state.panel {
+                        state.settingsPanel.toggle(toolbar: panel,
+                                                   buttonCenterX: panel.frame.minX + 229)
+                    }
+                }
 
                 ToolbarDivider()
 
                 // Record button
                 Button {
-                    state.startRecording()
+                    state.startCountdown()
                 } label: {
                     HStack(spacing: 4) {
                         Image(systemName: "record.circle.fill")
@@ -97,7 +149,8 @@ struct WindowSelectView: View {
                     .cornerRadius(6)
                 }
                 .buttonStyle(.plain)
-                .padding(.horizontal, 8)
+                .padding(.leading, 8)
+                .padding(.trailing, 16)
             }
         }
         .task {
@@ -108,54 +161,73 @@ struct WindowSelectView: View {
     }
 
     func loadDevices() async {
-        let session  = AVCaptureDevice.DiscoverySession(
-            deviceTypes: [.builtInWideAngleCamera, .externalUnknown],
-            mediaType: .video, position: .unspecified)
-        cameraDevices = session.devices
+        cameraDevices = AVCaptureDevice.cameraDevices()
         activeCamId   = activeCamId ?? cameraDevices.first?.uniqueID
-
-        let micSession = AVCaptureDevice.DiscoverySession(
-            deviceTypes: [.microphone],
-            mediaType: .audio, position: .unspecified)
-        micDevices  = micSession.devices
-        activeMicId = activeMicId ?? micDevices.first?.uniqueID
+        micDevices    = AVCaptureDevice.micDevices()
+        activeMicId   = activeMicId ?? micDevices.first?.uniqueID
     }
 }
 
-// ── State 3: Recording ──────────────────────────────────────
+// ── State 3: Countdown ──────────────────────────────────────
+
+struct CountdownToolbarView: View {
+    @ObservedObject var state: ToolbarState
+
+    var body: some View {
+        HStack(spacing: 0) {
+            CloseSection(action: { state.appState = .typeSelect }) {
+                Image(systemName: "xmark")
+                    .font(.system(size: 12, weight: .medium))
+                    .foregroundColor(.white)
+            }
+
+            VStack(spacing: 4) {
+                Text("\(state.countdownSeconds)")
+                    .font(.system(size: 20, weight: .bold).monospacedDigit())
+                    .foregroundColor(.white)
+                Text("Starting...")
+                    .font(.system(size: 11))
+                    .foregroundColor(Color(red: 0.690, green: 0.694, blue: 0.698))
+            }
+            .frame(maxWidth: .infinity)
+        }
+    }
+}
+
+// ── State 4: Recording ──────────────────────────────────────
 
 struct RecordingView: View {
     @ObservedObject var state: ToolbarState
 
     var body: some View {
         HStack(spacing: 0) {
-            HStack(spacing: 4) {
-                ActionButton(icon: "arrow.counterclockwise", label: "Restart") {
-                    state.stopRecording()
-                }
-                ActionButton(icon: state.paused ? "play.fill" : "pause.fill",
-                             label: state.paused ? "Resume" : "Pause") {
-                    state.togglePause()
-                }
-                ActionButton(icon: "stop.fill", label: "Stop") {
-                    state.stopRecording()
-                }
+            SegmentButton(icon: "arrow.counterclockwise", label: "Restart") {
+                state.stopRecording()
             }
-            .padding(.leading, 8)
+            SegmentButton(
+                icon:      state.paused ? "play.fill"  : "pause.fill",
+                label:     state.paused ? "Resume"     : "Pause"
+            ) {
+                state.togglePause()
+            }
+            SegmentButton(icon: "stop.fill", label: "Stop",
+                          iconColor: Color(red: 0.839, green: 0.251, blue: 0.184)) {
+                state.stopRecording()
+            }
 
             ToolbarDivider()
 
-            VStack(alignment: .leading, spacing: 2) {
+            VStack(spacing: 4) {
                 Text(state.timeString)
                     .font(.system(size: 12, weight: .medium).monospacedDigit())
                     .foregroundColor(.white)
                 Text("1 hour limit")
                     .font(.system(size: 11))
-                    .foregroundColor(Color(white: 0.69))
+                    .foregroundColor(Color(red: 0.690, green: 0.694, blue: 0.698))
             }
-            .padding(.horizontal, 8)
-            .frame(maxWidth: .infinity, alignment: .leading)
+            .frame(width: 80, height: 48)
         }
+        .padding(.horizontal, 8)
     }
 }
 
@@ -168,7 +240,8 @@ struct CloseSection<Icon: View>: View {
     var body: some View {
         Button(action: action) {
             icon()
-                .frame(width: 44, height: 68)
+                .frame(width: 44)
+                .frame(maxHeight: .infinity)
                 .background(Color.black.opacity(0.16))
                 .contentShape(Rectangle())
         }
@@ -182,9 +255,11 @@ struct CloseSection<Icon: View>: View {
 }
 
 struct SegmentButton: View {
-    let icon:   String
-    let label:  String
-    let action: () -> Void
+    let icon:      String
+    let label:     String
+    var iconColor: Color = .white
+    var isActive:  Bool  = false
+    let action:    () -> Void
     @State private var hovering = false
 
     var body: some View {
@@ -192,14 +267,14 @@ struct SegmentButton: View {
             VStack(spacing: 4) {
                 Image(systemName: icon)
                     .font(.system(size: 14))
-                    .foregroundColor(.white)
+                    .foregroundColor(iconColor)
                 Text(label)
                     .font(.system(size: 11))
                     .foregroundColor(Color(white: 0.69))
                     .lineLimit(1)
             }
-            .frame(width: 64, height: 68)
-            .background(hovering ? Color.white.opacity(0.08) : .clear)
+            .frame(width: 64, height: 48)
+            .background(isActive ? Color.white.opacity(0.16) : (hovering ? Color.white.opacity(0.08) : .clear))
             .cornerRadius(4)
         }
         .buttonStyle(.plain)

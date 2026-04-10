@@ -4,6 +4,7 @@ import AVFoundation
 struct CameraSegment: View {
     let devices: [AVCaptureDevice]
     @Binding var activeId: String?
+    var onHoverChanged: ((Bool) -> Void)? = nil
     @State private var stream: AVCaptureSession? = nil
     @State private var showMenu = false
     @State private var hovering = false
@@ -32,14 +33,46 @@ struct CameraSegment: View {
                     .truncationMode(.tail)
                     .frame(maxWidth: 60)
             }
-            .frame(width: 64, height: 68)
+            .frame(width: 64, height: 48)
             .background(hovering ? Color.white.opacity(0.08) : .clear)
             .cornerRadius(4)
         }
         .buttonStyle(.plain)
-        .onHover { hovering = $0 }
+        .onHover { h in
+            hovering = h
+            onHoverChanged?(h)
+        }
         .popover(isPresented: $showMenu, arrowEdge: .bottom) {
             DeviceMenuView(devices: devices, activeId: $activeId)
+        }
+    }
+}
+
+// Camera-only button for TypeSelectView — shows live preview thumbnail, no device menu.
+struct CamOnlySegment: View {
+    let activeId: String?
+    var onHoverChanged: ((Bool) -> Void)? = nil
+    @State private var hovering = false
+
+    var body: some View {
+        Button {} label: {
+            VStack(spacing: 4) {
+                CameraThumb(deviceId: activeId)
+                    .frame(width: 20, height: 20)
+                    .cornerRadius(4)
+                Text("Cam only")
+                    .font(.system(size: 11))
+                    .foregroundColor(Color(white: 0.69))
+                    .lineLimit(1)
+            }
+            .frame(width: 64, height: 48)
+            .background(hovering ? Color.white.opacity(0.08) : .clear)
+            .cornerRadius(4)
+        }
+        .buttonStyle(.plain)
+        .onHover { h in
+            hovering = h
+            onHoverChanged?(h)
         }
     }
 }
@@ -75,7 +108,7 @@ struct MicSegment: View {
                     .truncationMode(.tail)
                     .frame(maxWidth: 60)
             }
-            .frame(width: 64, height: 68)
+            .frame(width: 64, height: 48)
             .background(hovering ? Color.white.opacity(0.08) : .clear)
             .cornerRadius(4)
         }
@@ -208,10 +241,7 @@ class CameraPreviewView: NSView {
             old?.stopRunning()
             guard let self else { return }
 
-            let discovery = AVCaptureDevice.DiscoverySession(
-                deviceTypes: [.builtInWideAngleCamera, .external],
-                mediaType: .video, position: .unspecified)
-            guard let device = discovery.devices.first(where: { $0.uniqueID == id }),
+            guard let device = AVCaptureDevice.cameraDevices().first(where: { $0.uniqueID == id }),
                   let input  = try? AVCaptureDeviceInput(device: device) else { return }
 
             let s = AVCaptureSession()

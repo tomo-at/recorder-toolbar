@@ -11,6 +11,9 @@ class AppDelegate: NSObject, NSApplicationDelegate {
 
         let hosting = NSHostingView(rootView: ToolbarView(state: state))
         hosting.translatesAutoresizingMaskIntoConstraints = false
+        // Ensure transparent corners so the panel shadow follows the rounded content shape.
+        hosting.wantsLayer = true
+        hosting.layer?.backgroundColor = .clear
 
         panel = NSPanel(
             contentRect: .zero,
@@ -45,7 +48,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         ])
 
         panel.contentView = vfx
-        panel.setContentSize(CGSize(width: 389, height: 68))
+        panel.setContentSize(CGSize(width: 389, height: 56))
 
         // Position: horizontally centered, near bottom of screen
         if let screen = NSScreen.main {
@@ -56,6 +59,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         }
 
         panel.orderFrontRegardless()
+        panel.invalidateShadow()   // recompute shadow from rounded content alpha
 
         // Give ToolbarState a reference to the panel for overlay positioning
         state.panel = panel
