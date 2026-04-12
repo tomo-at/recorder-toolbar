@@ -57,9 +57,10 @@ struct CamOnlySegment: View {
     var body: some View {
         Button {} label: {
             VStack(spacing: 4) {
-                CameraThumb(deviceId: activeId)
+                Image(systemName: "person.crop.rectangle.fill")
+                    .font(.system(size: 14))
+                    .foregroundColor(.white)
                     .frame(width: 20, height: 20)
-                    .cornerRadius(4)
                 Text("Cam only")
                     .font(.system(size: 11))
                     .foregroundColor(Color(white: 0.69))
@@ -144,7 +145,7 @@ struct MicLevelBars: View {
                 let fromBottom = barCount - 1 - i
                 Rectangle()
                     .fill(fromBottom < litCount
-                          ? Color(red: 0.188, green: 0.820, blue: 0.345)
+                          ? Color.selectedGreen
                           : Color.white.opacity(0.24))
                     .frame(width: 12, height: 1)
                     .cornerRadius(2)
@@ -168,7 +169,7 @@ struct DeviceMenuView: View {
                     HStack(spacing: 8) {
                         Circle()
                             .fill(device.uniqueID == activeId
-                                  ? Color(red: 0.188, green: 0.820, blue: 0.345)
+                                  ? Color.selectedGreen
                                   : .clear)
                             .frame(width: 6, height: 6)
                         Text(device.localizedName)
@@ -186,7 +187,7 @@ struct DeviceMenuView: View {
             }
         }
         .padding(4)
-        .background(Color(red: 0.157, green: 0.157, blue: 0.157))
+        .background(Color.deviceMenuBg)
         .cornerRadius(8)
         .frame(minWidth: 200, maxWidth: 280)
     }

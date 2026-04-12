@@ -7,7 +7,7 @@ struct ToolbarView: View {
     var body: some View {
         Group {
             switch state.appState {
-            case .typeSelect:                   TypeSelectView(state: state)
+            case .typeSelect:                   TypeSelectViewV2(state: state)
             case .windowSelect, .displaySelect: WindowSelectView(state: state)
             case .countdown:                    CountdownToolbarView(state: state)
             case .recording:                    RecordingView(state: state)
@@ -145,7 +145,7 @@ struct WindowSelectView: View {
                     .foregroundColor(.white)
                     .padding(.horizontal, 10)
                     .padding(.vertical, 6)
-                    .background(Color(red: 0.839, green: 0.251, blue: 0.184))
+                    .background(Color.recordRed)
                     .cornerRadius(6)
                 }
                 .buttonStyle(.plain)
@@ -187,7 +187,7 @@ struct CountdownToolbarView: View {
                     .foregroundColor(.white)
                 Text("Starting...")
                     .font(.system(size: 11))
-                    .foregroundColor(Color(red: 0.690, green: 0.694, blue: 0.698))
+                    .foregroundColor(Color.subtitleGray)
             }
             .frame(maxWidth: .infinity)
         }
@@ -211,7 +211,7 @@ struct RecordingView: View {
                 state.togglePause()
             }
             SegmentButton(icon: "stop.fill", label: "Stop",
-                          iconColor: Color(red: 0.839, green: 0.251, blue: 0.184)) {
+                          iconColor: Color.recordRed) {
                 state.stopRecording()
             }
 
@@ -223,7 +223,7 @@ struct RecordingView: View {
                     .foregroundColor(.white)
                 Text("1 hour limit")
                     .font(.system(size: 11))
-                    .foregroundColor(Color(red: 0.690, green: 0.694, blue: 0.698))
+                    .foregroundColor(Color.subtitleGray)
             }
             .frame(width: 80, height: 48)
         }
@@ -268,6 +268,7 @@ struct SegmentButton: View {
                 Image(systemName: icon)
                     .font(.system(size: 14))
                     .foregroundColor(iconColor)
+                    .frame(width: 20, height: 20)
                 Text(label)
                     .font(.system(size: 11))
                     .foregroundColor(Color(white: 0.69))
@@ -321,3 +322,97 @@ struct ToolbarDivider: View {
             .padding(.horizontal, 4)
     }
 }
+
+// ── V2: Type Select (Camera + Mic always visible) ───────────
+// Layout (550px): [X(44)] [Display|Window|Area|CamOnly(256)+8] [div(9)] [Cam+Mic(136)+8] [div(9)] [Settings(64)] + outer pad(8×2)
+
+struct TypeSelectViewV2: View {
+    @ObservedObject var state: ToolbarState
+    @State private var cameraDevices: [AVCaptureDevice] = []
+    @State private var micDevices:    [AVCaptureDevice] = []
+    @State private var activeCamId:   String?           = nil
+    @State private var activeMicId:   String?           = nil
+
+    var body: some View {
+        HStack(spacing: 0) {
+            CloseSection(action: { NSApplication.shared.terminate(nil) }) {
+                Image(systemName: "xmark")
+                    .font(.system(size: 12, weight: .medium))
+                    .foregroundColor(.white)
+            }
+
+            HStack(spacing: 0) {
+                // Recording type selector
+                HStack(spacing: 0) {
+                    SegmentButton(icon: "display", label: "Display",
+                                  isActive: state.selectionMode == .display) {
+                        state.toggleSelecting(.display)
+                    }
+                    .onHover { h in preview(h ? .display : nil) }
+
+                    SegmentButton(icon: "macwindow", label: "Window",
+                                  isActive: state.selectionMode == .window) {
+                        state.toggleSelecting(.window)
+                    }
+                    .onHover { h in preview(h ? .window : nil) }
+
+                    SegmentButton(icon: "rectangle.dashed", label: "Area") {}
+                        .onHover { h in preview(h ? .area : nil) }
+
+                    CamOnlySegment(activeId: activeCamId) { h in
+                        guard let panel = state.panel else { return }
+                        if h, let id = activeCamId {
+                            state.showCameraPreview(deviceId: id, above: panel)
+                        } else {
+                            state.hideCameraPreview()
+                        }
+                    }
+                }
+                .padding(.trailing, 8)
+
+                ToolbarDivider()
+
+                // Camera + Mic (always visible in V2)
+                HStack(spacing: 8) {
+                    CameraSegment(devices: cameraDevices, activeId: $activeCamId,
+                                  onHoverChanged: { h in
+                                      guard let panel = state.panel else { return }
+                                      if h, let id = activeCamId {
+                                          state.showCameraPreview(deviceId: id, above: panel)
+                                      } else {
+                                          state.hideCameraPreview()
+                                      }
+                                  })
+                    MicSegment(devices: micDevices, activeId: $activeMicId)
+                }
+                .padding(.trailing, 8)
+
+                ToolbarDivider()
+
+                // Settings — center X from toolbar left: 44+8+264+9+144+9+32 = 510
+                SegmentButton(icon: "gearshape.fill", label: "Settings") {
+                    if let panel = state.panel {
+                        state.settingsPanel.toggle(toolbar: panel,
+                                                   buttonCenterX: panel.frame.minX + 510)
+                    }
+                }
+            }
+            .padding(.horizontal, 8)
+        }
+        .task { await loadDevices() }
+    }
+
+    private func loadDevices() async {
+        cameraDevices = AVCaptureDevice.cameraDevices()
+        activeCamId   = activeCamId ?? cameraDevices.first?.uniqueID
+        micDevices    = AVCaptureDevice.micDevices()
+        activeMicId   = activeMicId ?? micDevices.first?.uniqueID
+    }
+
+    private func preview(_ type: PreviewType?) {
+        guard let panel = state.panel else { return }
+        if let t = type { state.previewOverlay.show(t, keepingAbove: panel) }
+        else            { state.previewOverlay.hide() }
+    }
+}
+

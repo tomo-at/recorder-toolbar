@@ -158,7 +158,12 @@ class ToolbarState: ObservableObject {
 
     private func resizePanel(for state: AppState) {
         guard let panel else { return }
-        let newW: CGFloat = (state == .recording || state == .countdown) ? 297 : 389
+        let newW: CGFloat
+        switch state {
+        case .recording, .countdown:        newW = 297
+        case .typeSelect:                   newW = 550
+        case .windowSelect, .displaySelect: newW = 389
+        }
         let cx = panel.frame.midX
         let y  = panel.frame.origin.y
         panel.setFrame(NSRect(x: cx - newW / 2, y: y, width: newW, height: 56),

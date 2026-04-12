@@ -323,10 +323,100 @@
     .footer a { color: var(--color-accent-blue); }
     .footer a:hover { text-decoration: underline; }
 
+    /* ── Variation grid ────────────────────────────────────────── */
+    .variation-grid {
+      display: flex;
+      flex-direction: column;
+      gap: 24px;
+      max-width: 760px;
+      margin: 0 auto 56px;
+    }
+    .variation-card {
+      background: var(--color-bg-secondary);
+      border: 1px solid var(--color-highlight-1);
+      border-radius: var(--radius-md);
+      overflow: hidden;
+    }
+    .variation-video {
+      width: 100%;
+      background: var(--color-bg-tertiary);
+      border-bottom: 1px solid var(--color-highlight-1);
+    }
+    .variation-video video { width: 100%; height: auto; display: block; }
+    .variation-video-placeholder {
+      width: 100%;
+      padding: 48px 0;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      color: var(--color-text-tertiary);
+      font-size: 13px;
+    }
+    .variation-video-placeholder svg { opacity: 0.3; }
+    .variation-info {
+      padding: 16px 20px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 16px;
+      text-align: left;
+    }
+    .variation-title {
+      font-size: 14px;
+      font-weight: 600;
+      color: var(--color-text-primary);
+      margin-bottom: 3px;
+    }
+    .variation-meta {
+      font-size: 12px;
+      color: var(--color-text-tertiary);
+    }
+    .variation-badge {
+      display: inline-flex;
+      align-items: center;
+      padding: 3px 10px;
+      border-radius: var(--radius-pill);
+      font-size: 11px;
+      font-weight: 600;
+      white-space: nowrap;
+    }
+    .variation-badge--new {
+      background: color-mix(in srgb, var(--color-accent-green) 14%, transparent);
+      color: var(--color-accent-green);
+    }
+
+    /* ── Change list ───────────────────────────────────────────── */
+    .change-list {
+      list-style: none;
+      margin: 16px 0 0;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+    .change-list li {
+      display: flex;
+      gap: 10px;
+      align-items: flex-start;
+      font-size: 14px;
+      line-height: 20px;
+      color: var(--color-text-secondary);
+    }
+    .change-dot {
+      flex-shrink: 0;
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      background: var(--color-accent-green);
+      margin-top: 7px;
+    }
+
     /* ── Responsive ────────────────────────────────────────────── */
     @media (max-width: 600px) {
       .hero-headline { font-size: 28px; }
       .preview-info { flex-direction: column; align-items: flex-start; }
+      .variation-info { flex-direction: column; align-items: flex-start; }
     }
   </style>
 </head>
@@ -352,24 +442,52 @@
       device configuration, and countdown UX — no actual recording.
     </p>
 
-    <!-- Video -->
-    <div class="preview-video">
-      <video src="toolbar-demo.mp4" autoplay loop muted playsinline></video>
-    </div>
+    <!-- Variation cards -->
+    <div class="variation-grid">
 
-    <!-- Info card -->
-    <div class="preview-info">
-      <div>
-        <div class="preview-info-title">Variation 1 — Step by step</div>
-        <div class="preview-info-meta">Swift Package · macOS 13+</div>
+      <!-- Variation 1 -->
+      <div class="variation-card">
+        <div class="variation-video">
+          <video src="toolbar-demo.mp4" autoplay loop muted playsinline></video>
+        </div>
+        <div class="variation-info">
+          <div>
+            <div class="variation-title">Variation 1 — Step by step</div>
+            <div class="variation-meta">Camera &amp; mic appear only after recording type is selected</div>
+          </div>
+          <a class="download-btn"
+             href="https://github.com/tomo-at/recorder-toolbar/archive/refs/heads/main.zip">
+            <svg width="14" height="14" viewBox="0 0 14 14" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <path d="M7 1v8M4 6l3 3 3-3M2 11h10" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>
+            Download source
+          </a>
+        </div>
       </div>
-      <a class="download-btn"
-         href="https://github.com/tomo-at/recorder-toolbar/archive/refs/heads/main.zip">
-        <svg width="14" height="14" viewBox="0 0 14 14" fill="none" xmlns="http://www.w3.org/2000/svg">
-          <path d="M7 1v8M4 6l3 3 3-3M2 11h10" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
-        </svg>
-        Download source
-      </a>
+
+      <!-- Variation 2 -->
+      <div class="variation-card">
+        <div class="variation-video">
+          <video src="toolbar-demo-v2.mp4" autoplay loop muted playsinline></video>
+        </div>
+        <div class="variation-info">
+          <div>
+            <div class="variation-title">
+              Variation 2 — Compact, always-on devices
+              <span class="variation-badge variation-badge--new" style="margin-left:8px;vertical-align:middle;">New</span>
+            </div>
+            <div class="variation-meta">Camera &amp; mic always visible · 550 px typeSelect · person.crop.rectangle.fill cam-only icon</div>
+          </div>
+          <a class="download-btn"
+             href="https://github.com/tomo-at/recorder-toolbar/archive/refs/heads/main.zip">
+            <svg width="14" height="14" viewBox="0 0 14 14" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <path d="M7 1v8M4 6l3 3 3-3M2 11h10" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>
+            Download source
+          </a>
+        </div>
+      </div>
+
     </div>
   </section>
 
@@ -400,6 +518,16 @@
         <span class="badge badge--green"><span class="badge-icon">✓</span> No entitlements needed</span>
         <span class="badge badge--amber"><span class="badge-icon">⚠︎</span> No real recording</span>
       </div>
+
+      <h3 style="font-size:17px;font-weight:600;color:var(--color-text-primary);margin:32px 0 12px;letter-spacing:-0.01em;">
+        What changed in Variation 2
+      </h3>
+      <ul class="change-list">
+        <li><span class="change-dot"></span>Camera and microphone segments are visible from the very first state — no need to select a recording type first to see device controls.</li>
+        <li><span class="change-dot"></span>Toolbar width at typeSelect increases from 389 px to 550 px to accommodate the always-on device area.</li>
+        <li><span class="change-dot"></span>After confirming a window or display target, the toolbar expands to 623 px and a <strong>Record</strong> button appears in-line — reducing the number of distinct toolbar states the user experiences.</li>
+        <li><span class="change-dot"></span>Cam-only button icon changed from a live camera thumbnail to the <code>person.crop.rectangle.fill</code> SF Symbol, matching the Figma design.</li>
+      </ul>
     </div>
   </section>
 
@@ -483,7 +611,10 @@
         </tr>
         <tr>
           <td>Toolbar size</td>
-          <td>389 × 56 px (type/window/display) · 297 × 56 px (countdown/recording)</td>
+          <td>
+            <strong>V1:</strong> 389 × 56 px (type/window/display) · 297 × 56 px (countdown/recording)<br>
+            <strong>V2:</strong> 550 × 56 px (typeSelect) · 389 × 56 px (window/displaySelect) · 297 × 56 px (countdown/recording)
+          </td>
         </tr>
         <tr>
           <td>Settings panel</td>
