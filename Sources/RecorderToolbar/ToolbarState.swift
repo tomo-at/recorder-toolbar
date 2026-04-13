@@ -57,10 +57,8 @@ class ToolbarState: ObservableObject {
             self.selectionMode = nil
             guard self.settingsPanel.state.protoVersion == .v4 else { return }
             if let bounds = self.overlay.frozenWindowBounds, let panel = self.panel {
-                let primaryH = NSScreen.screens
-                    .first(where: { $0.frame.origin == .zero })?.frame.height ?? 800
                 let origin = NSPoint(x: bounds.minX + 16,
-                                     y: primaryH - bounds.maxY + 16)
+                                     y: NSScreen.primaryHeight - bounds.maxY + 16)
                 self.selectionConfirmPanel.show(origin: origin, above: panel,
                     onCancel: { [weak self] in self?.appState = .typeSelect },
                     onRecord:  { [weak self] in self?.startCountdown() })
@@ -325,5 +323,23 @@ class ToolbarState: ObservableObject {
 
     var timeString: String {
         String(format: "%02d:%02d", seconds / 60, seconds % 60)
+    }
+
+    // MARK: – View helpers (shared across TypeSelect variants)
+
+    /// Show or hide the hover preview overlay.
+    /// Centralises the `guard let panel` check that was duplicated in every TypeSelect view.
+    func showPreview(_ type: PreviewType?) {
+        guard let panel else { return }
+        if let t = type { previewOverlay.show(t, keepingAbove: panel) }
+        else            { previewOverlay.hide() }
+    }
+
+    /// Show a shortcut tooltip above a toolbar button.
+    /// `buttonCenterX` is measured from the toolbar's left edge.
+    func showTooltip(_ label: String, _ shortcut: String, buttonCenterX: CGFloat) {
+        guard let panel else { return }
+        shortcutTooltip.show(label: label, shortcut: shortcut,
+                             buttonCenterX: buttonCenterX, above: panel)
     }
 }

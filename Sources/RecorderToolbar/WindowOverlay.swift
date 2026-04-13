@@ -382,9 +382,7 @@ struct PerScreenOverlayView: View {
     /// The primary screen (frame.origin == .zero in AppKit coords) is the Y-flip reference:
     ///   CG Y of screen top = primaryH - screen.frame.origin.y - screen.frame.height
     private func adjustedFrame(for w: DetectedWindow) -> CGRect {
-        let primaryH = NSScreen.screens
-            .first(where: { $0.frame.origin == .zero })?.frame.height ?? screen.frame.height
-        let screenTopInCG  = primaryH - screen.frame.origin.y - screen.frame.height
+        let screenTopInCG  = NSScreen.primaryHeight - screen.frame.origin.y - screen.frame.height
         let screenLeftInCG = screen.frame.origin.x
         return CGRect(
             x:      w.bounds.origin.x - screenLeftInCG,

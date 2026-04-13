@@ -58,8 +58,8 @@ struct TypeSelectView: View {
                     state.toggleSelecting(.display)
                 }
                 .onHover { h in
-                    preview(h ? .display : nil)
-                    if h { tooltip("Record Screen", "⇧⌘6", 84) }
+                    state.showPreview(h ? .display : nil)
+                    if h { state.showTooltip("Record Screen", "⇧⌘6", buttonCenterX: 84) }
                     else  { state.shortcutTooltip.hide() }
                 }
 
@@ -68,15 +68,15 @@ struct TypeSelectView: View {
                     state.toggleSelecting(.window)
                 }
                 .onHover { h in
-                    preview(h ? .window : nil)
-                    if h { tooltip("Record Window", "⇧⌘7", 148) }
+                    state.showPreview(h ? .window : nil)
+                    if h { state.showTooltip("Record Window", "⇧⌘7", buttonCenterX: 148) }
                     else  { state.shortcutTooltip.hide() }
                 }
 
                 SegmentButton(icon: "rectangle.dashed", label: "Area") {}
                     .onHover { h in
-                        preview(h ? .area : nil)
-                        if h { tooltip("Record Area", "⇧⌘8", 212) }
+                        state.showPreview(h ? .area : nil)
+                        if h { state.showTooltip("Record Area", "⇧⌘8", buttonCenterX: 212) }
                         else  { state.shortcutTooltip.hide() }
                     }
 
@@ -106,18 +106,6 @@ struct TypeSelectView: View {
 
     private func loadCameraDevice() async {
         activeCamId = AVCaptureDevice.cameraDevices().first?.uniqueID
-    }
-
-    private func preview(_ type: PreviewType?) {
-        guard let panel = state.panel else { return }
-        if let t = type { state.previewOverlay.show(t, keepingAbove: panel) }
-        else            { state.previewOverlay.hide() }
-    }
-
-    private func tooltip(_ label: String, _ shortcut: String, _ centerX: CGFloat) {
-        guard let panel = state.panel else { return }
-        state.shortcutTooltip.show(label: label, shortcut: shortcut,
-                                   buttonCenterX: centerX, above: panel)
     }
 }
 
@@ -395,8 +383,8 @@ struct TypeSelectViewV2: View {
                         state.toggleSelecting(.display)
                     }
                     .onHover { h in
-                        preview(h ? .display : nil)
-                        if h { tooltip("Record Screen", "⇧⌘6", 84) }
+                        state.showPreview(h ? .display : nil)
+                        if h { state.showTooltip("Record Screen", "⇧⌘6", buttonCenterX: 84) }
                         else  { state.shortcutTooltip.hide() }
                     }
 
@@ -405,15 +393,15 @@ struct TypeSelectViewV2: View {
                         state.toggleSelecting(.window)
                     }
                     .onHover { h in
-                        preview(h ? .window : nil)
-                        if h { tooltip("Record Window", "⇧⌘7", 148) }
+                        state.showPreview(h ? .window : nil)
+                        if h { state.showTooltip("Record Window", "⇧⌘7", buttonCenterX: 148) }
                         else  { state.shortcutTooltip.hide() }
                     }
 
                     SegmentButton(icon: "rectangle.dashed", label: "Area") {}
                         .onHover { h in
-                            preview(h ? .area : nil)
-                            if h { tooltip("Record Area", "⇧⌘8", 212) }
+                            state.showPreview(h ? .area : nil)
+                            if h { state.showTooltip("Record Area", "⇧⌘8", buttonCenterX: 212) }
                             else  { state.shortcutTooltip.hide() }
                         }
 
@@ -465,18 +453,6 @@ struct TypeSelectViewV2: View {
         activeCamId   = activeCamId ?? cameraDevices.first?.uniqueID
         micDevices    = AVCaptureDevice.micDevices()
         activeMicId   = activeMicId ?? micDevices.first?.uniqueID
-    }
-
-    private func preview(_ type: PreviewType?) {
-        guard let panel = state.panel else { return }
-        if let t = type { state.previewOverlay.show(t, keepingAbove: panel) }
-        else            { state.previewOverlay.hide() }
-    }
-
-    private func tooltip(_ label: String, _ shortcut: String, _ centerX: CGFloat) {
-        guard let panel = state.panel else { return }
-        state.shortcutTooltip.show(label: label, shortcut: shortcut,
-                                   buttonCenterX: centerX, above: panel)
     }
 }
 
@@ -540,8 +516,8 @@ struct TypeSelectViewV3: View {
                         state.toggleSelecting(.display)
                     }
                     .onHover { h in
-                        preview(h ? .display : nil)
-                        if h { tooltip("Record Screen", "⇧⌘6", 86) }
+                        state.showPreview(h ? .display : nil)
+                        if h { state.showTooltip("Record Screen", "⇧⌘6", buttonCenterX: 86) }
                         else  { state.shortcutTooltip.hide() }
                     }
 
@@ -550,15 +526,15 @@ struct TypeSelectViewV3: View {
                         state.toggleSelecting(.window)
                     }
                     .onHover { h in
-                        preview(h ? .window : nil)
-                        if h { tooltip("Record Window", "⇧⌘7", 150) }
+                        state.showPreview(h ? .window : nil)
+                        if h { state.showTooltip("Record Window", "⇧⌘7", buttonCenterX: 150) }
                         else  { state.shortcutTooltip.hide() }
                     }
 
                     SegmentedControlItem(icon: "rectangle.dashed", label: "Area") {}
                         .onHover { h in
-                            preview(h ? .area : nil)
-                            if h { tooltip("Record Area", "⇧⌘8", 214) }
+                            state.showPreview(h ? .area : nil)
+                            if h { state.showTooltip("Record Area", "⇧⌘8", buttonCenterX: 214) }
                             else  { state.shortcutTooltip.hide() }
                         }
 
@@ -615,18 +591,6 @@ struct TypeSelectViewV3: View {
         activeCamId   = activeCamId ?? cameraDevices.first?.uniqueID
         micDevices    = AVCaptureDevice.micDevices()
         activeMicId   = activeMicId ?? micDevices.first?.uniqueID
-    }
-
-    private func preview(_ type: PreviewType?) {
-        guard let panel = state.panel else { return }
-        if let t = type { state.previewOverlay.show(t, keepingAbove: panel) }
-        else            { state.previewOverlay.hide() }
-    }
-
-    private func tooltip(_ label: String, _ shortcut: String, _ centerX: CGFloat) {
-        guard let panel = state.panel else { return }
-        state.shortcutTooltip.show(label: label, shortcut: shortcut,
-                                   buttonCenterX: centerX, above: panel)
     }
 }
 
@@ -686,8 +650,8 @@ struct TypeSelectViewV4: View {
                     state.toggleSelecting(.display)
                 }
                 .onHover { h in
-                    preview(h ? .display : nil)
-                    if h { tooltip("Record Screen", "⇧⌘6", 32) }
+                    state.showPreview(h ? .display : nil)
+                    if h { state.showTooltip("Record Screen", "⇧⌘6", buttonCenterX: 32) }
                     else  { state.shortcutTooltip.hide() }
                 }
 
@@ -697,15 +661,15 @@ struct TypeSelectViewV4: View {
                     state.toggleSelecting(.window)
                 }
                 .onHover { h in
-                    preview(h ? .window : nil)
-                    if h { tooltip("Record Window", "⇧⌘7", 96) }
+                    state.showPreview(h ? .window : nil)
+                    if h { state.showTooltip("Record Window", "⇧⌘7", buttonCenterX: 96) }
                     else  { state.shortcutTooltip.hide() }
                 }
 
                 SegmentedControlItem(icon: "rectangle.dashed", label: "Area") {}
                     .onHover { h in
-                        preview(h ? .area : nil)
-                        if h { tooltip("Record Area", "⇧⌘8", 160) }
+                        state.showPreview(h ? .area : nil)
+                        if h { state.showTooltip("Record Area", "⇧⌘8", buttonCenterX: 160) }
                         else  { state.shortcutTooltip.hide() }
                     }
 
@@ -754,18 +718,6 @@ struct TypeSelectViewV4: View {
         activeCamId   = activeCamId ?? cameraDevices.first?.uniqueID
         micDevices    = AVCaptureDevice.micDevices()
         activeMicId   = activeMicId ?? micDevices.first?.uniqueID
-    }
-
-    private func preview(_ type: PreviewType?) {
-        guard let panel = state.panel else { return }
-        if let t = type { state.previewOverlay.show(t, keepingAbove: panel) }
-        else            { state.previewOverlay.hide() }
-    }
-
-    private func tooltip(_ label: String, _ shortcut: String, _ centerX: CGFloat) {
-        guard let panel = state.panel else { return }
-        state.shortcutTooltip.show(label: label, shortcut: shortcut,
-                                   buttonCenterX: centerX, above: panel)
     }
 }
 

@@ -32,6 +32,16 @@ extension NSPanel {
     }
 }
 
+// MARK: – Primary screen height (CG ↔ AppKit Y-flip reference)
+
+extension NSScreen {
+    /// Height of the primary screen (frame.origin == .zero).
+    /// Used as the Y-flip reference when converting CoreGraphics coords to AppKit/SwiftUI.
+    static var primaryHeight: CGFloat {
+        screens.first(where: { $0.frame.origin == .zero })?.frame.height ?? 800
+    }
+}
+
 // MARK: – NSWindow factory for full-screen overlays
 
 extension NSWindow {

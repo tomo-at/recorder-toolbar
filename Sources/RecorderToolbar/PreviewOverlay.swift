@@ -63,11 +63,9 @@ final class PreviewOverlayController {
 
     private func buildWindowPreview(toolbar: NSPanel) {
         let cgBounds = frontmostWindowBounds()
-        let primaryH = NSScreen.screens.first(where: { $0.frame.origin == .zero })?.frame.height ?? 0
-
         for screen in NSScreen.screens {
             // Convert CG (global, top-left origin) → screen-local SwiftUI coords.
-            let screenTopCG  = primaryH - screen.frame.origin.y - screen.frame.height
+            let screenTopCG  = NSScreen.primaryHeight - screen.frame.origin.y - screen.frame.height
             let screenLeftCG = screen.frame.origin.x
             let screenRect   = CGRect(origin: .zero, size: screen.frame.size)
 
@@ -143,7 +141,7 @@ struct DisplayHoverPreviewView: View {
 
     var body: some View {
         RoundedRectangle(cornerRadius: 4, style: .continuous)
-            .strokeBorder(Color(red: 1.0, green: 0.427, blue: 0.298), lineWidth: 3)
+            .strokeBorder(Color.selectionOrange, lineWidth: 3)
             .frame(width: screenSize.width, height: screenSize.height)
     }
 }
@@ -164,7 +162,7 @@ struct WindowHoverPreviewView: View {
             // Orange border drawn at the window's bounds.
             if let b = windowBounds {
                 RoundedRectangle(cornerRadius: 8, style: .continuous)
-                    .strokeBorder(Color(red: 1.0, green: 0.427, blue: 0.298), lineWidth: 3)
+                    .strokeBorder(Color.selectionOrange, lineWidth: 3)
                     .frame(width: b.width, height: b.height)
                     .position(x: b.midX, y: b.midY)
             }
