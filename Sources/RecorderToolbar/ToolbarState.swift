@@ -38,6 +38,7 @@ class ToolbarState: ObservableObject {
     let previewOverlay   = PreviewOverlayController()
     let countdownOverlay = CountdownOverlayController()
     let settingsPanel    = SettingsPanelController()
+    let shortcutTooltip  = ShortcutTooltipController()
 
     private var timer:              AnyCancellable?
     private var countdownTask:      Task<Void, Never>?
@@ -110,6 +111,7 @@ class ToolbarState: ObservableObject {
         }
 
         previewOverlay.hideImmediate()
+        shortcutTooltip.hide()
         hideCameraPreview()
 
         updateEscMonitor()

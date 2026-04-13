@@ -38,16 +38,28 @@ struct TypeSelectView: View {
                               isActive: state.selectionMode == .display) {
                     state.toggleSelecting(.display)
                 }
-                .onHover { h in preview(h ? .display : nil) }
+                .onHover { h in
+                    preview(h ? .display : nil)
+                    if h { tooltip("Record Screen", "⇧⌘6", 84) }
+                    else  { state.shortcutTooltip.hide() }
+                }
 
                 SegmentButton(icon: "macwindow", label: "Window",
                               isActive: state.selectionMode == .window) {
                     state.toggleSelecting(.window)
                 }
-                .onHover { h in preview(h ? .window : nil) }
+                .onHover { h in
+                    preview(h ? .window : nil)
+                    if h { tooltip("Record Window", "⇧⌘7", 148) }
+                    else  { state.shortcutTooltip.hide() }
+                }
 
                 SegmentButton(icon: "rectangle.dashed", label: "Area") {}
-                    .onHover { h in preview(h ? .area : nil) }
+                    .onHover { h in
+                        preview(h ? .area : nil)
+                        if h { tooltip("Record Area", "⇧⌘8", 212) }
+                        else  { state.shortcutTooltip.hide() }
+                    }
 
                 CamOnlySegment(activeId: activeCamId) { h in
                     guard let panel = state.panel else { return }
@@ -81,6 +93,12 @@ struct TypeSelectView: View {
         guard let panel = state.panel else { return }
         if let t = type { state.previewOverlay.show(t, keepingAbove: panel) }
         else            { state.previewOverlay.hide() }
+    }
+
+    private func tooltip(_ label: String, _ shortcut: String, _ centerX: CGFloat) {
+        guard let panel = state.panel else { return }
+        state.shortcutTooltip.show(label: label, shortcut: shortcut,
+                                   buttonCenterX: centerX, above: panel)
     }
 }
 
@@ -348,16 +366,28 @@ struct TypeSelectViewV2: View {
                                   isActive: state.selectionMode == .display) {
                         state.toggleSelecting(.display)
                     }
-                    .onHover { h in preview(h ? .display : nil) }
+                    .onHover { h in
+                        preview(h ? .display : nil)
+                        if h { tooltip("Record Screen", "⇧⌘6", 84) }
+                        else  { state.shortcutTooltip.hide() }
+                    }
 
                     SegmentButton(icon: "macwindow", label: "Window",
                                   isActive: state.selectionMode == .window) {
                         state.toggleSelecting(.window)
                     }
-                    .onHover { h in preview(h ? .window : nil) }
+                    .onHover { h in
+                        preview(h ? .window : nil)
+                        if h { tooltip("Record Window", "⇧⌘7", 148) }
+                        else  { state.shortcutTooltip.hide() }
+                    }
 
                     SegmentButton(icon: "rectangle.dashed", label: "Area") {}
-                        .onHover { h in preview(h ? .area : nil) }
+                        .onHover { h in
+                            preview(h ? .area : nil)
+                            if h { tooltip("Record Area", "⇧⌘8", 212) }
+                            else  { state.shortcutTooltip.hide() }
+                        }
 
                     CamOnlySegment(activeId: activeCamId) { h in
                         guard let panel = state.panel else { return }
@@ -413,6 +443,40 @@ struct TypeSelectViewV2: View {
         guard let panel = state.panel else { return }
         if let t = type { state.previewOverlay.show(t, keepingAbove: panel) }
         else            { state.previewOverlay.hide() }
+    }
+
+    private func tooltip(_ label: String, _ shortcut: String, _ centerX: CGFloat) {
+        guard let panel = state.panel else { return }
+        state.shortcutTooltip.show(label: label, shortcut: shortcut,
+                                   buttonCenterX: centerX, above: panel)
+    }
+}
+
+// ── Shortcut tooltip view (light appearance, shown above type-select buttons) ──
+
+struct ShortcutTooltipView: View {
+    let label: String
+    let shortcut: String
+
+    var body: some View {
+        HStack(spacing: 14) {
+            Text(label)
+                .font(.system(size: 12))
+                .foregroundColor(.white)
+            Text(shortcut)
+                .font(.system(size: 12))
+                .foregroundColor(Color.subtitleGray)
+        }
+        .padding(.horizontal, 10)
+        .padding(.vertical, 6)
+        .background(Color(red: 0.22, green: 0.22, blue: 0.22))
+        .clipShape(RoundedRectangle(cornerRadius: 6))
+        .overlay(
+            RoundedRectangle(cornerRadius: 6)
+                .stroke(Color.white.opacity(0.15), lineWidth: 0.5)
+        )
+        .shadow(color: .black.opacity(0.4), radius: 6, x: 0, y: 3)
+        .padding(7)    // room for shadow to render without clipping
     }
 }
 

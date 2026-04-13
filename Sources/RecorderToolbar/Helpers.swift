@@ -1,5 +1,16 @@
 import AppKit
 import AVFoundation
+import SwiftUI
+
+// MARK: – Design tokens
+
+extension Color {
+    static let selectionOrange = Color(red: 1.0,   green: 0.427, blue: 0.298)
+    static let selectedGreen   = Color(red: 0.188, green: 0.820, blue: 0.345)
+    static let recordRed       = Color(red: 0.839, green: 0.251, blue: 0.184)
+    static let subtitleGray    = Color(red: 0.690, green: 0.694, blue: 0.698)
+    static let deviceMenuBg    = Color(red: 0.157, green: 0.157, blue: 0.157)
+}
 
 // MARK: – NSPanel factory
 
@@ -65,6 +76,68 @@ extension NSWindow {
             if resetAlpha { self.alphaValue = 1 }
             completion?()
         })
+    }
+}
+
+// MARK: – Overlay dismiss helper
+
+extension NSWindow {
+    /// Dismiss an overlay window: animated fade-out (resetting alpha for reuse) or instant order-out.
+    func dismissOverlay(animated: Bool) {
+        if animated { fadeOut(duration: 0.2, resetAlpha: true) }
+        else        { orderOut(nil) }
+    }
+}
+
+// MARK: – Shortcut tooltip panel
+
+@MainActor
+final class ShortcutTooltipController {
+    private var panel: NSPanel?
+
+    /// Show a label + shortcut tooltip above `toolbar`, horizontally centered on `buttonCenterX`
+    /// (measured from the toolbar's left edge).
+    func show(label: String, shortcut: String, buttonCenterX: CGFloat, above toolbar: NSPanel) {
+        panel?.orderOut(nil)
+        panel = nil
+
+        let hosting = NSHostingView(rootView: ShortcutTooltipView(label: label, shortcut: shortcut))
+        let size    = hosting.fittingSize
+        hosting.setFrameSize(size)
+
+        let p = NSPanel(contentRect: NSRect(origin: .zero, size: size),
+                        styleMask: [.borderless, .nonactivatingPanel],
+                        backing: .buffered, defer: false)
+        p.isFloatingPanel    = true
+        p.level              = toolbar.level
+        p.backgroundColor    = .clear
+        p.isOpaque           = false
+        p.hasShadow          = false
+        p.ignoresMouseEvents = true
+        p.collectionBehavior = [.canJoinAllSpaces, .fullScreenAuxiliary]
+        p.appearance         = NSAppearance(named: .darkAqua)
+        p.contentView        = hosting
+        p.setContentSize(size)
+
+        let x = toolbar.frame.minX + buttonCenterX - size.width / 2
+        let y = toolbar.frame.maxY + 4
+        p.setFrameOrigin(NSPoint(x: x, y: y))
+        p.alphaValue = 0
+        p.orderFrontRegardless()
+        NSAnimationContext.runAnimationGroup { ctx in
+            ctx.duration = 0.1
+            p.animator().alphaValue = 1
+        }
+        panel = p
+    }
+
+    func hide() {
+        guard let p = panel else { return }
+        panel = nil
+        NSAnimationContext.runAnimationGroup({ ctx in
+            ctx.duration = 0.08
+            p.animator().alphaValue = 0
+        }, completionHandler: { p.orderOut(nil) })
     }
 }
 
