@@ -162,13 +162,14 @@ class ToolbarState: ObservableObject {
         guard let panel else { return }
         let newW: CGFloat
         switch state {
-        case .recording, .countdown:        newW = 297
-        case .typeSelect:                   newW = 554
-        case .windowSelect, .displaySelect: newW = 389
+        case .recording:                    newW = 297
+        case .countdown:                    newW = 253
+        case .typeSelect:                   newW = 482
+        case .windowSelect, .displaySelect: newW = 346
         }
         let cx = panel.frame.midX
         let y  = panel.frame.origin.y
-        panel.setFrame(NSRect(x: cx - newW / 2, y: y, width: newW, height: 56),
+        panel.setFrame(NSRect(x: cx - newW / 2, y: y, width: newW, height: 66),
                        display: true, animate: true)
     }
 

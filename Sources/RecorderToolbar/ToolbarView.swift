@@ -7,13 +7,13 @@ struct ToolbarView: View {
     var body: some View {
         Group {
             switch state.appState {
-            case .typeSelect:                   TypeSelectViewV3(state: state)
-            case .windowSelect, .displaySelect: WindowSelectView(state: state)
-            case .countdown:                    CountdownToolbarView(state: state)
-            case .recording:                    RecordingView(state: state)
+            case .typeSelect:                   TypeSelectViewV4(state: state)
+            case .windowSelect, .displaySelect: WindowSelectViewV4(state: state)
+            case .countdown:                    CountdownToolbarViewV4(state: state)
+            case .recording:                    RecordingViewV4(state: state)
             }
         }
-        .frame(height: 56)
+        .frame(height: 66)
     }
 }
 
@@ -599,6 +599,265 @@ struct TypeSelectViewV3: View {
         guard let panel = state.panel else { return }
         state.shortcutTooltip.show(label: label, shortcut: shortcut,
                                    buttonCenterX: centerX, above: panel)
+    }
+}
+
+// ── V4: Message header bar ─────────────────────────────────
+// Header: 16px dark band with contextual message.
+// Controls: same as V3 but without X button and no outer side padding.
+// Total height: 66px (16 header + 50 controls).
+
+/// Thin header bar shown above toolbar controls in V4.
+struct ToolbarHeader: View {
+    let message: String
+
+    var body: some View {
+        Text(message)
+            .font(.system(size: 11))
+            .foregroundColor(Color(white: 0.60))
+            .frame(maxWidth: .infinity)
+            .frame(height: 16)
+            .background(Color.black.opacity(0.24))
+            .overlay(alignment: .bottom) {
+                Rectangle()
+                    .fill(Color.white.opacity(0.08))
+                    .frame(height: 0.5)
+            }
+    }
+}
+
+// Layout (482px): [SegItems(4×64=256)] [div(9)] [Cam+Mic+trail(144)] [div(9)] [Settings(64)]
+struct TypeSelectViewV4: View {
+    @ObservedObject var state: ToolbarState
+    @State private var cameraDevices: [AVCaptureDevice] = []
+    @State private var micDevices:    [AVCaptureDevice] = []
+    @State private var activeCamId:   String?           = nil
+    @State private var activeMicId:   String?           = nil
+
+    var headerMessage: String {
+        switch state.selectionMode {
+        case .display: return "Click a display to start recording"
+        case .window:  return "Click a window to start recording"
+        case nil:      return "Choose a recording type"
+        }
+    }
+
+    var body: some View {
+        VStack(spacing: 0) {
+            ToolbarHeader(message: headerMessage)
+
+            HStack(spacing: 0) {
+                // Type selector: 4 items × 64px = 256px (no wrapper background)
+                SegmentedControlItem(icon: "display", label: "Display",
+                                     isActive: state.selectionMode == .display) {
+                    state.toggleSelecting(.display)
+                }
+                .onHover { h in
+                    preview(h ? .display : nil)
+                    if h { tooltip("Record Screen", "⇧⌘6", 32) }
+                    else  { state.shortcutTooltip.hide() }
+                }
+
+                SegmentedControlItem(icon: "macwindow", label: "Window",
+                                     isActive: state.selectionMode == .window) {
+                    state.toggleSelecting(.window)
+                }
+                .onHover { h in
+                    preview(h ? .window : nil)
+                    if h { tooltip("Record Window", "⇧⌘7", 96) }
+                    else  { state.shortcutTooltip.hide() }
+                }
+
+                SegmentedControlItem(icon: "rectangle.dashed", label: "Area") {}
+                    .onHover { h in
+                        preview(h ? .area : nil)
+                        if h { tooltip("Record Area", "⇧⌘8", 160) }
+                        else  { state.shortcutTooltip.hide() }
+                    }
+
+                SegmentedControlItem(icon: "person.crop.rectangle.fill", label: "Cam only") {}
+                    .onHover { h in
+                        guard let panel = state.panel else { return }
+                        if h, let id = activeCamId {
+                            state.showCameraPreview(deviceId: id, above: panel)
+                        } else {
+                            state.hideCameraPreview()
+                        }
+                    }
+
+                ToolbarDivider()
+
+                HStack(spacing: 8) {
+                    CameraSegment(devices: cameraDevices, activeId: $activeCamId,
+                                  onHoverChanged: { h in
+                                      guard let panel = state.panel else { return }
+                                      if h, let id = activeCamId {
+                                          state.showCameraPreview(deviceId: id, above: panel)
+                                      } else {
+                                          state.hideCameraPreview()
+                                      }
+                                  })
+                    MicSegment(devices: micDevices, activeId: $activeMicId)
+                }
+                .padding(.trailing, 8)
+
+                ToolbarDivider()
+
+                // Settings — center X from toolbar left: 256+9+144+9+32 = 450
+                SegmentButton(icon: "gearshape.fill", label: "Settings") {
+                    if let panel = state.panel {
+                        state.settingsPanel.toggle(toolbar: panel,
+                                                   buttonCenterX: panel.frame.minX + 450)
+                    }
+                }
+            }
+        }
+        .task { await loadDevices() }
+    }
+
+    private func loadDevices() async {
+        cameraDevices = AVCaptureDevice.cameraDevices()
+        activeCamId   = activeCamId ?? cameraDevices.first?.uniqueID
+        micDevices    = AVCaptureDevice.micDevices()
+        activeMicId   = activeMicId ?? micDevices.first?.uniqueID
+    }
+
+    private func preview(_ type: PreviewType?) {
+        guard let panel = state.panel else { return }
+        if let t = type { state.previewOverlay.show(t, keepingAbove: panel) }
+        else            { state.previewOverlay.hide() }
+    }
+
+    private func tooltip(_ label: String, _ shortcut: String, _ centerX: CGFloat) {
+        guard let panel = state.panel else { return }
+        state.shortcutTooltip.show(label: label, shortcut: shortcut,
+                                   buttonCenterX: centerX, above: panel)
+    }
+}
+
+// Layout (346px): [Cam+Mic+trail(144)] [div(9)] [Settings(64)] [div(9)] [lead(8)+Record+trail(16)]
+struct WindowSelectViewV4: View {
+    @ObservedObject var state: ToolbarState
+    @State private var cameraDevices: [AVCaptureDevice] = []
+    @State private var micDevices:    [AVCaptureDevice] = []
+    @State private var activeCamId:   String?           = nil
+    @State private var activeMicId:   String?           = nil
+
+    var body: some View {
+        VStack(spacing: 0) {
+            ToolbarHeader(message: "Click Record when you're ready")
+
+            HStack(spacing: 0) {
+                HStack(spacing: 8) {
+                    CameraSegment(devices: cameraDevices, activeId: $activeCamId,
+                                  onHoverChanged: { h in
+                                      guard let panel = state.panel else { return }
+                                      if h, let id = activeCamId {
+                                          state.showCameraPreview(deviceId: id, above: panel)
+                                      } else {
+                                          state.hideCameraPreview()
+                                      }
+                                  })
+                    MicSegment(devices: micDevices, activeId: $activeMicId)
+                }
+                .padding(.trailing, 8)
+
+                ToolbarDivider()
+
+                // Settings — center X from toolbar left: 144+9+32 = 185
+                SegmentButton(icon: "gearshape.fill", label: "Settings") {
+                    if let panel = state.panel {
+                        state.settingsPanel.toggle(toolbar: panel,
+                                                   buttonCenterX: panel.frame.minX + 185)
+                    }
+                }
+
+                ToolbarDivider()
+
+                Button {
+                    state.startCountdown()
+                } label: {
+                    HStack(spacing: 4) {
+                        Image(systemName: "record.circle.fill")
+                            .font(.system(size: 12))
+                        Text("Record")
+                            .font(.system(size: 12, weight: .medium))
+                    }
+                    .foregroundColor(.white)
+                    .padding(.horizontal, 10)
+                    .padding(.vertical, 6)
+                    .background(Color.recordRed)
+                    .cornerRadius(6)
+                }
+                .buttonStyle(.plain)
+                .padding(.leading, 8)
+                .padding(.trailing, 16)
+            }
+        }
+        .task { await loadDevices() }
+    }
+
+    func loadDevices() async {
+        cameraDevices = AVCaptureDevice.cameraDevices()
+        activeCamId   = activeCamId ?? cameraDevices.first?.uniqueID
+        micDevices    = AVCaptureDevice.micDevices()
+        activeMicId   = activeMicId ?? micDevices.first?.uniqueID
+    }
+}
+
+// Layout (253px): header with countdown + centered number display
+struct CountdownToolbarViewV4: View {
+    @ObservedObject var state: ToolbarState
+
+    var body: some View {
+        VStack(spacing: 0) {
+            ToolbarHeader(message: "Starting in \(state.countdownSeconds)...")
+
+            Text("\(state.countdownSeconds)")
+                .font(.system(size: 18, weight: .bold).monospacedDigit())
+                .foregroundColor(.white)
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
+        }
+    }
+}
+
+// Layout (297px): header + [Restart|Pause|Stop] [div] [time display] with outer pad 8
+struct RecordingViewV4: View {
+    @ObservedObject var state: ToolbarState
+
+    var body: some View {
+        VStack(spacing: 0) {
+            ToolbarHeader(message: "Recording in progress")
+
+            HStack(spacing: 0) {
+                SegmentButton(icon: "arrow.counterclockwise", label: "Restart") {
+                    state.stopRecording()
+                }
+                SegmentButton(
+                    icon:  state.paused ? "play.fill"  : "pause.fill",
+                    label: state.paused ? "Resume"     : "Pause"
+                ) {
+                    state.togglePause()
+                }
+                SegmentButton(icon: "stop.fill", label: "Stop",
+                              iconColor: Color.recordRed) {
+                    state.stopRecording()
+                }
+
+                ToolbarDivider()
+
+                VStack(spacing: 4) {
+                    Text(state.timeString)
+                        .font(.system(size: 12, weight: .medium).monospacedDigit())
+                        .foregroundColor(.white)
+                    Text("1 hour limit")
+                        .font(.system(size: 11))
+                        .foregroundColor(Color.subtitleGray)
+                }
+                .frame(width: 80, height: 48)
+            }
+            .padding(.horizontal, 8)
+        }
     }
 }
 

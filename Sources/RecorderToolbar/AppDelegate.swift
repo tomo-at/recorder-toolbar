@@ -48,12 +48,12 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         ])
 
         panel.contentView = vfx
-        panel.setContentSize(CGSize(width: 554, height: 56))
+        panel.setContentSize(CGSize(width: 482, height: 66))
 
         // Position: horizontally centered, near bottom of screen
         if let screen = NSScreen.main {
             let sw = screen.visibleFrame.width
-            let x  = screen.visibleFrame.minX + (sw - 554) / 2
+            let x  = screen.visibleFrame.minX + (sw - 482) / 2
             let y  = screen.visibleFrame.minY + 42
             panel.setFrameOrigin(NSPoint(x: x, y: y))
         }
