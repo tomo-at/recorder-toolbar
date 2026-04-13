@@ -89,6 +89,11 @@ class ToolbarState: ObservableObject {
     /// - Same mode re-click → cancel selection.
     /// - Different mode → switch overlay.
     func toggleSelecting(_ mode: SelectionMode) {
+        // 確定済みの選択状態 (windowSelect/displaySelect) からモード切替する場合は
+        // 一度 typeSelect に戻して確定パネル・オーバーレイをリセットする。
+        if appState == .windowSelect || appState == .displaySelect {
+            appState = .typeSelect
+        }
         if selectionMode == mode {
             exitSelecting()
         } else {
