@@ -141,6 +141,60 @@ final class ShortcutTooltipController {
     }
 }
 
+// MARK: – Selection confirm panel (V4: preview + Cancel/Record at window bottom-left)
+
+@MainActor
+final class SelectionConfirmPanelController {
+    private var panel: NSPanel?
+
+    /// Show the confirm panel with its bottom-left at `origin` (AppKit screen coords).
+    func show(origin: NSPoint, above toolbar: NSPanel,
+              onCancel: @escaping () -> Void,
+              onRecord: @escaping () -> Void) {
+        panel?.orderOut(nil)
+        panel = nil
+
+        let p = NSPanel.makeFloating(level: toolbar.level)
+
+        let vfx = NSVisualEffectView()
+        vfx.blendingMode       = .behindWindow
+        vfx.material           = .underWindowBackground
+        vfx.state              = .active
+        vfx.wantsLayer         = true
+        vfx.layer?.cornerRadius    = 14
+        vfx.layer?.masksToBounds   = true
+
+        let hosting = NSHostingView(rootView: SelectionConfirmView(
+            onCancel: onCancel,
+            onRecord: onRecord
+        ))
+        hosting.translatesAutoresizingMaskIntoConstraints = false
+        hosting.wantsLayer = true
+        hosting.layer?.backgroundColor = .clear
+
+        vfx.addSubview(hosting)
+        NSLayoutConstraint.activate([
+            hosting.leadingAnchor.constraint(equalTo: vfx.leadingAnchor),
+            hosting.trailingAnchor.constraint(equalTo: vfx.trailingAnchor),
+            hosting.topAnchor.constraint(equalTo: vfx.topAnchor),
+            hosting.bottomAnchor.constraint(equalTo: vfx.bottomAnchor),
+        ])
+
+        p.contentView = vfx
+        p.setContentSize(CGSize(width: 160, height: 164))
+        p.setFrameOrigin(origin)
+        p.fadeIn()
+        panel = p
+        toolbar.orderFrontRegardless()
+    }
+
+    func dismiss() {
+        guard let p = panel else { return }
+        panel = nil
+        p.fadeOut(resetAlpha: true)
+    }
+}
+
 // MARK: – AV device discovery
 
 extension AVCaptureDevice {

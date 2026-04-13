@@ -31,9 +31,7 @@ class DisplayScreenOverlayWindow {
     func show() { win?.fadeIn(duration: 0.2) }
 
     func dismiss(animated: Bool = true) {
-        guard let w = win else { return }
-        if animated { w.fadeOut(duration: 0.2, resetAlpha: true) }
-        else        { w.orderOut(nil) }
+        win?.dismissOverlay(animated: animated)
     }
 }
 
@@ -53,6 +51,9 @@ final class DisplayOverlayController {
 
     var onSelect: (() -> Void)?
     var onCancel: (() -> Void)?
+
+    /// The frozen (clicked) screen. Nil before any selection.
+    var frozenScreen: NSScreen? { state.frozenScreen }
 
     // MARK: – Public API
 
@@ -156,7 +157,7 @@ struct DisplayPerScreenView: View {
 
             // Orange border around the active screen.
             RoundedRectangle(cornerRadius: 4, style: .continuous)
-                .strokeBorder(Color(red: 1.0, green: 0.427, blue: 0.298), lineWidth: 3)
+                .strokeBorder(Color.selectionOrange, lineWidth: 3)
                 .opacity(isActive ? 1 : 0)
 
             // Display-name card — visible when active, fades out after selection.

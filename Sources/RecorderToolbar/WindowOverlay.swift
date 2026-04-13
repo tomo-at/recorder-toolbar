@@ -56,9 +56,7 @@ class ScreenOverlayWindow {
     func show() { win?.fadeIn(duration: 0.2) }
 
     func dismiss(animated: Bool = true) {
-        guard let w = win else { return }
-        if animated { w.fadeOut(duration: 0.2, resetAlpha: true) }
-        else        { w.orderOut(nil) }
+        win?.dismissOverlay(animated: animated)
     }
 }
 
@@ -86,6 +84,9 @@ final class OverlayController {
 
     var onSelect: (() -> Void)?
     var onCancel: (() -> Void)?
+
+    /// CG-coordinate bounds of the frozen (clicked) window. Nil before any selection.
+    var frozenWindowBounds: CGRect? { state.frozenWindow?.bounds }
 
     // MARK: – Public API
 
@@ -405,7 +406,7 @@ struct WindowBadgeView: View {
         ZStack {
             // Orange border drawn at the window's exact bounds
             RoundedRectangle(cornerRadius: 8, style: .continuous)
-                .strokeBorder(Color(red: 1.0, green: 0.427, blue: 0.298), lineWidth: 3)
+                .strokeBorder(Color.selectionOrange, lineWidth: 3)
                 .frame(width: frame.width, height: frame.height)
 
             // Info card centered over the window — hidden when window is frozen/selected

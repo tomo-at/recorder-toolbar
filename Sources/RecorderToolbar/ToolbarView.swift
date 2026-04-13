@@ -8,7 +8,7 @@ struct ToolbarView: View {
         Group {
             switch state.appState {
             case .typeSelect:                   TypeSelectViewV4(state: state)
-            case .windowSelect, .displaySelect: WindowSelectViewV4(state: state)
+            case .windowSelect, .displaySelect: TypeSelectViewV4(state: state)
             case .countdown:                    CountdownToolbarViewV4(state: state)
             case .recording:                    RecordingViewV4(state: state)
             }
@@ -635,6 +635,10 @@ struct TypeSelectViewV4: View {
     @State private var activeMicId:   String?           = nil
 
     var headerMessage: String {
+        // After freeze (confirmed selection): wait-for-record prompt.
+        if state.appState == .displaySelect || state.appState == .windowSelect {
+            return "Click Record when you're ready"
+        }
         switch state.selectionMode {
         case .display: return "Click a display to start recording"
         case .window:  return "Click a window to start recording"
@@ -649,7 +653,8 @@ struct TypeSelectViewV4: View {
             HStack(spacing: 0) {
                 // Type selector: 4 items × 64px = 256px (no wrapper background)
                 SegmentedControlItem(icon: "display", label: "Display",
-                                     isActive: state.selectionMode == .display) {
+                                     isActive: state.selectionMode == .display
+                                               || state.appState == .displaySelect) {
                     state.toggleSelecting(.display)
                 }
                 .onHover { h in
@@ -659,7 +664,8 @@ struct TypeSelectViewV4: View {
                 }
 
                 SegmentedControlItem(icon: "macwindow", label: "Window",
-                                     isActive: state.selectionMode == .window) {
+                                     isActive: state.selectionMode == .window
+                                               || state.appState == .windowSelect) {
                     state.toggleSelecting(.window)
                 }
                 .onHover { h in
@@ -857,6 +863,70 @@ struct RecordingViewV4: View {
                 .frame(width: 80, height: 48)
             }
             .padding(.horizontal, 8)
+        }
+    }
+}
+
+// ── Selection confirm panel view (V4) ──────────────────────
+// Shown at the bottom-left of the selected window/display after freeze().
+// Contains a live camera preview + Cancel and Record buttons.
+
+struct SelectionConfirmView: View {
+    let onCancel: () -> Void
+    let onRecord: () -> Void
+    @State private var cameraDeviceId: String? = nil
+
+    var body: some View {
+        VStack(spacing: 8) {
+            // Live camera feed
+            Group {
+                if let id = cameraDeviceId {
+                    CameraThumb(deviceId: id)
+                } else {
+                    Color.black.opacity(0.4)
+                        .overlay {
+                            Image(systemName: "camera.fill")
+                                .font(.system(size: 18))
+                                .foregroundColor(Color(white: 0.35))
+                        }
+                }
+            }
+            .frame(maxWidth: .infinity)
+            .frame(height: 100)
+            .clipShape(RoundedRectangle(cornerRadius: 8, style: .continuous))
+
+            // Cancel / Record buttons
+            HStack(spacing: 6) {
+                Button(action: onCancel) {
+                    Text("Cancel")
+                        .font(.system(size: 12, weight: .medium))
+                        .foregroundColor(.white)
+                        .frame(maxWidth: .infinity)
+                        .frame(height: 30)
+                        .background(Color.white.opacity(0.10))
+                        .cornerRadius(6)
+                }
+                .buttonStyle(.plain)
+
+                Button(action: onRecord) {
+                    HStack(spacing: 4) {
+                        Image(systemName: "record.circle.fill")
+                            .font(.system(size: 11))
+                        Text("Record")
+                            .font(.system(size: 12, weight: .medium))
+                    }
+                    .foregroundColor(.white)
+                    .frame(maxWidth: .infinity)
+                    .frame(height: 30)
+                    .background(Color.recordRed)
+                    .cornerRadius(6)
+                }
+                .buttonStyle(.plain)
+            }
+        }
+        .padding(10)
+        .task {
+            cameraDeviceId = AVCaptureDevice.cameraDevices().first?.uniqueID
         }
     }
 }

@@ -38,7 +38,8 @@ class ToolbarState: ObservableObject {
     let previewOverlay   = PreviewOverlayController()
     let countdownOverlay = CountdownOverlayController()
     let settingsPanel    = SettingsPanelController()
-    let shortcutTooltip  = ShortcutTooltipController()
+    let shortcutTooltip        = ShortcutTooltipController()
+    let selectionConfirmPanel  = SelectionConfirmPanelController()
 
     private var timer:              AnyCancellable?
     private var countdownTask:      Task<Void, Never>?
@@ -46,21 +47,38 @@ class ToolbarState: ObservableObject {
     private var escKeyMonitor:      Any?
 
     init() {
-        // Window selected: freeze overlay, then switch toolbar to Record-button state.
+        // Window selected: freeze overlay, keep toolbar in typeSelect-like state,
+        // show confirm panel at the selected window's bottom-left.
         overlay.onSelect = { [weak self] in
             guard let self else { return }
             self.overlay.freeze()
-            self.appState     = .windowSelect   // handleStateChange fires first
-            self.selectionMode = nil            // updateEscMonitor sees appState=.windowSelect → keeps monitor
+            self.appState      = .windowSelect   // handleStateChange fires; panel stays at 482px
+            self.selectionMode = nil
+            if let bounds = self.overlay.frozenWindowBounds, let panel = self.panel {
+                let primaryH = NSScreen.screens
+                    .first(where: { $0.frame.origin == .zero })?.frame.height ?? 800
+                let origin = NSPoint(x: bounds.minX + 16,
+                                     y: primaryH - bounds.maxY + 16)
+                self.selectionConfirmPanel.show(origin: origin, above: panel,
+                    onCancel: { [weak self] in self?.appState = .typeSelect },
+                    onRecord:  { [weak self] in self?.startCountdown() })
+            }
         }
         overlay.onCancel = { [weak self] in self?.exitSelecting() }
 
-        // Display selected: same pattern.
+        // Display selected: same pattern — confirm panel at display bottom-left.
         displayOverlay.onSelect = { [weak self] in
             guard let self else { return }
             self.displayOverlay.freeze()
             self.appState      = .displaySelect
             self.selectionMode = nil
+            if let screen = self.displayOverlay.frozenScreen, let panel = self.panel {
+                let origin = NSPoint(x: screen.frame.minX + 16,
+                                     y: screen.frame.minY + 16)
+                self.selectionConfirmPanel.show(origin: origin, above: panel,
+                    onCancel: { [weak self] in self?.appState = .typeSelect },
+                    onRecord:  { [weak self] in self?.startCountdown() })
+            }
         }
         displayOverlay.onCancel = { [weak self] in self?.exitSelecting() }
     }
@@ -113,6 +131,10 @@ class ToolbarState: ObservableObject {
         previewOverlay.hideImmediate()
         shortcutTooltip.hide()
         hideCameraPreview()
+        // Dismiss confirm panel for any state except re-entering the same selection state.
+        if state != .windowSelect && state != .displaySelect {
+            selectionConfirmPanel.dismiss()
+        }
 
         updateEscMonitor()
 
@@ -162,10 +184,9 @@ class ToolbarState: ObservableObject {
         guard let panel else { return }
         let newW: CGFloat
         switch state {
-        case .recording:                    newW = 297
-        case .countdown:                    newW = 253
-        case .typeSelect:                   newW = 482
-        case .windowSelect, .displaySelect: newW = 346
+        case .recording:                                   newW = 297
+        case .countdown:                                   newW = 253
+        case .typeSelect, .windowSelect, .displaySelect:   newW = 482
         }
         let cx = panel.frame.midX
         let y  = panel.frame.origin.y
