@@ -7,7 +7,7 @@ struct ToolbarView: View {
     var body: some View {
         Group {
             switch state.appState {
-            case .typeSelect:                   TypeSelectViewV2(state: state)
+            case .typeSelect:                   TypeSelectViewV3(state: state)
             case .windowSelect, .displaySelect: WindowSelectView(state: state)
             case .countdown:                    CountdownToolbarView(state: state)
             case .recording:                    RecordingView(state: state)
@@ -452,7 +452,157 @@ struct TypeSelectViewV2: View {
     }
 }
 
-// ── Shortcut tooltip view (light appearance, shown above type-select buttons) ──
+// ── V3: Segmented Control type selector ────────────────────
+// Layout (554px): [X(44)] [SegmentedCtrl(260)+8] [div(9)] [Cam+Mic(136)+8] [div(9)] [Settings(64)] + outer pad(8×2)
+
+/// Single item inside the segmented control container.
+struct SegmentedControlItem: View {
+    let icon:     String
+    let label:    String
+    var isActive: Bool = false
+    let action:   () -> Void
+    @State private var hovering = false
+
+    var body: some View {
+        Button(action: action) {
+            VStack(spacing: 4) {
+                Image(systemName: icon)
+                    .font(.system(size: 14))
+                    .foregroundColor(.white)
+                    .frame(width: 20, height: 20)
+                Text(label)
+                    .font(.system(size: 11))
+                    .foregroundColor(isActive ? .white : Color(white: 0.69))
+                    .lineLimit(1)
+            }
+            .frame(width: 64, height: 44)
+            .background(
+                RoundedRectangle(cornerRadius: 8)   // inner radius = outer(10) - padding(2)
+                    .fill(isActive  ? Color.white.opacity(0.16)
+                          : hovering ? Color.white.opacity(0.08)
+                          : Color.clear)
+            )
+        }
+        .buttonStyle(.plain)
+        .onHover { hovering = $0 }
+    }
+}
+
+struct TypeSelectViewV3: View {
+    @ObservedObject var state: ToolbarState
+    @State private var cameraDevices: [AVCaptureDevice] = []
+    @State private var micDevices:    [AVCaptureDevice] = []
+    @State private var activeCamId:   String?           = nil
+    @State private var activeMicId:   String?           = nil
+
+    var body: some View {
+        HStack(spacing: 0) {
+            CloseSection(action: { NSApplication.shared.terminate(nil) }) {
+                Image(systemName: "xmark")
+                    .font(.system(size: 12, weight: .medium))
+                    .foregroundColor(.white)
+            }
+
+            HStack(spacing: 0) {
+                // Segmented control container
+                // inner: 4×64=256px, padding 2 each side → 260px wide, 44+4=48px tall
+                HStack(spacing: 0) {
+                    SegmentedControlItem(icon: "display", label: "Display",
+                                         isActive: state.selectionMode == .display) {
+                        state.toggleSelecting(.display)
+                    }
+                    .onHover { h in
+                        preview(h ? .display : nil)
+                        if h { tooltip("Record Screen", "⇧⌘6", 86) }
+                        else  { state.shortcutTooltip.hide() }
+                    }
+
+                    SegmentedControlItem(icon: "macwindow", label: "Window",
+                                         isActive: state.selectionMode == .window) {
+                        state.toggleSelecting(.window)
+                    }
+                    .onHover { h in
+                        preview(h ? .window : nil)
+                        if h { tooltip("Record Window", "⇧⌘7", 150) }
+                        else  { state.shortcutTooltip.hide() }
+                    }
+
+                    SegmentedControlItem(icon: "rectangle.dashed", label: "Area") {}
+                        .onHover { h in
+                            preview(h ? .area : nil)
+                            if h { tooltip("Record Area", "⇧⌘8", 214) }
+                            else  { state.shortcutTooltip.hide() }
+                        }
+
+                    SegmentedControlItem(icon: "person.crop.rectangle.fill",
+                                         label: "Cam only") {}
+                        .onHover { h in
+                            guard let panel = state.panel else { return }
+                            if h, let id = activeCamId {
+                                state.showCameraPreview(deviceId: id, above: panel)
+                            } else {
+                                state.hideCameraPreview()
+                            }
+                        }
+                }
+                .padding(2)
+                .background(Color.black.opacity(0.24))
+                .clipShape(RoundedRectangle(cornerRadius: 10))
+                .padding(.trailing, 8)
+
+                ToolbarDivider()
+
+                // Camera + Mic (always visible)
+                HStack(spacing: 8) {
+                    CameraSegment(devices: cameraDevices, activeId: $activeCamId,
+                                  onHoverChanged: { h in
+                                      guard let panel = state.panel else { return }
+                                      if h, let id = activeCamId {
+                                          state.showCameraPreview(deviceId: id, above: panel)
+                                      } else {
+                                          state.hideCameraPreview()
+                                      }
+                                  })
+                    MicSegment(devices: micDevices, activeId: $activeMicId)
+                }
+                .padding(.trailing, 8)
+
+                ToolbarDivider()
+
+                // Settings — center X from toolbar left: 44+8+260+8+9+144+9+32 = 514
+                SegmentButton(icon: "gearshape.fill", label: "Settings") {
+                    if let panel = state.panel {
+                        state.settingsPanel.toggle(toolbar: panel,
+                                                   buttonCenterX: panel.frame.minX + 514)
+                    }
+                }
+            }
+            .padding(.horizontal, 8)
+        }
+        .task { await loadDevices() }
+    }
+
+    private func loadDevices() async {
+        cameraDevices = AVCaptureDevice.cameraDevices()
+        activeCamId   = activeCamId ?? cameraDevices.first?.uniqueID
+        micDevices    = AVCaptureDevice.micDevices()
+        activeMicId   = activeMicId ?? micDevices.first?.uniqueID
+    }
+
+    private func preview(_ type: PreviewType?) {
+        guard let panel = state.panel else { return }
+        if let t = type { state.previewOverlay.show(t, keepingAbove: panel) }
+        else            { state.previewOverlay.hide() }
+    }
+
+    private func tooltip(_ label: String, _ shortcut: String, _ centerX: CGFloat) {
+        guard let panel = state.panel else { return }
+        state.shortcutTooltip.show(label: label, shortcut: shortcut,
+                                   buttonCenterX: centerX, above: panel)
+    }
+}
+
+// ── Shortcut tooltip view (shown above type-select buttons) ──
 
 struct ShortcutTooltipView: View {
     let label: String

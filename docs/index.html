@@ -488,6 +488,35 @@
         </div>
       </div>
 
+      <!-- Variation 3 -->
+      <div class="variation-card">
+        <div class="variation-video">
+          <div class="variation-video-placeholder">
+            <svg width="32" height="32" viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <rect x="3" y="8" width="26" height="16" rx="3" stroke="currentColor" stroke-width="1.5"/>
+              <circle cx="16" cy="16" r="3" stroke="currentColor" stroke-width="1.5"/>
+            </svg>
+            <span>Demo video coming soon</span>
+          </div>
+        </div>
+        <div class="variation-info">
+          <div>
+            <div class="variation-title">
+              Variation 3 — Segmented Control
+              <span class="variation-badge variation-badge--new" style="margin-left:8px;vertical-align:middle;">New</span>
+            </div>
+            <div class="variation-meta">Type selector as a unified pill · 554 px typeSelect · camera &amp; mic always on</div>
+          </div>
+          <a class="download-btn"
+             href="https://github.com/tomo-at/recorder-toolbar/archive/refs/heads/main.zip">
+            <svg width="14" height="14" viewBox="0 0 14 14" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <path d="M7 1v8M4 6l3 3 3-3M2 11h10" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>
+            Download source
+          </a>
+        </div>
+      </div>
+
     </div>
   </section>
 
@@ -527,6 +556,16 @@
         <li><span class="change-dot"></span>Toolbar width at typeSelect increases from 389 px to 550 px to accommodate the always-on device area.</li>
         <li><span class="change-dot"></span>After confirming a window or display target, the toolbar expands to 623 px and a <strong>Record</strong> button appears in-line — reducing the number of distinct toolbar states the user experiences.</li>
         <li><span class="change-dot"></span>Cam-only button icon changed from a live camera thumbnail to the <code>person.crop.rectangle.fill</code> SF Symbol, matching the Figma design.</li>
+      </ul>
+
+      <h3 style="font-size:17px;font-weight:600;color:var(--color-text-primary);margin:32px 0 12px;letter-spacing:-0.01em;">
+        What changed in Variation 3
+      </h3>
+      <ul class="change-list">
+        <li><span class="change-dot"></span>The four recording-type buttons are grouped into a single <strong>Segmented Control</strong> — a pill-shaped container with <code>rgba(0,0,0,0.24)</code> background, 2 px internal padding, and 10 px corner radius.</li>
+        <li><span class="change-dot"></span>The active segment is highlighted with <code>rgba(1,1,1,0.16)</code> and an 8 px inner corner radius (outer − padding).</li>
+        <li><span class="change-dot"></span>Toolbar width at typeSelect grows by 4 px to 554 px to accommodate the container's left/right padding.</li>
+        <li><span class="change-dot"></span>Camera, mic, settings, and keyboard shortcut tooltips carry over from Variation 2.</li>
       </ul>
     </div>
   </section>
@@ -613,7 +652,8 @@
           <td>Toolbar size</td>
           <td>
             <strong>V1:</strong> 389 × 56 px (type/window/display) · 297 × 56 px (countdown/recording)<br>
-            <strong>V2:</strong> 550 × 56 px (typeSelect) · 389 × 56 px (window/displaySelect) · 297 × 56 px (countdown/recording)
+            <strong>V2:</strong> 550 × 56 px (typeSelect) · 389 × 56 px (window/displaySelect) · 297 × 56 px (countdown/recording)<br>
+            <strong>V3:</strong> 554 × 56 px (typeSelect) · 389 × 56 px (window/displaySelect) · 297 × 56 px (countdown/recording)
           </td>
         </tr>
         <tr>
