@@ -10,6 +10,7 @@ final class SettingsState: ObservableObject {
     @Published var recordSystemAudio: Bool = true
     @Published var countdownChoice:   CountdownOption = .three   // Used by ToolbarState
     @Published var themeChoice:       ThemeOption = .auto
+    @Published var protoVersion:      ProtoVersion = .v4
 
     enum CountdownOption: String, CaseIterable {
         case none  = "None"
@@ -22,11 +23,18 @@ final class SettingsState: ObservableObject {
         case light = "Light"
         case dark  = "Dark"
     }
+
+    enum ProtoVersion: String, CaseIterable {
+        case v1 = "V1"
+        case v2 = "V2"
+        case v3 = "V3"
+        case v4 = "V4"
+    }
 }
 
 // MARK: - Controller
 
-enum SettingsSubPanelType { case theme }
+enum SettingsSubPanelType { case theme, prototype }
 
 @MainActor
 final class SettingsPanelController {
@@ -55,7 +63,7 @@ final class SettingsPanelController {
         hosting.layer?.backgroundColor = .clear
         p.contentView = hosting
 
-        let w: CGFloat = 257, h: CGFloat = 313
+        let w: CGFloat = 257, h: CGFloat = 350
         let rawX = buttonCenterX - w / 2
         let screenMinX = NSScreen.main?.frame.minX ?? 0
         let screenMaxX = NSScreen.main?.frame.maxX ?? 2000
@@ -98,15 +106,27 @@ final class SettingsPanelController {
                 controller: self)))
             sub.contentView = hosting
             rows = SettingsState.ThemeOption.allCases.count
+        case .prototype:
+            let hosting = NSHostingView(rootView: AnyView(PrototypeSubPanelView(
+                choice: Binding(get: { [weak self] in self?.state.protoVersion ?? .v4 },
+                                set: { [weak self] in self?.state.protoVersion = $0 }),
+                controller: self)))
+            sub.contentView = hosting
+            rows = SettingsState.ProtoVersion.allCases.count
         }
 
         let subH = CGFloat(rows) * 28 + 16
         let x = main.frame.maxX + 6
-        // Align sub-panel top with the Theme row.
-        // Offset from panel top: 8(pad) + 28(profile) + 9(div) + 28+28(videos)
-        //   + 9(div) + 28+28(watch/keyboard) + 9(div) = 175 px
-        let themeRowTopOffset: CGFloat = 175
-        let y = main.frame.maxY - themeRowTopOffset - subH
+        // Align sub-panel top with the relevant row.
+        // Row offsets from panel top:
+        //   Theme:     8+28+9+28+28+9+28+28+9 = 175 px
+        //   Prototype: 175+28(theme)+9(div)+28+28(cursor/audio)+9(div) = 277 px
+        let rowTopOffset: CGFloat
+        switch type {
+        case .theme:     rowTopOffset = 175
+        case .prototype: rowTopOffset = 277
+        }
+        let y = main.frame.maxY - rowTopOffset - subH
         sub.setFrame(NSRect(x: x, y: y, width: subW, height: subH), display: false)
 
         sub.fadeIn(); subPanel = sub
@@ -286,6 +306,13 @@ struct SettingsPanelView: View {
 
             MenuDivider()
 
+            SettingsMenuItem(icon: nil, label: "Prototype",
+                             rightIcon: .chevron) { h in
+                if h { controller.showSub(.prototype) } else { controller.scheduleDismissSub() }
+            }
+
+            MenuDivider()
+
             SettingsMenuItem(icon: nil, label: "Quit Airtime") { _ in }
                 .onTapGesture { NSApplication.shared.terminate(nil) }
         }
@@ -293,6 +320,29 @@ struct SettingsPanelView: View {
         .background(MenuBackground())
         .clipShape(RoundedRectangle(cornerRadius: 14))
         .frame(width: 257)
+    }
+}
+
+// MARK: - Prototype sub-panel
+
+struct PrototypeSubPanelView: View {
+    @Binding var choice: SettingsState.ProtoVersion
+    let controller: SettingsPanelController
+
+    var body: some View {
+        VStack(spacing: 0) {
+            ForEach(SettingsState.ProtoVersion.allCases, id: \.self) { version in
+                SettingsMenuItem(
+                    icon: choice == version ? "checkmark" : nil,
+                    label: version.rawValue
+                ) { _ in }
+                .onTapGesture { choice = version }
+            }
+        }
+        .padding(8)
+        .background(MenuBackground())
+        .clipShape(RoundedRectangle(cornerRadius: 14))
+        .onHover { h in h ? controller.keepSub() : controller.scheduleDismissSub() }
     }
 }
 

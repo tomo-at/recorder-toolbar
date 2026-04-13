@@ -3,14 +3,33 @@ import AVFoundation
 
 struct ToolbarView: View {
     @ObservedObject var state: ToolbarState
+    @ObservedObject var settings: SettingsState
+
+    init(state: ToolbarState) {
+        self.state    = state
+        self.settings = state.settingsPanel.state
+    }
 
     var body: some View {
         Group {
             switch state.appState {
-            case .typeSelect:                   TypeSelectViewV4(state: state)
-            case .windowSelect, .displaySelect: TypeSelectViewV4(state: state)
-            case .countdown:                    CountdownToolbarViewV4(state: state)
-            case .recording:                    RecordingViewV4(state: state)
+            case .typeSelect, .windowSelect, .displaySelect:
+                switch settings.protoVersion {
+                case .v1: TypeSelectView(state: state)
+                case .v2: TypeSelectViewV2(state: state)
+                case .v3: TypeSelectViewV3(state: state)
+                case .v4: TypeSelectViewV4(state: state)
+                }
+            case .countdown:
+                switch settings.protoVersion {
+                case .v1, .v2, .v3: CountdownToolbarView(state: state)
+                case .v4:           CountdownToolbarViewV4(state: state)
+                }
+            case .recording:
+                switch settings.protoVersion {
+                case .v1, .v2, .v3: RecordingView(state: state)
+                case .v4:           RecordingViewV4(state: state)
+                }
             }
         }
         .frame(height: 66)

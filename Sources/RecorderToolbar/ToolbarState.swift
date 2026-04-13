@@ -45,6 +45,7 @@ class ToolbarState: ObservableObject {
     private var countdownTask:      Task<Void, Never>?
     private var cameraPreviewPanel: NSPanel?
     private var escKeyMonitor:      Any?
+    private var cancellables:       Set<AnyCancellable> = []
 
     init() {
         // Window selected: freeze overlay, keep toolbar in typeSelect-like state,
@@ -54,6 +55,7 @@ class ToolbarState: ObservableObject {
             self.overlay.freeze()
             self.appState      = .windowSelect   // handleStateChange fires; panel stays at 482px
             self.selectionMode = nil
+            guard self.settingsPanel.state.protoVersion == .v4 else { return }
             if let bounds = self.overlay.frozenWindowBounds, let panel = self.panel {
                 let primaryH = NSScreen.screens
                     .first(where: { $0.frame.origin == .zero })?.frame.height ?? 800
@@ -72,6 +74,7 @@ class ToolbarState: ObservableObject {
             self.displayOverlay.freeze()
             self.appState      = .displaySelect
             self.selectionMode = nil
+            guard self.settingsPanel.state.protoVersion == .v4 else { return }
             if let screen = self.displayOverlay.frozenScreen, let panel = self.panel {
                 let origin = NSPoint(x: screen.frame.minX + 16,
                                      y: screen.frame.minY + 16)
@@ -81,6 +84,20 @@ class ToolbarState: ObservableObject {
             }
         }
         displayOverlay.onCancel = { [weak self] in self?.exitSelecting() }
+
+        // Reset to typeSelect (and resize panel) when proto version changes.
+        settingsPanel.state.$protoVersion
+            .dropFirst()
+            .sink { [weak self] _ in
+                guard let self else { return }
+                self.exitSelecting()
+                self.selectionConfirmPanel.dismiss()
+                self.appState = .typeSelect
+                // resizePanel is called via handleStateChange, but force it again
+                // so width also updates for the new version.
+                self.resizePanel(for: .typeSelect)
+            }
+            .store(in: &cancellables)
     }
 
     // MARK: – Selection mode (overlay visible, toolbar still in typeSelect)
@@ -189,8 +206,15 @@ class ToolbarState: ObservableObject {
         guard let panel else { return }
         let newW: CGFloat
         switch state {
-        case .recording, .countdown:                       newW = 297
-        case .typeSelect, .windowSelect, .displaySelect:   newW = 482
+        case .recording, .countdown:
+            newW = 297
+        case .typeSelect, .windowSelect, .displaySelect:
+            switch settingsPanel.state.protoVersion {
+            case .v1: newW = 389
+            case .v2: newW = 550
+            case .v3: newW = 554
+            case .v4: newW = 482
+            }
         }
         let cx = panel.frame.midX
         let y  = panel.frame.origin.y
