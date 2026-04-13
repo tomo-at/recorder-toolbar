@@ -875,56 +875,70 @@ struct SelectionConfirmView: View {
     let onCancel: () -> Void
     let onRecord: () -> Void
     @State private var cameraDeviceId: String? = nil
+    @State private var cancelHovering = false
+
+    // Figma: background/secondary = #12181a
+    private let panelBg = Color(red: 18/255.0, green: 24/255.0, blue: 26/255.0)
 
     var body: some View {
-        VStack(spacing: 8) {
-            // Live camera feed
+        VStack(spacing: 0) {
+            // ── Camera preview: 172×172 px, full width, square ──
             Group {
                 if let id = cameraDeviceId {
                     CameraThumb(deviceId: id)
                 } else {
-                    Color.black.opacity(0.4)
-                        .overlay {
-                            Image(systemName: "camera.fill")
-                                .font(.system(size: 18))
-                                .foregroundColor(Color(white: 0.35))
-                        }
+                    Color.black
                 }
             }
             .frame(maxWidth: .infinity)
-            .frame(height: 100)
-            .clipShape(RoundedRectangle(cornerRadius: 8, style: .continuous))
+            .frame(height: 172)
+            // Bottom separator between preview and controls
+            .overlay(alignment: .bottom) {
+                Rectangle()
+                    .fill(Color.white.opacity(0.08))
+                    .frame(height: 1)
+            }
 
-            // Cancel / Record buttons
-            HStack(spacing: 6) {
+            // ── Controls: padding 8px all sides, gap 8px, height 44px ──
+            HStack(spacing: 8) {
+                // Cancel: 56×28 px, transparent background
                 Button(action: onCancel) {
                     Text("Cancel")
                         .font(.system(size: 12, weight: .medium))
                         .foregroundColor(.white)
-                        .frame(maxWidth: .infinity)
-                        .frame(height: 30)
-                        .background(Color.white.opacity(0.10))
+                        .frame(width: 56, height: 28)
+                        .background(cancelHovering ? Color.white.opacity(0.08) : Color.clear)
                         .cornerRadius(6)
                 }
                 .buttonStyle(.plain)
+                .onHover { cancelHovering = $0 }
 
+                // Record: flex-1 × 28px, #d6402f = Color.recordRed
                 Button(action: onRecord) {
                     HStack(spacing: 4) {
                         Image(systemName: "record.circle.fill")
-                            .font(.system(size: 11))
+                            .font(.system(size: 12))
                         Text("Record")
                             .font(.system(size: 12, weight: .medium))
                     }
                     .foregroundColor(.white)
                     .frame(maxWidth: .infinity)
-                    .frame(height: 30)
+                    .frame(height: 28)
                     .background(Color.recordRed)
                     .cornerRadius(6)
                 }
                 .buttonStyle(.plain)
             }
+            .padding(8)
+            .frame(height: 44)
         }
-        .padding(10)
+        // Solid panel background #12181a, 12 px corner radius
+        .background(panelBg)
+        .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
+        .overlay(
+            RoundedRectangle(cornerRadius: 12, style: .continuous)
+                .strokeBorder(Color.white.opacity(0.08), lineWidth: 1)
+        )
         .task {
             cameraDeviceId = AVCaptureDevice.cameraDevices().first?.uniqueID
         }

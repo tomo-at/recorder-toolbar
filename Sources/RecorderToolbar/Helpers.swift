@@ -148,6 +148,7 @@ final class SelectionConfirmPanelController {
     private var panel: NSPanel?
 
     /// Show the confirm panel with its bottom-left at `origin` (AppKit screen coords).
+    /// Panel: 172×216 px, solid #12181a background, 12 px corner radius.
     func show(origin: NSPoint, above toolbar: NSPanel,
               onCancel: @escaping () -> Void,
               onRecord: @escaping () -> Void) {
@@ -155,14 +156,6 @@ final class SelectionConfirmPanelController {
         panel = nil
 
         let p = NSPanel.makeFloating(level: toolbar.level)
-
-        let vfx = NSVisualEffectView()
-        vfx.blendingMode       = .behindWindow
-        vfx.material           = .underWindowBackground
-        vfx.state              = .active
-        vfx.wantsLayer         = true
-        vfx.layer?.cornerRadius    = 14
-        vfx.layer?.masksToBounds   = true
 
         let hosting = NSHostingView(rootView: SelectionConfirmView(
             onCancel: onCancel,
@@ -172,18 +165,11 @@ final class SelectionConfirmPanelController {
         hosting.wantsLayer = true
         hosting.layer?.backgroundColor = .clear
 
-        vfx.addSubview(hosting)
-        NSLayoutConstraint.activate([
-            hosting.leadingAnchor.constraint(equalTo: vfx.leadingAnchor),
-            hosting.trailingAnchor.constraint(equalTo: vfx.trailingAnchor),
-            hosting.topAnchor.constraint(equalTo: vfx.topAnchor),
-            hosting.bottomAnchor.constraint(equalTo: vfx.bottomAnchor),
-        ])
-
-        p.contentView = vfx
-        p.setContentSize(CGSize(width: 160, height: 164))
+        p.contentView = hosting
+        p.setContentSize(CGSize(width: 172, height: 216))
         p.setFrameOrigin(origin)
         p.fadeIn()
+        p.invalidateShadow()   // shadow follows rounded rect alpha
         panel = p
         toolbar.orderFrontRegardless()
     }
