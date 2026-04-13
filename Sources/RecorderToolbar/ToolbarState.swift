@@ -189,8 +189,7 @@ class ToolbarState: ObservableObject {
         guard let panel else { return }
         let newW: CGFloat
         switch state {
-        case .recording:                                   newW = 297
-        case .countdown:                                   newW = 253
+        case .recording, .countdown:                       newW = 297
         case .typeSelect, .windowSelect, .displaySelect:   newW = 482
         }
         let cx = panel.frame.midX

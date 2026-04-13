@@ -193,22 +193,28 @@ struct CountdownToolbarView: View {
 
     var body: some View {
         HStack(spacing: 0) {
-            CloseSection(action: { state.appState = .typeSelect }) {
-                Image(systemName: "xmark")
-                    .font(.system(size: 12, weight: .medium))
-                    .foregroundColor(.white)
+            SegmentButton(icon: "arrow.counterclockwise", label: "Restart") {
+                state.stopRecording()
             }
+            SegmentButton(icon: "pause.fill", label: "Pause",
+                          isDisabled: true) {}
+            SegmentButton(icon: "stop.fill", label: "Stop",
+                          iconColor: Color.recordRed,
+                          isDisabled: true) {}
+
+            ToolbarDivider()
 
             VStack(spacing: 4) {
-                Text("\(state.countdownSeconds)")
-                    .font(.system(size: 20, weight: .bold).monospacedDigit())
+                Text(String(format: "00:%02d", state.countdownSeconds))
+                    .font(.system(size: 12, weight: .medium).monospacedDigit())
                     .foregroundColor(.white)
                 Text("Starting...")
                     .font(.system(size: 11))
                     .foregroundColor(Color.subtitleGray)
             }
-            .frame(maxWidth: .infinity)
+            .frame(width: 80, height: 48)
         }
+        .padding(.horizontal, 8)
     }
 }
 
@@ -273,11 +279,12 @@ struct CloseSection<Icon: View>: View {
 }
 
 struct SegmentButton: View {
-    let icon:      String
-    let label:     String
-    var iconColor: Color = .white
-    var isActive:  Bool  = false
-    let action:    () -> Void
+    let icon:        String
+    let label:       String
+    var iconColor:   Color = .white
+    var isActive:    Bool  = false
+    var isDisabled:  Bool  = false
+    let action:      () -> Void
     @State private var hovering = false
 
     var body: some View {
@@ -293,11 +300,13 @@ struct SegmentButton: View {
                     .lineLimit(1)
             }
             .frame(width: 64, height: 48)
-            .background(isActive ? Color.white.opacity(0.16) : (hovering ? Color.white.opacity(0.08) : .clear))
+            .background(isActive ? Color.white.opacity(0.16) : (hovering && !isDisabled ? Color.white.opacity(0.08) : .clear))
             .cornerRadius(4)
         }
         .buttonStyle(.plain)
         .onHover { hovering = $0 }
+        .disabled(isDisabled)
+        .opacity(isDisabled ? 0.35 : 1.0)
     }
 }
 
@@ -811,7 +820,7 @@ struct WindowSelectViewV4: View {
     }
 }
 
-// Layout (253px): header with countdown + centered number display
+/// Layout (297px): same as RecordingViewV4 but Pause/Stop disabled, time shows countdown
 struct CountdownToolbarViewV4: View {
     @ObservedObject var state: ToolbarState
 
@@ -819,10 +828,29 @@ struct CountdownToolbarViewV4: View {
         VStack(spacing: 0) {
             ToolbarHeader(message: "Starting in \(state.countdownSeconds)...")
 
-            Text("\(state.countdownSeconds)")
-                .font(.system(size: 18, weight: .bold).monospacedDigit())
-                .foregroundColor(.white)
-                .frame(maxWidth: .infinity, maxHeight: .infinity)
+            HStack(spacing: 0) {
+                SegmentButton(icon: "arrow.counterclockwise", label: "Restart") {
+                    state.stopRecording()
+                }
+                SegmentButton(icon: "pause.fill", label: "Pause",
+                              isDisabled: true) {}
+                SegmentButton(icon: "stop.fill", label: "Stop",
+                              iconColor: Color.recordRed,
+                              isDisabled: true) {}
+
+                ToolbarDivider()
+
+                VStack(spacing: 4) {
+                    Text(String(format: "00:%02d", state.countdownSeconds))
+                        .font(.system(size: 12, weight: .medium).monospacedDigit())
+                        .foregroundColor(.white)
+                    Text("Starting...")
+                        .font(.system(size: 11))
+                        .foregroundColor(Color.subtitleGray)
+                }
+                .frame(width: 80, height: 48)
+            }
+            .padding(.horizontal, 8)
         }
     }
 }
