@@ -63,6 +63,9 @@ class AppDelegate: NSObject, NSApplicationDelegate {
 
         // Give ToolbarState a reference to the panel for overlay positioning
         state.panel = panel
+
+        // Default to Display selected on launch
+        state.toggleSelecting(.display)
     }
 
     func applicationShouldTerminateAfterLastWindowClosed(_ app: NSApplication) -> Bool { false }
