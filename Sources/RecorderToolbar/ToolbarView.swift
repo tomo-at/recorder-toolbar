@@ -49,13 +49,6 @@ struct TypeSelectView: View {
 
     var body: some View {
         HStack(spacing: 0) {
-            // Close button
-            CloseSection(action: { NSApplication.shared.terminate(nil) }) {
-                Image(systemName: "xmark")
-                    .font(.system(size: 12, weight: .medium))
-                    .foregroundColor(.white)
-            }
-
             // Segment strip
             HStack(spacing: 0) {
                 SegmentButton(icon: "display", label: "Display",
@@ -64,7 +57,7 @@ struct TypeSelectView: View {
                 }
                 .onHover { h in
                     state.showPreview(h ? .display : nil)
-                    if h { state.showTooltip("Record Screen", "⇧⌘6", buttonCenterX: 84) }
+                    if h { state.showTooltip("Record Screen", "⇧⌘6", buttonCenterX: 40) }
                     else  { state.shortcutTooltip.hide() }
                 }
 
@@ -74,14 +67,14 @@ struct TypeSelectView: View {
                 }
                 .onHover { h in
                     state.showPreview(h ? .window : nil)
-                    if h { state.showTooltip("Record Window", "⇧⌘7", buttonCenterX: 148) }
+                    if h { state.showTooltip("Record Window", "⇧⌘7", buttonCenterX: 104) }
                     else  { state.shortcutTooltip.hide() }
                 }
 
                 SegmentButton(icon: "rectangle.dashed", label: "Area") {}
                     .onHover { h in
                         state.showPreview(h ? .area : nil)
-                        if h { state.showTooltip("Record Area", "⇧⌘8", buttonCenterX: 212) }
+                        if h { state.showTooltip("Record Area", "⇧⌘8", buttonCenterX: 168) }
                         else  { state.shortcutTooltip.hide() }
                     }
 
@@ -97,10 +90,10 @@ struct TypeSelectView: View {
                 ToolbarDivider()
 
                 SegmentButton(icon: "gearshape.fill", label: "Settings") {
-                    // Settings button center x from toolbar left = 44(close) + 8(pad) + 64×4(segs) + 9(div) + 32(half btn) = 349
+                    // Settings button center x from toolbar left = 8(pad) + 64×4(segs) + 9(div) + 32(half btn) = 305
                     if let panel = state.panel {
                         state.settingsPanel.toggle(toolbar: panel,
-                                                   buttonCenterX: panel.frame.minX + 349)
+                                                   buttonCenterX: panel.frame.minX + 305)
                     }
                 }
             }
@@ -365,7 +358,7 @@ struct ToolbarDivider: View {
 }
 
 // ── V2: Type Select (Camera + Mic always visible) ───────────
-// Layout (550px): [X(44)] [Display|Window|Area|CamOnly(256)+8] [div(9)] [Cam+Mic(136)+8] [div(9)] [Settings(64)] + outer pad(8×2)
+// Layout (506px): [Display|Window|Area|CamOnly(256)+8] [div(9)] [Cam+Mic(136)+8] [div(9)] [Settings(64)] + outer pad(8×2)
 
 struct TypeSelectViewV2: View {
     @ObservedObject var state: ToolbarState
@@ -376,12 +369,6 @@ struct TypeSelectViewV2: View {
 
     var body: some View {
         HStack(spacing: 0) {
-            CloseSection(action: { NSApplication.shared.terminate(nil) }) {
-                Image(systemName: "xmark")
-                    .font(.system(size: 12, weight: .medium))
-                    .foregroundColor(.white)
-            }
-
             HStack(spacing: 0) {
                 // Recording type selector
                 HStack(spacing: 0) {
@@ -391,7 +378,7 @@ struct TypeSelectViewV2: View {
                     }
                     .onHover { h in
                         state.showPreview(h ? .display : nil)
-                        if h { state.showTooltip("Record Screen", "⇧⌘6", buttonCenterX: 84) }
+                        if h { state.showTooltip("Record Screen", "⇧⌘6", buttonCenterX: 40) }
                         else  { state.shortcutTooltip.hide() }
                     }
 
@@ -401,14 +388,14 @@ struct TypeSelectViewV2: View {
                     }
                     .onHover { h in
                         state.showPreview(h ? .window : nil)
-                        if h { state.showTooltip("Record Window", "⇧⌘7", buttonCenterX: 148) }
+                        if h { state.showTooltip("Record Window", "⇧⌘7", buttonCenterX: 104) }
                         else  { state.shortcutTooltip.hide() }
                     }
 
                     SegmentButton(icon: "rectangle.dashed", label: "Area") {}
                         .onHover { h in
                             state.showPreview(h ? .area : nil)
-                            if h { state.showTooltip("Record Area", "⇧⌘8", buttonCenterX: 212) }
+                            if h { state.showTooltip("Record Area", "⇧⌘8", buttonCenterX: 168) }
                             else  { state.shortcutTooltip.hide() }
                         }
 
@@ -442,11 +429,11 @@ struct TypeSelectViewV2: View {
 
                 ToolbarDivider()
 
-                // Settings — center X from toolbar left: 44+8+264+9+144+9+32 = 510
+                // Settings — center X from toolbar left: 8+264+9+144+9+32 = 466
                 SegmentButton(icon: "gearshape.fill", label: "Settings") {
                     if let panel = state.panel {
                         state.settingsPanel.toggle(toolbar: panel,
-                                                   buttonCenterX: panel.frame.minX + 510)
+                                                   buttonCenterX: panel.frame.minX + 466)
                     }
                 }
             }
@@ -464,7 +451,7 @@ struct TypeSelectViewV2: View {
 }
 
 // ── V3: Segmented Control type selector ────────────────────
-// Layout (554px): [X(44)] [SegmentedCtrl(260)+8] [div(9)] [Cam+Mic(136)+8] [div(9)] [Settings(64)] + outer pad(8×2)
+// Layout (510px): [SegmentedCtrl(260)+8] [div(9)] [Cam+Mic(136)+8] [div(9)] [Settings(64)] + outer pad(8×2)
 
 /// Single item inside the segmented control container.
 struct SegmentedControlItem: View {
@@ -508,12 +495,6 @@ struct TypeSelectViewV3: View {
 
     var body: some View {
         HStack(spacing: 0) {
-            CloseSection(action: { NSApplication.shared.terminate(nil) }) {
-                Image(systemName: "xmark")
-                    .font(.system(size: 12, weight: .medium))
-                    .foregroundColor(.white)
-            }
-
             HStack(spacing: 0) {
                 // Segmented control container
                 // inner: 4×64=256px, padding 2 each side → 260px wide, 44+4=48px tall
@@ -524,7 +505,7 @@ struct TypeSelectViewV3: View {
                     }
                     .onHover { h in
                         state.showPreview(h ? .display : nil)
-                        if h { state.showTooltip("Record Screen", "⇧⌘6", buttonCenterX: 86) }
+                        if h { state.showTooltip("Record Screen", "⇧⌘6", buttonCenterX: 42) }
                         else  { state.shortcutTooltip.hide() }
                     }
 
@@ -534,14 +515,14 @@ struct TypeSelectViewV3: View {
                     }
                     .onHover { h in
                         state.showPreview(h ? .window : nil)
-                        if h { state.showTooltip("Record Window", "⇧⌘7", buttonCenterX: 150) }
+                        if h { state.showTooltip("Record Window", "⇧⌘7", buttonCenterX: 106) }
                         else  { state.shortcutTooltip.hide() }
                     }
 
                     SegmentedControlItem(icon: "rectangle.dashed", label: "Area") {}
                         .onHover { h in
                             state.showPreview(h ? .area : nil)
-                            if h { state.showTooltip("Record Area", "⇧⌘8", buttonCenterX: 214) }
+                            if h { state.showTooltip("Record Area", "⇧⌘8", buttonCenterX: 170) }
                             else  { state.shortcutTooltip.hide() }
                         }
 
@@ -580,11 +561,11 @@ struct TypeSelectViewV3: View {
 
                 ToolbarDivider()
 
-                // Settings — center X from toolbar left: 44+8+260+8+9+144+9+32 = 514
+                // Settings — center X from toolbar left: 8+260+8+9+144+9+32 = 470
                 SegmentButton(icon: "gearshape.fill", label: "Settings") {
                     if let panel = state.panel {
                         state.settingsPanel.toggle(toolbar: panel,
-                                                   buttonCenterX: panel.frame.minX + 514)
+                                                   buttonCenterX: panel.frame.minX + 470)
                     }
                 }
             }

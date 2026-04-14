@@ -208,9 +208,9 @@ class ToolbarState: ObservableObject {
             newW = 297
         case .typeSelect:
             switch settingsPanel.state.protoVersion {
-            case .v1: newW = 389
-            case .v2: newW = 550
-            case .v3: newW = 554
+            case .v1: newW = 345
+            case .v2: newW = 506
+            case .v3: newW = 510
             case .v4: newW = 482
             }
         case .windowSelect, .displaySelect:
