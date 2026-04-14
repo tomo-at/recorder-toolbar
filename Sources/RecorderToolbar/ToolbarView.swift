@@ -13,12 +13,17 @@ struct ToolbarView: View {
     var body: some View {
         Group {
             switch state.appState {
-            case .typeSelect, .windowSelect, .displaySelect:
+            case .typeSelect:
                 switch settings.protoVersion {
                 case .v1: TypeSelectView(state: state)
                 case .v2: TypeSelectViewV2(state: state)
                 case .v3: TypeSelectViewV3(state: state)
                 case .v4: TypeSelectViewV4(state: state)
+                }
+            case .windowSelect, .displaySelect:
+                switch settings.protoVersion {
+                case .v1, .v2, .v3: WindowSelectView(state: state)
+                case .v4:           TypeSelectViewV4(state: state)
                 }
             case .countdown:
                 switch settings.protoVersion {
@@ -215,6 +220,7 @@ struct CountdownToolbarView: View {
                 Text(String(format: "00:%02d", state.countdownSeconds))
                     .font(.system(size: 12, weight: .medium).monospacedDigit())
                     .foregroundColor(.white)
+                    .frame(height: 20)
                 Text("Starting...")
                     .font(.system(size: 11))
                     .foregroundColor(Color.subtitleGray)
@@ -252,6 +258,7 @@ struct RecordingView: View {
                 Text(state.timeString)
                     .font(.system(size: 12, weight: .medium).monospacedDigit())
                     .foregroundColor(.white)
+                    .frame(height: 20)
                 Text("1 hour limit")
                     .font(.system(size: 11))
                     .foregroundColor(Color.subtitleGray)

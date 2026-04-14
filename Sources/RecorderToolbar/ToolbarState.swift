@@ -206,11 +206,16 @@ class ToolbarState: ObservableObject {
         switch state {
         case .recording, .countdown:
             newW = 297
-        case .typeSelect, .windowSelect, .displaySelect:
+        case .typeSelect:
             switch settingsPanel.state.protoVersion {
             case .v1: newW = 389
             case .v2: newW = 550
             case .v3: newW = 554
+            case .v4: newW = 482
+            }
+        case .windowSelect, .displaySelect:
+            switch settingsPanel.state.protoVersion {
+            case .v1, .v2, .v3: newW = 389  // WindowSelectView width
             case .v4: newW = 482
             }
         }

@@ -337,6 +337,14 @@
       border-radius: var(--radius-md);
       overflow: hidden;
     }
+    .variation-card--deprecated {
+      opacity: 0.30;
+      pointer-events: none;
+    }
+    .variation-index-item--deprecated {
+      opacity: 0.30;
+      pointer-events: none;
+    }
     .variation-video {
       width: 100%;
       background: var(--color-bg-tertiary);
@@ -491,7 +499,7 @@
         <span class="variation-index-num">V2</span>
         <span class="variation-index-name">Always-on devices</span>
       </a>
-      <a class="variation-index-item" href="#v3">
+      <a class="variation-index-item variation-index-item--deprecated" href="#v3">
         <span class="variation-index-num">V3</span>
         <span class="variation-index-name">Segmented control</span>
       </a>
@@ -548,7 +556,7 @@
       </div>
 
       <!-- Variation 3 -->
-      <div class="variation-card" id="v3">
+      <div class="variation-card variation-card--deprecated" id="v3">
         <div class="variation-video">
           <video src="toolbar-demo-v3.mp4" autoplay loop muted playsinline></video>
         </div>
