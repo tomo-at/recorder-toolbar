@@ -45,7 +45,13 @@ struct ToolbarView: View {
 
 struct TypeSelectView: View {
     @ObservedObject var state: ToolbarState
+    @ObservedObject var settings: SettingsState
     @State private var activeCamId: String?
+
+    init(state: ToolbarState) {
+        self.state    = state
+        self.settings = state.settingsPanel.state
+    }
 
     var body: some View {
         HStack(spacing: 0) {
@@ -89,8 +95,10 @@ struct TypeSelectView: View {
 
                 ToolbarDivider()
 
-                SegmentButton(icon: "gearshape.fill", label: "Settings") {
+                SegmentButton(icon: "gearshape.fill", label: "Settings",
+                              showBadge: settings.settingsBadge) {
                     // Settings button center x from toolbar left = 8(pad) + 64×4(segs) + 9(div) + 32(half btn) = 305
+                    settings.settingsBadge = false
                     if let panel = state.panel {
                         state.settingsPanel.toggle(toolbar: panel,
                                                    buttonCenterX: panel.frame.minX + 305)
@@ -98,6 +106,11 @@ struct TypeSelectView: View {
                 }
             }
             .padding(.horizontal, 8)
+        }
+        .overlay(alignment: .top) {
+            if state.isUploading {
+                UploadProgressBarView(progress: state.uploadProgress)
+            }
         }
         .task { await loadCameraDevice() }
     }
@@ -291,6 +304,8 @@ struct SegmentButton: View {
     var iconColor:   Color = .white
     var isActive:    Bool  = false
     var isDisabled:  Bool  = false
+    var showBadge:   Bool  = false
+    var badgeColor:  Color = .modelessTeal
     let action:      () -> Void
     @State private var hovering = false
 
@@ -301,6 +316,14 @@ struct SegmentButton: View {
                     .font(.system(size: 14))
                     .foregroundColor(iconColor)
                     .frame(width: 20, height: 20)
+                    .overlay(alignment: .topTrailing) {
+                        if showBadge {
+                            Circle()
+                                .fill(badgeColor)
+                                .frame(width: 6, height: 6)
+                                .offset(x: 3, y: -1)
+                        }
+                    }
                 Text(label)
                     .font(.system(size: 11))
                     .foregroundColor(Color(white: 0.69))
@@ -314,6 +337,25 @@ struct SegmentButton: View {
         .onHover { hovering = $0 }
         .disabled(isDisabled)
         .opacity(isDisabled ? 0.35 : 1.0)
+    }
+}
+
+// MARK: – Upload progress bar (V1)
+
+/// 4px progress bar shown above the toolbar during uploads.
+/// Track: modeless-black-24, fill: modeless-teal (airtime design system).
+struct UploadProgressBarView: View {
+    let progress: Double
+
+    var body: some View {
+        GeometryReader { geo in
+            ZStack(alignment: .leading) {
+                Rectangle().fill(Color.modelessBlack24)
+                Rectangle().fill(Color.modelessTeal)
+                    .frame(width: geo.size.width * CGFloat(max(0, min(1, progress))))
+            }
+        }
+        .frame(height: 4)
     }
 }
 

@@ -30,6 +30,8 @@ class ToolbarState: ObservableObject {
     @Published var paused = false
     @Published var seconds: Int = 0
     @Published var countdownSeconds: Int = 3
+    @Published var isUploading:    Bool   = false
+    @Published var uploadProgress: Double = 0.0
 
     // Set by AppDelegate after panel creation
     weak var panel: NSPanel?
@@ -43,6 +45,7 @@ class ToolbarState: ObservableObject {
 
     private var timer:              AnyCancellable?
     private var countdownTask:      Task<Void, Never>?
+    private var uploadTask:         Task<Void, Never>?
     private var cameraPreviewPanel: NSPanel?
     private var escKeyMonitor:      Any?
     private var cancellables:       Set<AnyCancellable> = []
@@ -104,6 +107,8 @@ class ToolbarState: ObservableObject {
     /// - Same mode re-click → cancel selection.
     /// - Different mode → switch overlay.
     func toggleSelecting(_ mode: SelectionMode) {
+        settingsPanel.dismiss()
+
         // 確定済みの選択状態 (windowSelect/displaySelect) からモード切替する場合は
         // 一度 typeSelect に戻して確定パネル・オーバーレイをリセットする。
         if appState == .windowSelect || appState == .displaySelect {
@@ -279,6 +284,31 @@ class ToolbarState: ObservableObject {
         timer    = nil
         seconds  = 0
         appState = .typeSelect
+
+        let proto = settingsPanel.state.protoVersion
+        if proto == .v1 || proto == .v2 {
+            startFakeUpload()
+        }
+    }
+
+    private func startFakeUpload() {
+        uploadTask?.cancel()
+        isUploading    = true
+        uploadProgress = 0.0
+
+        uploadTask = Task { @MainActor [weak self] in
+            guard let self else { return }
+            let totalSteps = 50    // 5 秒 × 10 steps/s（デバッグ用）
+            for i in 1...totalSteps {
+                try? await Task.sleep(nanoseconds: 100_000_000)
+                guard !Task.isCancelled else { return }
+                self.uploadProgress = Double(i) / Double(totalSteps)
+            }
+            self.isUploading    = false
+            self.uploadProgress = 0.0
+            self.settingsPanel.state.settingsBadge   = true
+            self.settingsPanel.state.allVideosCount += 1
+        }
     }
 
     func togglePause() { paused = !paused }

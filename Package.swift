@@ -7,7 +7,9 @@ let package = Package(
     targets: [
         .executableTarget(
             name: "RecorderToolbar",
-            path: "Sources/RecorderToolbar"
+            path: "Sources/RecorderToolbar",
+            exclude: ["Info.plist"],
+            resources: [.process("assets")]
         )
     ]
 )

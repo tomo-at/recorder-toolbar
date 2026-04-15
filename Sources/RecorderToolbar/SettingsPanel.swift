@@ -10,7 +10,11 @@ final class SettingsState: ObservableObject {
     @Published var recordSystemAudio: Bool = true
     @Published var countdownChoice:   CountdownOption = .three   // Used by ToolbarState
     @Published var themeChoice:       ThemeOption = .auto
-    @Published var protoVersion:      ProtoVersion = .v4
+    @Published var protoVersion:      ProtoVersion = .v2
+    // Upload-complete badges — Settings dot cleared on Settings click,
+    // All-videos count cleared when user opens All videos.
+    @Published var settingsBadge:   Bool = false
+    @Published var allVideosCount:  Int  = 0
 
     enum CountdownOption: String, CaseIterable {
         case none  = "None"
@@ -43,6 +47,7 @@ final class SettingsPanelController {
     private var activeSubType: SettingsSubPanelType?
     private var dismissWork:   DispatchWorkItem?
     private var clickMonitor:  Any?
+    private var escMonitor:    Any?
     private weak var toolbar:  NSPanel?
 
     private(set) var state = SettingsState()
@@ -77,10 +82,16 @@ final class SettingsPanelController {
         clickMonitor = NSEvent.addGlobalMonitorForEvents(
             matching: [.leftMouseDown, .rightMouseDown]
         ) { [weak self] _ in Task { @MainActor [weak self] in self?.dismiss() } }
+
+        escMonitor = NSEvent.addGlobalMonitorForEvents(matching: .keyDown) { [weak self] event in
+            guard event.keyCode == 53 else { return }   // 53 = Escape
+            Task { @MainActor [weak self] in self?.dismiss() }
+        }
     }
 
     func dismiss() {
         if let m = clickMonitor { NSEvent.removeMonitor(m); clickMonitor = nil }
+        if let m = escMonitor   { NSEvent.removeMonitor(m); escMonitor   = nil }
         dismissSubImmediate()
         mainPanel?.fadeOut(); mainPanel = nil
     }
@@ -180,10 +191,12 @@ private enum MenuItemRightIcon {
 }
 
 private struct SettingsMenuItem: View {
-    let icon:      String?
-    let label:     String
-    var rightIcon: MenuItemRightIcon = .none
-    let onHover:   (Bool) -> Void
+    let icon:       String?
+    let label:      String
+    var rightIcon:  MenuItemRightIcon = .none
+    /// Numeric neutral badge shown before the right icon. `nil` or `0` = hidden.
+    var badgeCount: Int? = nil
+    let onHover:    (Bool) -> Void
     @State private var hovering = false
 
     var body: some View {
@@ -202,6 +215,15 @@ private struct SettingsMenuItem: View {
                 .foregroundColor(.white)
                 .lineLimit(1)
                 .frame(maxWidth: .infinity, alignment: .leading)
+
+            if let count = badgeCount, count > 0 {
+                Text("\(count)")
+                    .font(.system(size: 10, weight: .medium))
+                    .foregroundColor(.white)
+                    .padding(.horizontal, 5)
+                    .frame(minWidth: 16, minHeight: 14)
+                    .background(Capsule().fill(Color.white.opacity(0.2)))
+            }
 
             switch rightIcon {
             case .chevron:
@@ -275,8 +297,12 @@ struct SettingsPanelView: View {
             MenuDivider()
 
             SettingsMenuItem(icon: nil, label: "All videos",
-                             rightIcon: .externalLink) { _ in }
-                .onTapGesture { controller.dismiss() }
+                             rightIcon: .externalLink,
+                             badgeCount: state.allVideosCount) { _ in }
+                .onTapGesture {
+                    state.allVideosCount = 0
+                    controller.dismiss()
+                }
             SettingsMenuItem(icon: nil, label: "Account settings",
                              rightIcon: .externalLink) { _ in }
                 .onTapGesture { controller.dismiss() }

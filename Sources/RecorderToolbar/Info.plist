@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+    <key>CFBundleIdentifier</key>
+    <string>com.all-turtles.RecorderToolbar.v2</string>
+    <key>CFBundleName</key>
+    <string>RecorderToolbar</string>
+    <key>CFBundleDisplayName</key>
+    <string>Recorder Toolbar</string>
+    <key>CFBundleVersion</key>
+    <string>1</string>
+    <key>CFBundleShortVersionString</key>
+    <string>1.0</string>
+    <key>CFBundlePackageType</key>
+    <string>APPL</string>
+    <key>CFBundleExecutable</key>
+    <string>RecorderToolbar</string>
+    <key>NSPrincipalClass</key>
+    <string>NSApplication</string>
+    <key>LSUIElement</key>
+    <true/>
+    <key>NSCameraUsageDescription</key>
+    <string>Camera access is required for the camera preview feature.</string>
+    <key>NSMicrophoneUsageDescription</key>
+    <string>Microphone access is required for the microphone level indicator.</string>
+</dict>
+</plist>

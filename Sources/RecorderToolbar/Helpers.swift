@@ -10,6 +10,10 @@ extension Color {
     static let recordRed       = Color(red: 0.839, green: 0.251, blue: 0.184)
     static let subtitleGray    = Color(red: 0.690, green: 0.694, blue: 0.698)
     static let deviceMenuBg    = Color(red: 0.157, green: 0.157, blue: 0.157)
+
+    // Airtime design system — modeless surfaces
+    static let modelessBlack24 = Color.black.opacity(0.24)
+    static let modelessTeal    = Color(red: 125/255, green: 210/255, blue: 213/255)
 }
 
 // MARK: – NSPanel factory
