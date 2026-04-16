@@ -75,14 +75,16 @@ final class SettingsState: ObservableObject {
 
     /// V5 のアップロード演出スタイル
     enum UploadStyle: String, CaseIterable {
-        case toolbar              = "toolbar"
-        case menuBarNotification  = "menuBarNotification"
-        case uploadMode           = "uploadMode"
+        case toolbar                    = "toolbar"
+        case toolbarWithCompleteMessage = "toolbarWithCompleteMessage"
+        case menuBarNotification        = "menuBarNotification"
+        case uploadMode                 = "uploadMode"
         var label: String {
             switch self {
-            case .toolbar:             return "Toolbar"
-            case .menuBarNotification: return "Menu bar + Notification"
-            case .uploadMode:          return "Upload mode"
+            case .toolbar:                    return "Toolbar"
+            case .toolbarWithCompleteMessage: return "Toolbar + Complete message"
+            case .menuBarNotification:        return "Menu bar + Notification"
+            case .uploadMode:                 return "Upload mode"
             }
         }
     }

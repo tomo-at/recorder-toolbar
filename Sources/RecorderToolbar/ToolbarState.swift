@@ -31,8 +31,9 @@ class ToolbarState: ObservableObject {
     @Published var paused = false
     @Published var seconds: Int = 0
     @Published var countdownSeconds: Int = 3
-    @Published var isUploading:    Bool   = false
-    @Published var uploadProgress: Double = 0.0
+    @Published var isUploading:     Bool   = false
+    @Published var uploadProgress:  Double = 0.0
+    @Published var uploadComplete:  Bool   = false
 
     // デバイス（全 View で共有。各 View の .task { await state.loadDevices() } から呼ぶ）
     @Published var cameraDevices: [AVCaptureDevice] = []
@@ -49,6 +50,7 @@ class ToolbarState: ObservableObject {
     let settingsPanel    = SettingsPanelController()
     let shortcutTooltip        = ShortcutTooltipController()
     let selectionConfirmPanel  = SelectionConfirmPanelController()
+    let uploadCompleteBanner   = UploadCompleteBannerController()
 
     private var timer:              AnyCancellable?
     private var countdownTask:      Task<Void, Never>?
@@ -127,6 +129,7 @@ class ToolbarState: ObservableObject {
                 guard let self else { return }
                 self.exitSelecting()
                 self.selectionConfirmPanel.dismiss()
+                self.cancelUpload()
                 self.appState = .typeSelect
                 // resizePanel is called via handleStateChange, but force it again
                 // so width also updates for the new version.
@@ -424,14 +427,29 @@ class ToolbarState: ObservableObject {
                 self.settingsPanel.state.settingsBadge   = true
                 self.settingsPanel.state.allVideosCount += 1
             }
+            if s.v5UploadStyle == .uploadMode {
+                self.uploadComplete = true
+            }
+            if s.v5UploadStyle == .toolbarWithCompleteMessage, let panel = self.panel {
+                self.uploadCompleteBanner.show(above: panel, onViewVideo: {}, onDismiss: { [weak self] in
+                    self?.dismissUploadComplete()
+                })
+            }
         }
     }
 
     func cancelUpload() {
         uploadTask?.cancel()
-        uploadTask = nil
+        uploadTask     = nil
         isUploading    = false
         uploadProgress = 0
+        uploadComplete = false
+        uploadCompleteBanner.hide()
+    }
+
+    func dismissUploadComplete() {
+        uploadComplete = false
+        uploadCompleteBanner.hide()
     }
 
     func togglePause() { paused = !paused }

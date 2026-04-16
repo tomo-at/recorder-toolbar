@@ -188,6 +188,94 @@ final class ShortcutTooltipController {
     }
 }
 
+// MARK: – Upload complete banner (V5: Toolbar + Complete message style)
+
+/// Pill-shaped banner that floats above the toolbar after upload completes.
+struct UploadCompleteBannerView: View {
+    let onViewVideo: () -> Void
+    let onDismiss:   () -> Void
+
+    var body: some View {
+        HStack(spacing: 6) {
+            HStack(spacing: 4) {
+                Image(systemName: "checkmark")
+                    .font(.system(size: 11, weight: .medium))
+                Text("Upload complete")
+                    .font(.system(size: 11))
+            }
+            .foregroundColor(.contentSecondary)
+
+            Button(action: onViewVideo) {
+                Text("View video")
+                    .font(.system(size: 11, weight: .bold))
+                    .foregroundColor(.modelessTeal)
+            }
+            .buttonStyle(.plain)
+
+            Button(action: onDismiss) {
+                Image(systemName: "xmark.circle.fill")
+                    .font(.system(size: 13))
+                    .foregroundColor(.contentTertiary)
+            }
+            .buttonStyle(.plain)
+            .padding(.leading, 10)  // 6 (HStack spacing) + 10 = 16px gap from "View video"
+        }
+        .padding(.horizontal, 6)
+        .frame(height: 24)
+        .background(RoundedRectangle(cornerRadius: 6).fill(Color.bgTertiary))
+    }
+}
+
+@MainActor
+final class UploadCompleteBannerController {
+    private var panel: NSPanel?
+
+    func show(above toolbar: NSPanel, onViewVideo: @escaping () -> Void, onDismiss: @escaping () -> Void) {
+        panel?.orderOut(nil)
+        panel = nil
+
+        let view    = UploadCompleteBannerView(onViewVideo: onViewVideo, onDismiss: onDismiss)
+        let hosting = NSHostingView(rootView: view)
+        hosting.wantsLayer              = true
+        hosting.layer?.backgroundColor  = .clear
+        let size = hosting.fittingSize
+        hosting.setFrameSize(size)
+
+        let p = NSPanel(contentRect: NSRect(origin: .zero, size: size),
+                        styleMask: [.borderless, .nonactivatingPanel],
+                        backing: .buffered, defer: false)
+        p.isFloatingPanel    = true
+        p.level              = toolbar.level
+        p.backgroundColor    = .clear
+        p.isOpaque           = false
+        p.hasShadow          = true
+        p.collectionBehavior = [.canJoinAllSpaces, .fullScreenAuxiliary]
+        p.appearance         = NSAppearance(named: .darkAqua)
+        p.contentView        = hosting
+        p.setContentSize(size)
+
+        let x = toolbar.frame.midX - size.width / 2
+        let y = toolbar.frame.maxY + 8
+        p.setFrameOrigin(NSPoint(x: x, y: y))
+        p.alphaValue = 0
+        p.orderFrontRegardless()
+        NSAnimationContext.runAnimationGroup { ctx in
+            ctx.duration = 0.15
+            p.animator().alphaValue = 1
+        }
+        panel = p
+    }
+
+    func hide() {
+        guard let p = panel else { return }
+        panel = nil
+        NSAnimationContext.runAnimationGroup({ ctx in
+            ctx.duration = 0.1
+            p.animator().alphaValue = 0
+        }, completionHandler: { p.orderOut(nil) })
+    }
+}
+
 // MARK: – Selection confirm panel (V4: preview + Cancel/Record at window bottom-left)
 
 @MainActor

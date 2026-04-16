@@ -26,7 +26,8 @@ struct V5TypeSelect: View {
             }
         }
         .overlay(alignment: .top) {
-            if settings.v5UploadStyle == .toolbar, state.isUploading {
+            let showsProgress = (settings.v5UploadStyle == .toolbar || settings.v5UploadStyle == .toolbarWithCompleteMessage) && state.isUploading
+            if showsProgress {
                 V5UploadProgressBar(progress: state.uploadProgress)
                     .padding(.top, settings.v5DefaultStyle == .message ? 16 : 0)
             }
@@ -145,6 +146,16 @@ struct UploadModeView: View {
     }
 
     var body: some View {
+        if state.uploadComplete {
+            uploadCompleteBody
+        } else {
+            uploadingBody
+        }
+    }
+
+    // MARK: – Uploading state
+
+    private var uploadingBody: some View {
         VStack(spacing: 0) {
             if settings.v5DefaultStyle == .message {
                 ToolbarHeader(message: "Uploading… \(Int(state.uploadProgress * 100))%")
@@ -190,5 +201,52 @@ struct UploadModeView: View {
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .contentShape(Rectangle())
         .onHover { hovering = $0 }
+    }
+
+    // MARK: – Upload complete state
+
+    private var uploadCompleteBody: some View {
+        VStack(spacing: 0) {
+            if settings.v5DefaultStyle == .message {
+                ToolbarHeader(message: "Completed")
+            }
+
+            HStack(spacing: 8) {
+                Text("Upload complete ✓")
+                    .font(.system(size: 13))
+                    .foregroundColor(.white)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+
+                Button {
+                    // prototype: no-op
+                } label: {
+                    Label("View video", systemImage: "play.rectangle.fill")
+                        .font(.system(size: 12, weight: .medium))
+                        .foregroundColor(.white)
+                        .frame(width: 126, height: 28)
+                        .background(Color.highlightSecondary)
+                        .cornerRadius(7)
+                }
+                .buttonStyle(.plain)
+
+                Button {
+                    state.dismissUploadComplete()
+                } label: {
+                    HStack(spacing: 5) {
+                        Image(systemName: "record.circle.fill")
+                            .foregroundColor(.modelessDestructive)
+                        Text("New recording")
+                            .foregroundColor(.white)
+                    }
+                    .font(.system(size: 12, weight: .medium))
+                    .frame(width: 126, height: 28)
+                    .background(Color.highlightSecondary)
+                    .cornerRadius(7)
+                }
+                .buttonStyle(.plain)
+            }
+            .padding(.horizontal, 12)
+        }
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
     }
 }

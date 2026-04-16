@@ -10,7 +10,7 @@ final class PrototypeSettingsWindowController: NSWindowController {
     init(state: SettingsState) {
         self.state = state
         let window = NSWindow(
-            contentRect: NSRect(x: 0, y: 0, width: 360, height: 440),
+            contentRect: NSRect(x: 0, y: 0, width: 360, height: 480),
             styleMask: [.titled, .closable],
             backing: .buffered,
             defer: false
@@ -108,7 +108,7 @@ struct PrototypeSettingsView: View {
             }
         }
         .padding(20)
-        .frame(width: 360, height: 440)
+        .frame(width: 360, height: 480)
     }
 
     @ViewBuilder

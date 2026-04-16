@@ -25,8 +25,8 @@ struct ToolbarView: View {
 
     var body: some View {
         Group {
-            // Upload mode: replace entire toolbar with upload UI
-            if state.isUploading && settings.v5UploadStyle == .uploadMode {
+            // Upload mode: replace entire toolbar with upload UI (during and after upload)
+            if (state.isUploading || state.uploadComplete) && settings.v5UploadStyle == .uploadMode {
                 UploadModeView(state: state)
             } else {
                 switch state.appState {
