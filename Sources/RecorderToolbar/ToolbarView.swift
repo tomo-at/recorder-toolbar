@@ -25,32 +25,37 @@ struct ToolbarView: View {
 
     var body: some View {
         Group {
-            switch state.appState {
-            case .typeSelect:
-                switch settings.protoVersion {
-                case .v1: TypeSelectView(state: state)
-                case .v2: TypeSelectViewV2(state: state)
-                case .v3: TypeSelectViewV3(state: state)
-                case .v4: TypeSelectViewV4(state: state)
-                case .v5: V5TypeSelect(state: state)
-                }
-            case .windowSelect, .displaySelect:
-                switch settings.protoVersion {
-                case .v1, .v2, .v3: WindowSelectView(state: state)
-                case .v4:           TypeSelectViewV4(state: state)
-                case .v5:           V5WindowSelect(state: state)
-                }
-            case .countdown:
-                switch settings.protoVersion {
-                case .v1, .v2, .v3: CountdownToolbarView(state: state)
-                case .v4:           CountdownToolbarViewV4(state: state)
-                case .v5:           V5Countdown(state: state)
-                }
-            case .recording:
-                switch settings.protoVersion {
-                case .v1, .v2, .v3: RecordingView(state: state)
-                case .v4:           RecordingViewV4(state: state)
-                case .v5:           V5Recording(state: state)
+            // Upload mode: replace entire toolbar with upload UI
+            if state.isUploading && settings.v5UploadStyle == .uploadMode {
+                UploadModeView(state: state)
+            } else {
+                switch state.appState {
+                case .typeSelect:
+                    switch settings.protoVersion {
+                    case .v1: TypeSelectView(state: state)
+                    case .v2: TypeSelectViewV2(state: state)
+                    case .v3: TypeSelectViewV3(state: state)
+                    case .v4: TypeSelectViewV4(state: state)
+                    case .v5: V5TypeSelect(state: state)
+                    }
+                case .windowSelect, .displaySelect:
+                    switch settings.protoVersion {
+                    case .v1, .v2, .v3: WindowSelectView(state: state)
+                    case .v4:           TypeSelectViewV4(state: state)
+                    case .v5:           V5WindowSelect(state: state)
+                    }
+                case .countdown:
+                    switch settings.protoVersion {
+                    case .v1, .v2, .v3: CountdownToolbarView(state: state)
+                    case .v4:           CountdownToolbarViewV4(state: state)
+                    case .v5:           V5Countdown(state: state)
+                    }
+                case .recording:
+                    switch settings.protoVersion {
+                    case .v1, .v2, .v3: RecordingView(state: state)
+                    case .v4:           RecordingViewV4(state: state)
+                    case .v5:           V5Recording(state: state)
+                    }
                 }
             }
         }
@@ -1664,6 +1669,73 @@ struct RevealedAllCompactTypeSelectView: View {
             .padding(.horizontal, 8)
         }
         .task { await state.loadDevices() }
+    }
+}
+
+// MARK: – Upload mode (UploadStyle.uploadMode)
+// Replaces toolbar content during upload. Shows "Uploading video" + progress bar.
+// On hover: Cancel button replaces the text.
+
+struct UploadModeView: View {
+    @ObservedObject var state: ToolbarState
+    @ObservedObject var settings: SettingsState
+    @State private var hovering = false
+
+    init(state: ToolbarState) {
+        self.state    = state
+        self.settings = state.settingsPanel.state
+    }
+
+    var body: some View {
+        VStack(spacing: 0) {
+            // Message header with percentage (only for message default style)
+            if settings.v5DefaultStyle == .message {
+                ToolbarHeader(message: "Uploading… \(Int(state.uploadProgress * 100))%")
+            }
+
+            HStack(spacing: 0) {
+                // Left area: fixed width — text or cancel button
+                Group {
+                    if hovering {
+                        Button {
+                            state.cancelUpload()
+                        } label: {
+                            Text("Cancel")
+                                .font(.system(size: 11))
+                                .foregroundColor(.white)
+                                .frame(maxWidth: .infinity, minHeight: 28, maxHeight: 28)
+                                .background(Color.highlightSecondary)
+                                .cornerRadius(6)
+                        }
+                        .buttonStyle(.plain)
+                    } else {
+                        // Body Small: size 11
+                        Text("Uploading video")
+                            .font(.system(size: 11))
+                            .foregroundColor(.contentSecondary)
+                            .frame(maxWidth: .infinity, alignment: .leading)
+                    }
+                }
+                .frame(width: 100)
+                .padding(.trailing, 16)
+
+                // Progress bar: fills remaining space (width stays constant)
+                GeometryReader { geo in
+                    ZStack(alignment: .leading) {
+                        RoundedRectangle(cornerRadius: 3)
+                            .fill(Color.highlightPrimary)
+                        RoundedRectangle(cornerRadius: 3)
+                            .fill(Color.modelessTeal)
+                            .frame(width: geo.size.width * CGFloat(max(0, min(1, state.uploadProgress))))
+                    }
+                }
+                .frame(height: 6)
+            }
+            .padding(.horizontal, 12)
+        }
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .contentShape(Rectangle())
+        .onHover { hovering = $0 }
     }
 }
 

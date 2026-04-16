@@ -77,10 +77,12 @@ final class SettingsState: ObservableObject {
     enum UploadStyle: String, CaseIterable {
         case toolbar              = "toolbar"
         case menuBarNotification  = "menuBarNotification"
+        case uploadMode           = "uploadMode"
         var label: String {
             switch self {
             case .toolbar:             return "Toolbar"
             case .menuBarNotification: return "Menu bar + Notification"
+            case .uploadMode:          return "Upload mode"
             }
         }
     }
@@ -182,8 +184,9 @@ final class SettingsPanelController {
         let w: CGFloat = 257
         let h: CGFloat = mainPanelHeight()
         let rawX = buttonCenterX - w / 2
-        let screenMinX = NSScreen.main?.frame.minX ?? 0
-        let screenMaxX = NSScreen.main?.frame.maxX ?? 2000
+        let screen = toolbar.screen ?? NSScreen.main
+        let screenMinX = screen?.frame.minX ?? 0
+        let screenMaxX = screen?.frame.maxX ?? 2000
         let x = max(screenMinX + 4, min(rawX, screenMaxX - w - 4))
         let y = toolbar.frame.maxY + 8
         p.setFrame(NSRect(x: x, y: y, width: w, height: h), display: false)

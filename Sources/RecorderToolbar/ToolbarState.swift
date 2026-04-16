@@ -427,6 +427,13 @@ class ToolbarState: ObservableObject {
         }
     }
 
+    func cancelUpload() {
+        uploadTask?.cancel()
+        uploadTask = nil
+        isUploading    = false
+        uploadProgress = 0
+    }
+
     func togglePause() { paused = !paused }
 
     // MARK: – Camera preview popup
