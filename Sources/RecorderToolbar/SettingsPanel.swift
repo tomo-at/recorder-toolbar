@@ -46,11 +46,13 @@ final class SettingsState: ObservableObject {
         case stepByStep   = "stepByStep"
         case revealedAll  = "revealedAll"
         case message      = "message"
+        case horizontal   = "horizontal"
         var label: String {
             switch self {
             case .stepByStep:  return "Step by step"
             case .revealedAll: return "Revealed all"
             case .message:     return "Message"
+            case .horizontal:  return "Horizontal layout"
             }
         }
     }
@@ -58,10 +60,12 @@ final class SettingsState: ObservableObject {
     /// V5 の選択確定〜録画 UI のスタイル
     enum RecordingStyle: String, CaseIterable {
         case toolbar         = "toolbar"
+        case selectToStart   = "selectToStart"
         case selectedRegion  = "selectedRegion"
         var label: String {
             switch self {
             case .toolbar:        return "Toolbar"
+            case .selectToStart:  return "Select to start"
             case .selectedRegion: return "Selected region"
             }
         }
@@ -82,16 +86,12 @@ final class SettingsState: ObservableObject {
     // MARK: – UserDefaults 永続化
 
     private var cancellables: Set<AnyCancellable> = []
-    private static let kProtoVersion     = "protoVersion"
     private static let kV5DefaultStyle   = "v5DefaultStyle"
     private static let kV5RecordingStyle = "v5RecordingStyle"
     private static let kV5UploadStyle    = "v5UploadStyle"
 
     init() {
         let d = UserDefaults.standard
-        if let v = d.string(forKey: Self.kProtoVersion).flatMap(ProtoVersion.init(rawValue:)) {
-            protoVersion = v
-        }
         if let v = d.string(forKey: Self.kV5DefaultStyle).flatMap(DefaultStyle.init(rawValue:)) {
             v5DefaultStyle = v
         }
@@ -102,9 +102,6 @@ final class SettingsState: ObservableObject {
             v5UploadStyle = v
         }
 
-        $protoVersion.dropFirst()
-            .sink { d.set($0.rawValue, forKey: Self.kProtoVersion) }
-            .store(in: &cancellables)
         $v5DefaultStyle.dropFirst()
             .sink { d.set($0.rawValue, forKey: Self.kV5DefaultStyle) }
             .store(in: &cancellables)
@@ -119,7 +116,7 @@ final class SettingsState: ObservableObject {
 
 // MARK: - Controller
 
-enum SettingsSubPanelType { case theme, prototype }
+enum SettingsSubPanelType { case camera, microphone }
 
 @MainActor
 final class SettingsPanelController {
@@ -132,6 +129,7 @@ final class SettingsPanelController {
     private weak var toolbar:  NSPanel?
 
     private(set) var state = SettingsState()
+    weak var toolbarState: ToolbarState?
     var isVisible: Bool { mainPanel != nil }
 
     private var prototypeSettingsWC: PrototypeSettingsWindowController?
@@ -144,10 +142,13 @@ final class SettingsPanelController {
         prototypeSettingsWC?.show()
     }
 
-    /// V5 選択時に "Prototype Settings..." 項目が追加されるためメインパネルを 28px 伸ばす。
+    /// パネルの動的高さ。ベース 313px + stepByStep 時は Camera/Mic/Div(65) を加算。
     private func mainPanelHeight() -> CGFloat {
-        let base: CGFloat = 350
-        return state.protoVersion == .v5 ? base + 28 : base
+        var h: CGFloat = 313
+        if state.v5DefaultStyle == .stepByStep {
+            h += 65   // Camera(28) + Microphone(28) + Divider(9)
+        }
+        return h
     }
 
     private func resizeMainPanelToFitContent() {
@@ -188,7 +189,7 @@ final class SettingsPanelController {
         p.fadeIn(); mainPanel = p
         toolbar.orderFrontRegardless()
 
-        protoVersionObserver = state.$protoVersion
+        protoVersionObserver = state.$v5DefaultStyle
             .dropFirst()
             .sink { [weak self] _ in
                 Task { @MainActor [weak self] in self?.resizeMainPanelToFitContent() }
@@ -222,36 +223,38 @@ final class SettingsPanelController {
         guard let main = mainPanel, let tb = toolbar else { return }
 
         let sub = NSPanel.makeFloating(level: tb.level)
-        let subW: CGFloat = 130
+        let subW: CGFloat
         let rows: Int
 
         switch type {
-        case .theme:
-            let hosting = NSHostingView(rootView: AnyView(ThemeSubPanelView(
-                choice: Binding(get: { [weak self] in self?.state.themeChoice ?? .auto },
-                                set: { [weak self] in self?.state.themeChoice = $0 }),
+        case .camera:
+            let devs = toolbarState?.cameraDevices ?? []
+            let hosting = NSHostingView(rootView: AnyView(DeviceSubPanelView(
+                devices: devs,
+                activeId: Binding(get: { [weak self] in self?.toolbarState?.activeCamId },
+                                  set: { [weak self] in self?.toolbarState?.activeCamId = $0 }),
                 controller: self)))
             sub.contentView = hosting
-            rows = SettingsState.ThemeOption.allCases.count
-        case .prototype:
-            let hosting = NSHostingView(rootView: AnyView(PrototypeSubPanelView(
-                choice: Binding(get: { [weak self] in self?.state.protoVersion ?? .v4 },
-                                set: { [weak self] in self?.state.protoVersion = $0 }),
+            rows = max(1, devs.count)
+            subW = 200
+        case .microphone:
+            let devs = toolbarState?.micDevices ?? []
+            let hosting = NSHostingView(rootView: AnyView(DeviceSubPanelView(
+                devices: devs,
+                activeId: Binding(get: { [weak self] in self?.toolbarState?.activeMicId },
+                                  set: { [weak self] in self?.toolbarState?.activeMicId = $0 }),
                 controller: self)))
             sub.contentView = hosting
-            rows = SettingsState.ProtoVersion.allCases.count
+            rows = max(1, devs.count)
+            subW = 200
         }
 
         let subH = CGFloat(rows) * 28 + 16
         let x = main.frame.maxX + 6
-        // Align sub-panel top with the relevant row.
-        // Row offsets from panel top:
-        //   Theme:     8+28+9+28+28+9+28+28+9 = 175 px
-        //   Prototype: 175+28(theme)+9(div)+28+28(cursor/audio)+9(div) = 277 px
         let rowTopOffset: CGFloat
         switch type {
-        case .theme:     rowTopOffset = 175
-        case .prototype: rowTopOffset = 277
+        case .camera:     rowTopOffset = 45         // 8+28+9
+        case .microphone: rowTopOffset = 73         // 45+28
         }
         let y = main.frame.maxY - rowTopOffset - subH
         sub.setFrame(NSRect(x: x, y: y, width: subW, height: subH), display: false)
@@ -406,11 +409,31 @@ struct SettingsPanelView: View {
     @ObservedObject var state: SettingsState
     let controller: SettingsPanelController
 
+    /// V5 + Step by step のときだけ Camera/Mic 選択メニューを Settings 内に表示する
+    /// （Revealed all / Message はツールバーに直接 Camera/Mic セグメントがあるため不要）。
+    private var showsDeviceMenu: Bool {
+        state.protoVersion == .v5 && state.v5DefaultStyle == .stepByStep
+    }
+
     var body: some View {
         VStack(spacing: 0) {
             UserProfileRow { controller.dismiss() }
 
             MenuDivider()
+
+            // Camera / Microphone（V5 + Step by step のみ）
+            if showsDeviceMenu {
+                SettingsMenuItem(icon: nil, label: "Camera",
+                                 rightIcon: .chevron) { h in
+                    if h { controller.showSub(.camera) } else { controller.scheduleDismissSub() }
+                }
+                SettingsMenuItem(icon: nil, label: "Microphone",
+                                 rightIcon: .chevron) { h in
+                    if h { controller.showSub(.microphone) } else { controller.scheduleDismissSub() }
+                }
+
+                MenuDivider()
+            }
 
             SettingsMenuItem(icon: nil, label: "All videos",
                              rightIcon: .externalLink,
@@ -432,13 +455,6 @@ struct SettingsPanelView: View {
 
             MenuDivider()
 
-            SettingsMenuItem(icon: nil, label: "Theme",
-                             rightIcon: .chevron) { h in
-                if h { controller.showSub(.theme) } else { controller.scheduleDismissSub() }
-            }
-
-            MenuDivider()
-
             SettingsMenuItem(icon: state.showCursor ? "checkmark" : nil,
                              label: "Show cursor") { _ in }
                 .onTapGesture { state.showCursor.toggle() }
@@ -448,19 +464,11 @@ struct SettingsPanelView: View {
 
             MenuDivider()
 
-            SettingsMenuItem(icon: nil, label: "Prototype",
-                             rightIcon: .chevron) { h in
-                if h { controller.showSub(.prototype) } else { controller.scheduleDismissSub() }
-            }
-
-            // V5 選択時のみ表示。クリックで独立ウィンドウが開く。
-            if state.protoVersion == .v5 {
-                SettingsMenuItem(icon: nil, label: "Prototype Settings...") { _ in }
-                    .onTapGesture {
-                        controller.dismiss()
-                        controller.openPrototypeSettings()
-                    }
-            }
+            SettingsMenuItem(icon: nil, label: "Prototype Settings...") { _ in }
+                .onTapGesture {
+                    controller.dismiss()
+                    controller.openPrototypeSettings()
+                }
 
             MenuDivider()
 
@@ -474,43 +482,25 @@ struct SettingsPanelView: View {
     }
 }
 
-// MARK: - Prototype sub-panel
+// MARK: - Device sub-panel (Camera / Microphone)
 
-struct PrototypeSubPanelView: View {
-    @Binding var choice: SettingsState.ProtoVersion
+struct DeviceSubPanelView: View {
+    let devices: [AVCaptureDevice]
+    @Binding var activeId: String?
     let controller: SettingsPanelController
 
     var body: some View {
         VStack(spacing: 0) {
-            ForEach(SettingsState.ProtoVersion.allCases, id: \.self) { version in
-                SettingsMenuItem(
-                    icon: choice == version ? "checkmark" : nil,
-                    label: version.rawValue
-                ) { _ in }
-                .onTapGesture { choice = version }
-            }
-        }
-        .padding(8)
-        .background(MenuBackground())
-        .clipShape(RoundedRectangle(cornerRadius: 14))
-        .onHover { h in h ? controller.keepSub() : controller.scheduleDismissSub() }
-    }
-}
-
-// MARK: - Theme sub-panel
-
-struct ThemeSubPanelView: View {
-    @Binding var choice: SettingsState.ThemeOption
-    let controller: SettingsPanelController
-
-    var body: some View {
-        VStack(spacing: 0) {
-            ForEach(SettingsState.ThemeOption.allCases, id: \.self) { option in
-                SettingsMenuItem(
-                    icon: choice == option ? "checkmark" : nil,
-                    label: option.rawValue
-                ) { _ in }
-                .onTapGesture { choice = option }
+            if devices.isEmpty {
+                SettingsMenuItem(icon: nil, label: "No devices") { _ in }
+            } else {
+                ForEach(devices, id: \.uniqueID) { device in
+                    SettingsMenuItem(
+                        icon: device.uniqueID == activeId ? "checkmark" : nil,
+                        label: String(device.localizedName.prefix(20))
+                    ) { _ in }
+                    .onTapGesture { activeId = device.uniqueID }
+                }
             }
         }
         .padding(8)

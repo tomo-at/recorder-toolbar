@@ -65,14 +65,28 @@ class ToolbarState: ObservableObject {
         return false
     }
 
+    /// V5(.selectToStart) はオーバーレイ選択 → 即カウントダウン（windowSelect をスキップ）。
+    private var usesSelectToStart: Bool {
+        let s = settingsPanel.state
+        return s.protoVersion == .v5 && s.v5RecordingStyle == .selectToStart
+    }
+
     init() {
-        // Window selected: freeze overlay, keep toolbar in typeSelect-like state,
-        // show confirm panel at the selected window's bottom-left.
+        settingsPanel.toolbarState = self
+
+        // Window selected: freeze overlay.
+        // - selectToStart: 即 startCountdown（windowSelect スキップ）
+        // - selectedRegion: confirm panel 表示
+        // - toolbar: windowSelect ツールバーへ遷移
         overlay.onSelect = { [weak self] in
             guard let self else { return }
             self.overlay.freeze()
-            self.appState      = .windowSelect   // handleStateChange fires; panel stays at 482px
             self.selectionMode = nil
+            if self.usesSelectToStart {
+                self.startCountdown()
+                return
+            }
+            self.appState = .windowSelect
             guard self.usesSelectionConfirmPanel else { return }
             if let bounds = self.overlay.frozenWindowBounds, let panel = self.panel {
                 let origin = NSPoint(x: bounds.minX + 16,
@@ -84,12 +98,16 @@ class ToolbarState: ObservableObject {
         }
         overlay.onCancel = { [weak self] in self?.exitSelecting() }
 
-        // Display selected: same pattern — confirm panel at display bottom-left.
+        // Display selected: same pattern.
         displayOverlay.onSelect = { [weak self] in
             guard let self else { return }
             self.displayOverlay.freeze()
-            self.appState      = .displaySelect
             self.selectionMode = nil
+            if self.usesSelectToStart {
+                self.startCountdown()
+                return
+            }
+            self.appState = .displaySelect
             guard self.usesSelectionConfirmPanel else { return }
             if let screen = self.displayOverlay.frozenScreen, let panel = self.panel {
                 let origin = NSPoint(x: screen.frame.minX + 16,
@@ -144,6 +162,17 @@ class ToolbarState: ObservableObject {
         if selectionMode == mode {
             exitSelecting()
         } else {
+            enterSelecting(mode)
+        }
+    }
+
+    /// Activate a selection mode without toggling (used by horizontal capture type dropdown).
+    func activateSelecting(_ mode: SelectionMode) {
+        settingsPanel.dismiss()
+        if appState == .windowSelect || appState == .displaySelect {
+            appState = .typeSelect
+        }
+        if selectionMode != mode {
             enterSelecting(mode)
         }
     }
@@ -235,10 +264,12 @@ class ToolbarState: ObservableObject {
     private func resizePanel(for state: AppState) {
         guard let panel else { return }
         let s = settingsPanel.state
+        let isHorizontal = s.protoVersion == .v5 && s.v5DefaultStyle == .horizontal
+        let newH: CGFloat = panelHeight(for: s)
         let newW: CGFloat
         switch state {
         case .recording, .countdown:
-            newW = 297
+            newW = isHorizontal ? 365 : 297
         case .typeSelect:
             switch s.protoVersion {
             case .v1: newW = 345
@@ -253,17 +284,17 @@ class ToolbarState: ObservableObject {
             case .v4: newW = 482
             case .v5:
                 switch s.v5RecordingStyle {
-                case .selectedRegion:
+                case .selectToStart, .selectedRegion:
                     // typeSelect が出続けるので幅は defaultStyle に合わせる
                     newW = v5TypeSelectWidth(for: s.v5DefaultStyle)
                 case .toolbar:
-                    newW = 389
+                    newW = isHorizontal ? 482 : 389
                 }
             }
         }
         let cx = panel.frame.midX
         let y  = panel.frame.origin.y
-        panel.setFrame(NSRect(x: cx - newW / 2, y: y, width: newW, height: 66),
+        panel.setFrame(NSRect(x: cx - newW / 2, y: y, width: newW, height: newH),
                        display: true, animate: true)
     }
 
@@ -272,6 +303,20 @@ class ToolbarState: ObservableObject {
         case .stepByStep:  return 345  // V1 と同じ
         case .revealedAll: return 506  // V2 と同じ
         case .message:     return 482  // V4 と同じ
+        case .horizontal:  return 482
+        }
+    }
+
+    private func panelHeight(for s: SettingsState) -> CGFloat {
+        switch s.protoVersion {
+        case .v1, .v2, .v3: return 56
+        case .v4:            return 66
+        case .v5:
+            switch s.v5DefaultStyle {
+            case .stepByStep, .revealedAll: return 56
+            case .message:                 return 66
+            case .horizontal:              return 48
+            }
         }
     }
 
@@ -324,12 +369,13 @@ class ToolbarState: ObservableObject {
             }
     }
 
-    func stopRecording() {
+    func stopRecording(upload: Bool = true) {
         timer?.cancel()
         timer    = nil
         seconds  = 0
         appState = .typeSelect
 
+        guard upload else { return }
         let s = settingsPanel.state
         let triggersUpload = s.protoVersion == .v1
             || s.protoVersion == .v2
