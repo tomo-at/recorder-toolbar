@@ -1,5 +1,6 @@
 import SwiftUI
 import AVFoundation
+import CoreMedia
 
 struct CameraSegment: View {
     let devices: [AVCaptureDevice]
@@ -151,6 +152,94 @@ struct MicLevelBars: View {
                     .cornerRadius(2)
             }
         }
+    }
+}
+
+/// Mic SF Symbol filled from bottom by audio level (green on gray).
+/// Self-contained with its own fake meter timer.
+struct MicIconWithLevel: View {
+    let size: CGFloat
+    @State private var level: Float = 0
+    @State private var meterTimer: Timer? = nil
+
+    var body: some View {
+        ZStack {
+            // Base: dim icon
+            Image(systemName: "mic.fill")
+                .font(.system(size: size * 0.67))
+                .foregroundColor(.contentTertiary)
+            // Fill: green, masked from bottom by level
+            Image(systemName: "mic.fill")
+                .font(.system(size: size * 0.67))
+                .foregroundColor(.selectedGreen)
+                .mask {
+                    VStack(spacing: 0) {
+                        Color.clear
+                            .frame(height: size * CGFloat(max(0, 1 - level)))
+                        Color.white
+                            .frame(height: size * CGFloat(min(1, level)))
+                    }
+                }
+        }
+        .frame(width: size, height: size)
+        .onAppear { startFakeMeter() }
+        .onDisappear { meterTimer?.invalidate() }
+    }
+
+    private func startFakeMeter() {
+        var t: Float = 0
+        meterTimer = Timer.scheduledTimer(withTimeInterval: 0.05, repeats: true) { _ in
+            t += 0.04
+            level = 0.15 + abs(sin(t)) * 0.5
+        }
+    }
+}
+
+// MARK: – Real-time mic audio level delegate (unused – kept for future use)
+
+/// AVCaptureAudioDataOutput delegate that calculates RMS audio level from sample buffers.
+class MicAudioLevelDelegate: NSObject, AVCaptureAudioDataOutputSampleBufferDelegate {
+    private let onLevel: @Sendable (Float) -> Void
+
+    init(onLevel: @escaping @Sendable (Float) -> Void) {
+        self.onLevel = onLevel
+    }
+
+    nonisolated func captureOutput(_ output: AVCaptureOutput,
+                                    didOutput sampleBuffer: CMSampleBuffer,
+                                    from connection: AVCaptureConnection) {
+        guard let formatDesc = CMSampleBufferGetFormatDescription(sampleBuffer),
+              let asbd = CMAudioFormatDescriptionGetStreamBasicDescription(formatDesc)?.pointee,
+              let buf = CMSampleBufferGetDataBuffer(sampleBuffer) else { return }
+
+        var length = 0
+        var dataPointer: UnsafeMutablePointer<Int8>?
+        guard CMBlockBufferGetDataPointer(buf, atOffset: 0, lengthAtOffsetOut: nil,
+                                           totalLengthOut: &length, dataPointerOut: &dataPointer) == noErr,
+              let ptr = dataPointer, length > 0 else { return }
+
+        let rms: Float
+        if asbd.mFormatFlags & kAudioFormatFlagIsFloat != 0 {
+            let count = length / MemoryLayout<Float>.size
+            guard count > 0 else { return }
+            let floatPtr = UnsafeRawPointer(ptr).assumingMemoryBound(to: Float.self)
+            var sum: Float = 0
+            for i in 0..<count { sum += floatPtr[i] * floatPtr[i] }
+            rms = sqrt(sum / Float(count))
+        } else {
+            // 16-bit integer PCM
+            let count = length / MemoryLayout<Int16>.size
+            guard count > 0 else { return }
+            let int16Ptr = UnsafeRawPointer(ptr).assumingMemoryBound(to: Int16.self)
+            var sum: Float = 0
+            for i in 0..<count {
+                let s = Float(int16Ptr[i]) / Float(Int16.max)
+                sum += s * s
+            }
+            rms = sqrt(sum / Float(count))
+        }
+
+        onLevel(min(1.0, rms * 4))
     }
 }
 

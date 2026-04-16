@@ -21,7 +21,7 @@ class AppDelegate: NSObject, NSApplicationDelegate, UNUserNotificationCenterDele
         hosting.wantsLayer = true
         hosting.layer?.backgroundColor = .clear
 
-        panel = NSPanel(
+        panel = KeyablePanel(
             contentRect: .zero,
             styleMask: [.borderless, .nonactivatingPanel],
             backing: .buffered,

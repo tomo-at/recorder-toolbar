@@ -43,16 +43,18 @@ final class SettingsState: ObservableObject {
 
     /// V5 のデフォルトトールバー描画スタイル（typeSelect ビュー）
     enum DefaultStyle: String, CaseIterable {
-        case stepByStep   = "stepByStep"
-        case revealedAll  = "revealedAll"
-        case message      = "message"
-        case horizontal   = "horizontal"
+        case stepByStep         = "stepByStep"
+        case revealedAll        = "revealedAll"
+        case revealedAllCompact = "revealedAllCompact"
+        case message            = "message"
+        case horizontal         = "horizontal"
         var label: String {
             switch self {
-            case .stepByStep:  return "Step by step"
-            case .revealedAll: return "Revealed all"
-            case .message:     return "Message"
-            case .horizontal:  return "Horizontal layout"
+            case .stepByStep:        return "Step by step"
+            case .revealedAll:       return "Revealed all"
+            case .message:           return "Message"
+            case .horizontal:        return "Horizontal layout"
+            case .revealedAllCompact: return "Revealed all (compact)"
             }
         }
     }

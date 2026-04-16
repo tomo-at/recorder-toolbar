@@ -41,6 +41,14 @@ extension Color {
     static let deviceMenuBg    = bgSecondary                           // 旧値を DS #12181A へ統合
 }
 
+// MARK: – KeyablePanel (non-activating but accepts key events for Esc handling)
+
+/// NSPanel subclass that can become key window while remaining non-activating.
+/// Allows local key event monitoring (e.g., Esc to cancel overlay selection).
+class KeyablePanel: NSPanel {
+    override var canBecomeKey: Bool { true }
+}
+
 // MARK: – NSPanel factory
 
 extension NSPanel {

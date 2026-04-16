@@ -55,6 +55,7 @@ class ToolbarState: ObservableObject {
     private var uploadTask:         Task<Void, Never>?
     private var cameraPreviewPanel: NSPanel?
     private var escKeyMonitor:      Any?
+    private var escLocalMonitor:    Any?
     private var cancellables:       Set<AnyCancellable> = []
 
     /// V4 / V5(.selectedRegion) は選択確定後に SelectionConfirmPanel を出す。
@@ -144,6 +145,7 @@ class ToolbarState: ObservableObject {
             self.resizePanel(for: self.appState)
         }
         .store(in: &cancellables)
+
     }
 
     // MARK: – Selection mode (overlay visible, toolbar still in typeSelect)
@@ -232,6 +234,14 @@ class ToolbarState: ObservableObject {
 
     // MARK: – Esc monitor
 
+    private func handleEscPress() {
+        if selectionMode != nil {
+            exitSelecting()
+        } else if appState == .windowSelect || appState == .displaySelect || appState == .countdown {
+            appState = .typeSelect
+        }
+    }
+
     private func updateEscMonitor() {
         let needsMonitor = selectionMode != nil
             || appState == .windowSelect
@@ -239,23 +249,27 @@ class ToolbarState: ObservableObject {
             || appState == .countdown
 
         if needsMonitor {
-            guard escKeyMonitor == nil else { return }
-            escKeyMonitor = NSEvent.addGlobalMonitorForEvents(matching: .keyDown) { [weak self] event in
-                guard event.keyCode == 53 else { return }   // 53 = Escape
-                Task { @MainActor [weak self] in
-                    guard let self else { return }
-                    if self.selectionMode != nil {
-                        // Cancel overlay selection → stay in typeSelect
-                        self.exitSelecting()
-                    } else {
-                        // Leave windowSelect / displaySelect / countdown → back to typeSelect
-                        self.appState = .typeSelect
-                    }
+            // Make toolbar panel key so it receives local key events
+            panel?.makeKeyAndOrderFront(nil)
+
+            // Global monitor — catches Esc sent to other apps
+            if escKeyMonitor == nil {
+                escKeyMonitor = NSEvent.addGlobalMonitorForEvents(matching: .keyDown) { [weak self] event in
+                    guard event.keyCode == 53 else { return }   // 53 = Escape
+                    Task { @MainActor [weak self] in self?.handleEscPress() }
                 }
             }
-        } else if let token = escKeyMonitor {
-            NSEvent.removeMonitor(token)
-            escKeyMonitor = nil
+            // Local monitor — catches Esc sent to this app (panel is key)
+            if escLocalMonitor == nil {
+                escLocalMonitor = NSEvent.addLocalMonitorForEvents(matching: .keyDown) { [weak self] event in
+                    guard event.keyCode == 53 else { return event }
+                    Task { @MainActor [weak self] in self?.handleEscPress() }
+                    return nil   // consume the event
+                }
+            }
+        } else {
+            if let token = escKeyMonitor  { NSEvent.removeMonitor(token); escKeyMonitor = nil }
+            if let token = escLocalMonitor { NSEvent.removeMonitor(token); escLocalMonitor = nil }
         }
     }
 
@@ -300,10 +314,11 @@ class ToolbarState: ObservableObject {
 
     private func v5TypeSelectWidth(for style: SettingsState.DefaultStyle) -> CGFloat {
         switch style {
-        case .stepByStep:  return 345  // V1 と同じ
-        case .revealedAll: return 506  // V2 と同じ
-        case .message:     return 482  // V4 と同じ
-        case .horizontal:  return 482
+        case .stepByStep:        return 345  // V1 と同じ
+        case .revealedAll:       return 506  // V2 と同じ
+        case .message:           return 482  // V4 と同じ
+        case .horizontal:        return 482
+        case .revealedAllCompact: return 470
         }
     }
 
@@ -313,9 +328,9 @@ class ToolbarState: ObservableObject {
         case .v4:            return 66
         case .v5:
             switch s.v5DefaultStyle {
-            case .stepByStep, .revealedAll: return 56
-            case .message:                 return 66
-            case .horizontal:              return 48
+            case .stepByStep, .revealedAll, .revealedAllCompact: return 56
+            case .message:                                     return 66
+            case .horizontal:                                  return 48
             }
         }
     }

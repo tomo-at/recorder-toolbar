@@ -16,9 +16,9 @@ struct ToolbarView: View {
         case .v4:           return 66
         case .v5:
             switch settings.v5DefaultStyle {
-            case .stepByStep, .revealedAll: return 56
-            case .message:                 return 66
-            case .horizontal:              return 48
+            case .stepByStep, .revealedAll, .revealedAllCompact: return 56
+            case .message:                                     return 66
+            case .horizontal:                                  return 48
             }
         }
     }
@@ -83,7 +83,8 @@ struct V5TypeSelect: View {
             case .stepByStep:  TypeSelectView(state: state)
             case .revealedAll: TypeSelectViewV2(state: state)
             case .message:     TypeSelectViewV4(state: state)
-            case .horizontal:  HorizontalTypeSelectView(state: state)
+            case .horizontal:        HorizontalTypeSelectView(state: state)
+            case .revealedAllCompact: RevealedAllCompactTypeSelectView(state: state)
             }
         }
         .overlay(alignment: .top) {
@@ -1296,6 +1297,8 @@ struct HCaptureTypeButton: View {
                     .font(.system(size: 10, weight: .medium))
                     .foregroundColor(.contentTertiary)
                     .frame(width: 16, height: 16)
+                    .rotationEffect(.degrees(showMenu ? 180 : 0))
+                    .animation(.easeInOut(duration: 0.15), value: showMenu)
             }
             .padding(.horizontal, 4)
             .frame(height: 32)
@@ -1375,6 +1378,7 @@ struct HCameraDropdown: View {
     let devices: [AVCaptureDevice]
     @Binding var activeId: String?
     var fixedWidth: CGFloat? = nil
+    var showLabel: Bool = true
     var onHoverChanged: ((Bool) -> Void)? = nil
     @State private var hovering = false
     @State private var showMenu = false
@@ -1389,20 +1393,27 @@ struct HCameraDropdown: View {
     }
 
     var body: some View {
-        Button { showMenu.toggle() } label: {
+        Button {
+            showMenu.toggle()
+            if showMenu { onHoverChanged?(false) }
+        } label: {
             HStack(spacing: 4) {
                 CameraThumb(deviceId: activeId)
                     .frame(width: 24, height: 24)
                     .cornerRadius(4)
-                Text(label)
-                    .font(.system(size: 13))
-                    .foregroundColor(.white)
-                    .lineLimit(1)
-                    .truncationMode(.tail)
+                if showLabel {
+                    Text(label)
+                        .font(.system(size: 13))
+                        .foregroundColor(.white)
+                        .lineLimit(1)
+                        .truncationMode(.tail)
+                }
                 Image(systemName: "chevron.down")
                     .font(.system(size: 10, weight: .medium))
                     .foregroundColor(.contentTertiary)
                     .frame(width: 16, height: 16)
+                    .rotationEffect(.degrees(showMenu ? 180 : 0))
+                    .animation(.easeInOut(duration: 0.15), value: showMenu)
             }
             .padding(.horizontal, 4)
             .frame(width: fixedWidth, height: 32)
@@ -1412,7 +1423,7 @@ struct HCameraDropdown: View {
         .buttonStyle(.plain)
         .onHover { h in
             hovering = h
-            onHoverChanged?(h)
+            if !showMenu { onHoverChanged?(h) }
         }
         .popover(isPresented: $showMenu, arrowEdge: .bottom) {
             DeviceMenuView(devices: devices, activeId: $activeId)
@@ -1425,6 +1436,7 @@ struct HMicDropdown: View {
     let devices: [AVCaptureDevice]
     @Binding var activeId: String?
     var showIcon: Bool = true
+    var showLabel: Bool = true
     var fixedWidth: CGFloat? = nil
     @State private var hovering = false
     @State private var showMenu = false
@@ -1442,20 +1454,21 @@ struct HMicDropdown: View {
         Button { showMenu.toggle() } label: {
             HStack(spacing: 4) {
                 if showIcon {
-                    Image(systemName: "mic.fill")
-                        .font(.system(size: 16))
-                        .foregroundColor(.white)
-                        .frame(width: 24, height: 24)
+                    MicIconWithLevel(size: 24)
                 }
-                Text(label)
-                    .font(.system(size: 13))
-                    .foregroundColor(.white)
-                    .lineLimit(1)
-                    .truncationMode(.tail)
+                if showLabel {
+                    Text(label)
+                        .font(.system(size: 13))
+                        .foregroundColor(.white)
+                        .lineLimit(1)
+                        .truncationMode(.tail)
+                }
                 Image(systemName: "chevron.down")
                     .font(.system(size: 10, weight: .medium))
                     .foregroundColor(.contentTertiary)
                     .frame(width: 16, height: 16)
+                    .rotationEffect(.degrees(showMenu ? 180 : 0))
+                    .animation(.easeInOut(duration: 0.15), value: showMenu)
             }
             .padding(.horizontal, 4)
             .frame(width: fixedWidth, height: 32)
@@ -1470,10 +1483,11 @@ struct HMicDropdown: View {
     }
 }
 
-/// Horizontal settings button: gear icon only, 32×32.
+/// Horizontal settings button: gear icon (+ optional chevron).
 struct HSettingsButton: View {
     @ObservedObject var state: ToolbarState
     @ObservedObject var settings: SettingsState
+    var showChevron: Bool = false
     @State private var hovering = false
 
     var body: some View {
@@ -1481,15 +1495,27 @@ struct HSettingsButton: View {
             settings.settingsBadge = false
             if let panel = state.panel {
                 state.settingsPanel.toggle(toolbar: panel,
-                                           buttonCenterX: panel.frame.maxX - 24)
+                                           buttonCenterX: panel.frame.maxX - (showChevron ? 34 : 24))
             }
         } label: {
-            Image(systemName: "gearshape.fill")
-                .font(.system(size: 16))
-                .foregroundColor(.white)
-                .frame(width: 32, height: 32)
-                .background(hovering ? Color.highlightPrimary : .clear)
-                .cornerRadius(6)
+            HStack(spacing: 4) {
+                Image(systemName: "gearshape.fill")
+                    .font(.system(size: 16))
+                    .foregroundColor(.white)
+                    .frame(width: 24, height: 24)
+                if showChevron {
+                    Image(systemName: "chevron.down")
+                        .font(.system(size: 10, weight: .medium))
+                        .foregroundColor(.contentTertiary)
+                        .frame(width: 16, height: 16)
+                        .rotationEffect(.degrees(state.settingsPanel.isVisible ? 180 : 0))
+                        .animation(.easeInOut(duration: 0.15), value: state.settingsPanel.isVisible)
+                }
+            }
+            .padding(.horizontal, 4)
+            .frame(width: showChevron ? 52 : 32, height: 32)
+            .background((hovering || state.settingsPanel.isVisible) ? Color.highlightPrimary : .clear)
+            .cornerRadius(6)
         }
         .buttonStyle(.plain)
         .onHover { hovering = $0 }
@@ -1550,6 +1576,94 @@ struct HRecordButton: View {
         }
         .buttonStyle(.plain)
         .onHover { hovering = $0 }
+    }
+}
+
+// MARK: – Revealed all (compact) layout (V5 DefaultStyle.revealedAllCompact)
+// Same segment buttons as V2, but Camera/Mic/Settings are icon+chevron only (no text).
+// Width: 470px, height: 56px
+
+struct RevealedAllCompactTypeSelectView: View {
+    @ObservedObject var state: ToolbarState
+    @ObservedObject var settings: SettingsState
+
+    init(state: ToolbarState) {
+        self.state    = state
+        self.settings = state.settingsPanel.state
+    }
+
+    var body: some View {
+        HStack(spacing: 0) {
+            HStack(spacing: 0) {
+                // Type selector: 4 × SegmentButton (same as V2)
+                HStack(spacing: 0) {
+                    SegmentButton(icon: "display", label: "Display",
+                                  isActive: state.selectionMode == .display
+                                            || state.appState == .displaySelect) {
+                        state.toggleSelecting(.display)
+                    }
+                    .onHover { h in
+                        state.showPreview(h ? .display : nil)
+                        if h { state.showTooltip("Record Screen", "⇧⌘6", buttonCenterX: 40) }
+                        else  { state.shortcutTooltip.hide() }
+                    }
+
+                    SegmentButton(icon: "macwindow", label: "Window",
+                                  isActive: state.selectionMode == .window
+                                            || state.appState == .windowSelect) {
+                        state.toggleSelecting(.window)
+                    }
+                    .onHover { h in
+                        state.showPreview(h ? .window : nil)
+                        if h { state.showTooltip("Record Window", "⇧⌘7", buttonCenterX: 104) }
+                        else  { state.shortcutTooltip.hide() }
+                    }
+
+                    SegmentButton(icon: "rectangle.dashed", label: "Area") {}
+                        .onHover { h in
+                            state.showPreview(h ? .area : nil)
+                            if h { state.showTooltip("Record Area", "⇧⌘8", buttonCenterX: 168) }
+                            else  { state.shortcutTooltip.hide() }
+                        }
+
+                    CamOnlySegment(activeId: state.activeCamId) { h in
+                        guard let panel = state.panel else { return }
+                        if h, let id = state.activeCamId {
+                            state.showCameraPreview(deviceId: id, above: panel)
+                        } else {
+                            state.hideCameraPreview()
+                        }
+                    }
+                }
+                .padding(.trailing, 8)
+
+                ToolbarDivider()
+
+                // Compact Camera + Mic (icon + chevron, no label)
+                HStack(spacing: 8) {
+                    HCameraDropdown(devices: state.cameraDevices, activeId: $state.activeCamId,
+                                    fixedWidth: 52, showLabel: false,
+                                    onHoverChanged: { h in
+                                        guard let panel = state.panel else { return }
+                                        if h, let id = state.activeCamId {
+                                            state.showCameraPreview(deviceId: id, above: panel)
+                                        } else {
+                                            state.hideCameraPreview()
+                                        }
+                                    })
+                    HMicDropdown(devices: state.micDevices, activeId: $state.activeMicId,
+                                 showIcon: true, showLabel: false, fixedWidth: 52)
+                }
+                .padding(.trailing, 8)
+
+                ToolbarDivider()
+
+                // Compact Settings (gear + chevron)
+                HSettingsButton(state: state, settings: settings, showChevron: true)
+            }
+            .padding(.horizontal, 8)
+        }
+        .task { await state.loadDevices() }
     }
 }
 
