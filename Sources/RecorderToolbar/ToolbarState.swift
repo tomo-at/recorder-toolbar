@@ -50,6 +50,14 @@ class ToolbarState: ObservableObject {
     private var escKeyMonitor:      Any?
     private var cancellables:       Set<AnyCancellable> = []
 
+    /// V4 / V5(.selectedRegion) は選択確定後に SelectionConfirmPanel を出す。
+    private var usesSelectionConfirmPanel: Bool {
+        let s = settingsPanel.state
+        if s.protoVersion == .v4 { return true }
+        if s.protoVersion == .v5 && s.v5RecordingStyle == .selectedRegion { return true }
+        return false
+    }
+
     init() {
         // Window selected: freeze overlay, keep toolbar in typeSelect-like state,
         // show confirm panel at the selected window's bottom-left.
@@ -58,7 +66,7 @@ class ToolbarState: ObservableObject {
             self.overlay.freeze()
             self.appState      = .windowSelect   // handleStateChange fires; panel stays at 482px
             self.selectionMode = nil
-            guard self.settingsPanel.state.protoVersion == .v4 else { return }
+            guard self.usesSelectionConfirmPanel else { return }
             if let bounds = self.overlay.frozenWindowBounds, let panel = self.panel {
                 let origin = NSPoint(x: bounds.minX + 16,
                                      y: NSScreen.primaryHeight - bounds.maxY + 16)
@@ -75,7 +83,7 @@ class ToolbarState: ObservableObject {
             self.displayOverlay.freeze()
             self.appState      = .displaySelect
             self.selectionMode = nil
-            guard self.settingsPanel.state.protoVersion == .v4 else { return }
+            guard self.usesSelectionConfirmPanel else { return }
             if let screen = self.displayOverlay.frozenScreen, let panel = self.panel {
                 let origin = NSPoint(x: screen.frame.minX + 16,
                                      y: screen.frame.minY + 16)
@@ -99,6 +107,18 @@ class ToolbarState: ObservableObject {
                 self.resizePanel(for: .typeSelect)
             }
             .store(in: &cancellables)
+
+        // V5 軸が変わったらツールバー幅を再計算（描画は SwiftUI が自動で対応）。
+        Publishers.MergeMany(
+            settingsPanel.state.$v5DefaultStyle.dropFirst().map { _ in () }.eraseToAnyPublisher(),
+            settingsPanel.state.$v5RecordingStyle.dropFirst().map { _ in () }.eraseToAnyPublisher(),
+            settingsPanel.state.$v5UploadStyle.dropFirst().map { _ in () }.eraseToAnyPublisher()
+        )
+        .sink { [weak self] in
+            guard let self else { return }
+            self.resizePanel(for: self.appState)
+        }
+        .store(in: &cancellables)
     }
 
     // MARK: – Selection mode (overlay visible, toolbar still in typeSelect)
@@ -207,27 +227,45 @@ class ToolbarState: ObservableObject {
 
     private func resizePanel(for state: AppState) {
         guard let panel else { return }
+        let s = settingsPanel.state
         let newW: CGFloat
         switch state {
         case .recording, .countdown:
             newW = 297
         case .typeSelect:
-            switch settingsPanel.state.protoVersion {
+            switch s.protoVersion {
             case .v1: newW = 345
             case .v2: newW = 506
             case .v3: newW = 510
             case .v4: newW = 482
+            case .v5: newW = v5TypeSelectWidth(for: s.v5DefaultStyle)
             }
         case .windowSelect, .displaySelect:
-            switch settingsPanel.state.protoVersion {
+            switch s.protoVersion {
             case .v1, .v2, .v3: newW = 389  // WindowSelectView width
             case .v4: newW = 482
+            case .v5:
+                switch s.v5RecordingStyle {
+                case .selectedRegion:
+                    // typeSelect が出続けるので幅は defaultStyle に合わせる
+                    newW = v5TypeSelectWidth(for: s.v5DefaultStyle)
+                case .toolbar:
+                    newW = 389
+                }
             }
         }
         let cx = panel.frame.midX
         let y  = panel.frame.origin.y
         panel.setFrame(NSRect(x: cx - newW / 2, y: y, width: newW, height: 66),
                        display: true, animate: true)
+    }
+
+    private func v5TypeSelectWidth(for style: SettingsState.DefaultStyle) -> CGFloat {
+        switch style {
+        case .stepByStep:  return 345  // V1 と同じ
+        case .revealedAll: return 506  // V2 と同じ
+        case .message:     return 482  // V4 と同じ
+        }
     }
 
     // MARK: – Countdown & Recording
@@ -285,8 +323,11 @@ class ToolbarState: ObservableObject {
         seconds  = 0
         appState = .typeSelect
 
-        let proto = settingsPanel.state.protoVersion
-        if proto == .v1 || proto == .v2 {
+        let s = settingsPanel.state
+        let triggersUpload = s.protoVersion == .v1
+            || s.protoVersion == .v2
+            || s.protoVersion == .v5
+        if triggersUpload {
             startFakeUpload()
         }
     }
@@ -295,6 +336,11 @@ class ToolbarState: ObservableObject {
         uploadTask?.cancel()
         isUploading    = true
         uploadProgress = 0.0
+        let s = settingsPanel.state
+        // バッジ系の完了表示を出すのは V1 か V5+toolbar のとき。
+        // V2 / V5+menuBarNotification はメニューバーチェック + 通知で完了を示す。
+        let usesToolbarBadges = s.protoVersion == .v1
+            || (s.protoVersion == .v5 && s.v5UploadStyle == .toolbar)
 
         uploadTask = Task { @MainActor [weak self] in
             guard let self else { return }
@@ -306,8 +352,10 @@ class ToolbarState: ObservableObject {
             }
             self.isUploading    = false
             self.uploadProgress = 0.0
-            self.settingsPanel.state.settingsBadge   = true
-            self.settingsPanel.state.allVideosCount += 1
+            if usesToolbarBadges {
+                self.settingsPanel.state.settingsBadge   = true
+                self.settingsPanel.state.allVideosCount += 1
+            }
         }
     }
 

@@ -2,18 +2,43 @@ import AppKit
 import AVFoundation
 import SwiftUI
 
-// MARK: – Design tokens
+// MARK: – Airtime Design System トークン
+//
+// ソース: ~/workspace/airtime-design-system-main/tokens/colors.json
+// ツールバーは常に darkAqua なので dark mode 値を使用。
 
 extension Color {
-    static let selectionOrange = Color(red: 1.0,   green: 0.427, blue: 0.298)
-    static let selectedGreen   = Color(red: 0.188, green: 0.820, blue: 0.345)
-    static let recordRed       = Color(red: 0.839, green: 0.251, blue: 0.184)
-    static let subtitleGray    = Color(red: 0.690, green: 0.694, blue: 0.698)
-    static let deviceMenuBg    = Color(red: 0.157, green: 0.157, blue: 0.157)
+    // ── Modeless（テーマ非依存）────────────────────────────
+    static let modelessWhite        = Color.white                                                // #FFFFFF
+    static let modelessWhite24      = Color.white.opacity(0.24)                                  // #FFFFFF3D
+    static let modelessBlack        = Color.black                                                // #000000
+    static let modelessBlack24      = Color.black.opacity(0.24)                                  // #0000003D
+    static let modelessOverlay      = Color.black.opacity(0.50)                                  // #00000080
+    static let modelessTeal         = Color(red: 0x79/255, green: 0xDD/255, blue: 0xE8/255)      // #79DDE8
+    static let modelessDestructive  = Color(red: 0xFF/255, green: 0x6D/255, blue: 0x4C/255)      // #FF6D4C
+    static let modelessSilhouette   = Color(red: 0x8A/255, green: 0x90/255, blue: 0x97/255)      // #8A9097
 
-    // Airtime design system — modeless surfaces
-    static let modelessBlack24 = Color.black.opacity(0.24)
-    static let modelessTeal    = Color(red: 125/255, green: 210/255, blue: 213/255)
+    // ── Dark mode ──────────────────────────────────────────
+    static let bgPrimary            = Color(red: 0x0A/255, green: 0x0D/255, blue: 0x0E/255)      // #0A0D0E
+    static let bgSecondary          = Color(red: 0x12/255, green: 0x18/255, blue: 0x1A/255)      // #12181A
+    static let bgTertiary           = Color(red: 0x1B/255, green: 0x23/255, blue: 0x26/255)      // #1B2326
+    static let contentPrimary       = Color.white                                                // #FFFFFF
+    static let contentSecondary     = Color(red: 0xD2/255, green: 0xD5/255, blue: 0xD6/255)      // #D2D5D6
+    static let contentTertiary      = Color(red: 0xB0/255, green: 0xB1/255, blue: 0xB2/255)      // #B0B1B2
+    static let highlightPrimary     = Color.white.opacity(0x14/255)                              // #FFFFFF14 ≈ 8%
+    static let highlightSecondary   = Color.white.opacity(0x29/255)                              // #FFFFFF29 ≈ 16%
+    static let accentTeal           = Color(red: 0x79/255, green: 0xDD/255, blue: 0xE8/255)      // #79DDE8 (= modelessTeal)
+    static let accentDestructive    = Color(red: 0xFF/255, green: 0x6D/255, blue: 0x4C/255)      // #FF6D4C (= modelessDestructive)
+    static let shadowSmall          = Color.black.opacity(0x3D/255)                              // #0000003D
+    static let shadowMedium         = Color.black.opacity(0x7A/255)                              // #0000007A
+    static let shadowLarge          = Color.black.opacity(0xB8/255)                              // #000000B8
+
+    // ── Legacy aliases（旧名、DS 正式名へ移行予定）─────────
+    static let selectionOrange = modelessDestructive                    // 旧 #FF6D4C
+    static let recordRed       = Color(red: 0xD6/255, green: 0x40/255, blue: 0x2F/255)  // #D6402F (DS light accent-destructive)
+    static let selectedGreen   = Color(red: 0.188, green: 0.820, blue: 0.345)           // DS 外
+    static let subtitleGray    = contentTertiary                       // 旧 #B0B1B2 へ統合
+    static let deviceMenuBg    = bgSecondary                           // 旧値を DS #12181A へ統合
 }
 
 // MARK: – NSPanel factory

@@ -3,7 +3,7 @@
 <plist version="1.0">
 <dict>
     <key>CFBundleIdentifier</key>
-    <string>com.all-turtles.RecorderToolbar.v2</string>
+    <string>com.all-turtles.RecorderToolbar.v3</string>
     <key>CFBundleName</key>
     <string>RecorderToolbar</string>
     <key>CFBundleDisplayName</key>

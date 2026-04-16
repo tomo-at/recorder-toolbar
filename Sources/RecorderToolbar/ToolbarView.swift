@@ -19,25 +19,150 @@ struct ToolbarView: View {
                 case .v2: TypeSelectViewV2(state: state)
                 case .v3: TypeSelectViewV3(state: state)
                 case .v4: TypeSelectViewV4(state: state)
+                case .v5: V5TypeSelect(state: state)
                 }
             case .windowSelect, .displaySelect:
                 switch settings.protoVersion {
                 case .v1, .v2, .v3: WindowSelectView(state: state)
                 case .v4:           TypeSelectViewV4(state: state)
+                case .v5:           V5WindowSelect(state: state)
                 }
             case .countdown:
                 switch settings.protoVersion {
                 case .v1, .v2, .v3: CountdownToolbarView(state: state)
                 case .v4:           CountdownToolbarViewV4(state: state)
+                case .v5:           V5Countdown(state: state)
                 }
             case .recording:
                 switch settings.protoVersion {
                 case .v1, .v2, .v3: RecordingView(state: state)
                 case .v4:           RecordingViewV4(state: state)
+                case .v5:           V5Recording(state: state)
                 }
             }
         }
         .frame(height: 66)
+    }
+}
+
+// MARK: – V5: 3軸組み合わせディスパッチ
+//
+// Default style    : Step by step (V1) / Revealed all (V2) / Message (V4-style header)
+// Recording style  : Toolbar (V1/V2 風 select→record トールバー) / Selected region (V4 風 confirm panel)
+// Upload style     : Toolbar (進捗バー + Settings/All-videos バッジ) / Menu bar + Notification (V2 風)
+//
+// Q1: Message default + Toolbar recording → 選択後の WindowSelect/Recording にも message bar を被せる
+// Q2: Selected region は録画 UI 自体も V4 風（ヘッダー付き）
+// Q7: Toolbar upload の進捗バーは 2px、message bar の下（= ボタン領域の最上端に重なる）
+
+/// V5 typeSelect: defaultStyle に従って既存 V1/V2/V4 の typeSelect を再利用し、
+/// uploadStyle == .toolbar 中はその top に 2px 進捗バーを overlay する。
+struct V5TypeSelect: View {
+    @ObservedObject var state: ToolbarState
+    @ObservedObject var settings: SettingsState
+    init(state: ToolbarState) {
+        self.state    = state
+        self.settings = state.settingsPanel.state
+    }
+    var body: some View {
+        Group {
+            switch settings.v5DefaultStyle {
+            case .stepByStep:  TypeSelectView(state: state)
+            case .revealedAll: TypeSelectViewV2(state: state)
+            case .message:     TypeSelectViewV4(state: state)
+            }
+        }
+        .overlay(alignment: .top) {
+            // Message bar(16px)がある場合のみその下に進捗バーを置く
+            if settings.v5UploadStyle == .toolbar, state.isUploading {
+                V5UploadProgressBar(progress: state.uploadProgress)
+                    .padding(.top, settings.v5DefaultStyle == .message ? 16 : 0)
+            }
+        }
+    }
+}
+
+/// V5 windowSelect/displaySelect:
+/// - recording == .selectedRegion → typeSelect のまま（V4 流: confirm panel が region 横に出る）
+/// - recording == .toolbar → V1/V2 風 WindowSelectView を表示。message default なら header を被せる
+struct V5WindowSelect: View {
+    @ObservedObject var state: ToolbarState
+    @ObservedObject var settings: SettingsState
+    init(state: ToolbarState) {
+        self.state    = state
+        self.settings = state.settingsPanel.state
+    }
+    var body: some View {
+        switch settings.v5RecordingStyle {
+        case .selectedRegion:
+            V5TypeSelect(state: state)
+        case .toolbar:
+            V5MaybeHeadered(state: state, message: "Click Record when you're ready") {
+                WindowSelectView(state: state)
+            }
+        }
+    }
+}
+
+/// V5 countdown / recording: メッセージバーの有無は **DefaultStyle == .message** のときのみ。
+/// RecordingStyle は問わない（Selected region でも Step by step ならヘッダー無し）。
+struct V5Countdown: View {
+    @ObservedObject var state: ToolbarState
+    init(state: ToolbarState) { self.state = state }
+    var body: some View {
+        V5MaybeHeadered(state: state, message: "Starting in \(state.countdownSeconds)...") {
+            CountdownToolbarView(state: state)
+        }
+    }
+}
+
+struct V5Recording: View {
+    @ObservedObject var state: ToolbarState
+    init(state: ToolbarState) { self.state = state }
+    var body: some View {
+        V5MaybeHeadered(state: state, message: "Recording in progress") {
+            RecordingView(state: state)
+        }
+    }
+}
+
+/// V5 で Message default のときだけ ToolbarHeader を上に被せる小ヘルパー。
+/// Toolbar 全高は 66px に維持されるため、内側の content 部分は 50px に圧縮される。
+struct V5MaybeHeadered<Content: View>: View {
+    @ObservedObject var state: ToolbarState
+    @ObservedObject var settings: SettingsState
+    let message: String
+    let content: Content
+    init(state: ToolbarState, message: String, @ViewBuilder content: () -> Content) {
+        self.state    = state
+        self.settings = state.settingsPanel.state
+        self.message  = message
+        self.content  = content()
+    }
+    var body: some View {
+        if settings.v5DefaultStyle == .message {
+            VStack(spacing: 0) {
+                ToolbarHeader(message: message)
+                content
+            }
+        } else {
+            content
+        }
+    }
+}
+
+/// V5 用の細い (2px) 進捗バー。色味は既存 UploadProgressBarView と同じ。
+struct V5UploadProgressBar: View {
+    let progress: Double
+    var body: some View {
+        GeometryReader { geo in
+            ZStack(alignment: .leading) {
+                Rectangle().fill(Color.modelessBlack24)
+                Rectangle().fill(Color.modelessTeal)
+                    .frame(width: geo.size.width * CGFloat(max(0, min(1, progress))))
+            }
+        }
+        .frame(height: 2)
     }
 }
 
@@ -58,7 +183,8 @@ struct TypeSelectView: View {
             // Segment strip
             HStack(spacing: 0) {
                 SegmentButton(icon: "display", label: "Display",
-                              isActive: state.selectionMode == .display) {
+                              isActive: state.selectionMode == .display
+                                        || state.appState == .displaySelect) {
                     state.toggleSelecting(.display)
                 }
                 .onHover { h in
@@ -68,7 +194,8 @@ struct TypeSelectView: View {
                 }
 
                 SegmentButton(icon: "macwindow", label: "Window",
-                              isActive: state.selectionMode == .window) {
+                              isActive: state.selectionMode == .window
+                                        || state.appState == .windowSelect) {
                     state.toggleSelecting(.window)
                 }
                 .onHover { h in
@@ -404,10 +531,16 @@ struct ToolbarDivider: View {
 
 struct TypeSelectViewV2: View {
     @ObservedObject var state: ToolbarState
+    @ObservedObject var settings: SettingsState
     @State private var cameraDevices: [AVCaptureDevice] = []
     @State private var micDevices:    [AVCaptureDevice] = []
     @State private var activeCamId:   String?           = nil
     @State private var activeMicId:   String?           = nil
+
+    init(state: ToolbarState) {
+        self.state    = state
+        self.settings = state.settingsPanel.state
+    }
 
     var body: some View {
         HStack(spacing: 0) {
@@ -415,7 +548,8 @@ struct TypeSelectViewV2: View {
                 // Recording type selector
                 HStack(spacing: 0) {
                     SegmentButton(icon: "display", label: "Display",
-                                  isActive: state.selectionMode == .display) {
+                                  isActive: state.selectionMode == .display
+                                            || state.appState == .displaySelect) {
                         state.toggleSelecting(.display)
                     }
                     .onHover { h in
@@ -425,7 +559,8 @@ struct TypeSelectViewV2: View {
                     }
 
                     SegmentButton(icon: "macwindow", label: "Window",
-                                  isActive: state.selectionMode == .window) {
+                                  isActive: state.selectionMode == .window
+                                            || state.appState == .windowSelect) {
                         state.toggleSelecting(.window)
                     }
                     .onHover { h in
@@ -472,7 +607,9 @@ struct TypeSelectViewV2: View {
                 ToolbarDivider()
 
                 // Settings — center X from toolbar left: 8+264+9+144+9+32 = 466
-                SegmentButton(icon: "gearshape.fill", label: "Settings") {
+                SegmentButton(icon: "gearshape.fill", label: "Settings",
+                              showBadge: settings.settingsBadge) {
+                    settings.settingsBadge = false
                     if let panel = state.panel {
                         state.settingsPanel.toggle(toolbar: panel,
                                                    buttonCenterX: panel.frame.minX + 466)
@@ -651,10 +788,16 @@ struct ToolbarHeader: View {
 // Layout (482px): [SegItems(4×64=256)] [div(9)] [Cam+Mic+trail(144)] [div(9)] [Settings(64)]
 struct TypeSelectViewV4: View {
     @ObservedObject var state: ToolbarState
+    @ObservedObject var settings: SettingsState
     @State private var cameraDevices: [AVCaptureDevice] = []
     @State private var micDevices:    [AVCaptureDevice] = []
     @State private var activeCamId:   String?           = nil
     @State private var activeMicId:   String?           = nil
+
+    init(state: ToolbarState) {
+        self.state    = state
+        self.settings = state.settingsPanel.state
+    }
 
     var headerMessage: String {
         // After freeze (confirmed selection): wait-for-record prompt.
@@ -732,7 +875,9 @@ struct TypeSelectViewV4: View {
                 ToolbarDivider()
 
                 // Settings — center X from toolbar left: 256+9+144+9+32 = 450
-                SegmentButton(icon: "gearshape.fill", label: "Settings") {
+                SegmentButton(icon: "gearshape.fill", label: "Settings",
+                              showBadge: settings.settingsBadge) {
+                    settings.settingsBadge = false
                     if let panel = state.panel {
                         state.settingsPanel.toggle(toolbar: panel,
                                                    buttonCenterX: panel.frame.minX + 450)

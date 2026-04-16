@@ -1,6 +1,7 @@
 import AppKit
 import SwiftUI
 import AVFoundation
+import Combine
 
 // MARK: - State
 
@@ -10,7 +11,11 @@ final class SettingsState: ObservableObject {
     @Published var recordSystemAudio: Bool = true
     @Published var countdownChoice:   CountdownOption = .three   // Used by ToolbarState
     @Published var themeChoice:       ThemeOption = .auto
-    @Published var protoVersion:      ProtoVersion = .v2
+    @Published var protoVersion:      ProtoVersion = .v5
+    // V5 軸（Prototype Settings ウィンドウから設定）
+    @Published var v5DefaultStyle:    DefaultStyle    = .revealedAll
+    @Published var v5RecordingStyle:  RecordingStyle  = .toolbar
+    @Published var v5UploadStyle:     UploadStyle     = .toolbar
     // Upload-complete badges — Settings dot cleared on Settings click,
     // All-videos count cleared when user opens All videos.
     @Published var settingsBadge:   Bool = false
@@ -33,6 +38,82 @@ final class SettingsState: ObservableObject {
         case v2 = "V2"
         case v3 = "V3"
         case v4 = "V4"
+        case v5 = "V5"
+    }
+
+    /// V5 のデフォルトトールバー描画スタイル（typeSelect ビュー）
+    enum DefaultStyle: String, CaseIterable {
+        case stepByStep   = "stepByStep"
+        case revealedAll  = "revealedAll"
+        case message      = "message"
+        var label: String {
+            switch self {
+            case .stepByStep:  return "Step by step"
+            case .revealedAll: return "Revealed all"
+            case .message:     return "Message"
+            }
+        }
+    }
+
+    /// V5 の選択確定〜録画 UI のスタイル
+    enum RecordingStyle: String, CaseIterable {
+        case toolbar         = "toolbar"
+        case selectedRegion  = "selectedRegion"
+        var label: String {
+            switch self {
+            case .toolbar:        return "Toolbar"
+            case .selectedRegion: return "Selected region"
+            }
+        }
+    }
+
+    /// V5 のアップロード演出スタイル
+    enum UploadStyle: String, CaseIterable {
+        case toolbar              = "toolbar"
+        case menuBarNotification  = "menuBarNotification"
+        var label: String {
+            switch self {
+            case .toolbar:             return "Toolbar"
+            case .menuBarNotification: return "Menu bar + Notification"
+            }
+        }
+    }
+
+    // MARK: – UserDefaults 永続化
+
+    private var cancellables: Set<AnyCancellable> = []
+    private static let kProtoVersion     = "protoVersion"
+    private static let kV5DefaultStyle   = "v5DefaultStyle"
+    private static let kV5RecordingStyle = "v5RecordingStyle"
+    private static let kV5UploadStyle    = "v5UploadStyle"
+
+    init() {
+        let d = UserDefaults.standard
+        if let v = d.string(forKey: Self.kProtoVersion).flatMap(ProtoVersion.init(rawValue:)) {
+            protoVersion = v
+        }
+        if let v = d.string(forKey: Self.kV5DefaultStyle).flatMap(DefaultStyle.init(rawValue:)) {
+            v5DefaultStyle = v
+        }
+        if let v = d.string(forKey: Self.kV5RecordingStyle).flatMap(RecordingStyle.init(rawValue:)) {
+            v5RecordingStyle = v
+        }
+        if let v = d.string(forKey: Self.kV5UploadStyle).flatMap(UploadStyle.init(rawValue:)) {
+            v5UploadStyle = v
+        }
+
+        $protoVersion.dropFirst()
+            .sink { d.set($0.rawValue, forKey: Self.kProtoVersion) }
+            .store(in: &cancellables)
+        $v5DefaultStyle.dropFirst()
+            .sink { d.set($0.rawValue, forKey: Self.kV5DefaultStyle) }
+            .store(in: &cancellables)
+        $v5RecordingStyle.dropFirst()
+            .sink { d.set($0.rawValue, forKey: Self.kV5RecordingStyle) }
+            .store(in: &cancellables)
+        $v5UploadStyle.dropFirst()
+            .sink { d.set($0.rawValue, forKey: Self.kV5UploadStyle) }
+            .store(in: &cancellables)
     }
 }
 
@@ -53,6 +134,33 @@ final class SettingsPanelController {
     private(set) var state = SettingsState()
     var isVisible: Bool { mainPanel != nil }
 
+    private var prototypeSettingsWC: PrototypeSettingsWindowController?
+    private var protoVersionObserver: AnyCancellable?
+
+    func openPrototypeSettings() {
+        if prototypeSettingsWC == nil {
+            prototypeSettingsWC = PrototypeSettingsWindowController(state: state)
+        }
+        prototypeSettingsWC?.show()
+    }
+
+    /// V5 選択時に "Prototype Settings..." 項目が追加されるためメインパネルを 28px 伸ばす。
+    private func mainPanelHeight() -> CGFloat {
+        let base: CGFloat = 350
+        return state.protoVersion == .v5 ? base + 28 : base
+    }
+
+    private func resizeMainPanelToFitContent() {
+        guard let p = mainPanel else { return }
+        let f = p.frame
+        let newH = mainPanelHeight()
+        let dy = newH - f.height
+        // 上方向に伸ばす（toolbar.frame.maxY + 8 を保つため bottom 固定）
+        p.setFrame(NSRect(x: f.minX, y: f.minY, width: f.width, height: newH),
+                   display: true, animate: false)
+        _ = dy
+    }
+
     // MARK: – Open / Close
 
     func toggle(toolbar: NSPanel, buttonCenterX: CGFloat) {
@@ -68,7 +176,8 @@ final class SettingsPanelController {
         hosting.layer?.backgroundColor = .clear
         p.contentView = hosting
 
-        let w: CGFloat = 257, h: CGFloat = 350
+        let w: CGFloat = 257
+        let h: CGFloat = mainPanelHeight()
         let rawX = buttonCenterX - w / 2
         let screenMinX = NSScreen.main?.frame.minX ?? 0
         let screenMaxX = NSScreen.main?.frame.maxX ?? 2000
@@ -78,6 +187,12 @@ final class SettingsPanelController {
 
         p.fadeIn(); mainPanel = p
         toolbar.orderFrontRegardless()
+
+        protoVersionObserver = state.$protoVersion
+            .dropFirst()
+            .sink { [weak self] _ in
+                Task { @MainActor [weak self] in self?.resizeMainPanelToFitContent() }
+            }
 
         clickMonitor = NSEvent.addGlobalMonitorForEvents(
             matching: [.leftMouseDown, .rightMouseDown]
@@ -92,6 +207,7 @@ final class SettingsPanelController {
     func dismiss() {
         if let m = clickMonitor { NSEvent.removeMonitor(m); clickMonitor = nil }
         if let m = escMonitor   { NSEvent.removeMonitor(m); escMonitor   = nil }
+        protoVersionObserver?.cancel(); protoVersionObserver = nil
         dismissSubImmediate()
         mainPanel?.fadeOut(); mainPanel = nil
     }
@@ -219,10 +335,10 @@ private struct SettingsMenuItem: View {
             if let count = badgeCount, count > 0 {
                 Text("\(count)")
                     .font(.system(size: 10, weight: .medium))
-                    .foregroundColor(.white)
+                    .foregroundColor(.modelessBlack)
                     .padding(.horizontal, 5)
                     .frame(minWidth: 16, minHeight: 14)
-                    .background(Capsule().fill(Color.white.opacity(0.2)))
+                    .background(Capsule().fill(Color.modelessTeal))
             }
 
             switch rightIcon {
@@ -335,6 +451,15 @@ struct SettingsPanelView: View {
             SettingsMenuItem(icon: nil, label: "Prototype",
                              rightIcon: .chevron) { h in
                 if h { controller.showSub(.prototype) } else { controller.scheduleDismissSub() }
+            }
+
+            // V5 選択時のみ表示。クリックで独立ウィンドウが開く。
+            if state.protoVersion == .v5 {
+                SettingsMenuItem(icon: nil, label: "Prototype Settings...") { _ in }
+                    .onTapGesture {
+                        controller.dismiss()
+                        controller.openPrototypeSettings()
+                    }
             }
 
             MenuDivider()
