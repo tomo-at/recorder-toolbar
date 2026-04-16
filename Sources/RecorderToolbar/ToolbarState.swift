@@ -2,6 +2,7 @@ import Foundation
 import Combine
 import AppKit
 import SwiftUI
+import AVFoundation
 
 enum AppState {
     case typeSelect
@@ -32,6 +33,12 @@ class ToolbarState: ObservableObject {
     @Published var countdownSeconds: Int = 3
     @Published var isUploading:    Bool   = false
     @Published var uploadProgress: Double = 0.0
+
+    // デバイス（全 View で共有。各 View の .task { await state.loadDevices() } から呼ぶ）
+    @Published var cameraDevices: [AVCaptureDevice] = []
+    @Published var micDevices:    [AVCaptureDevice] = []
+    @Published var activeCamId:   String?           = nil
+    @Published var activeMicId:   String?           = nil
 
     // Set by AppDelegate after panel creation
     weak var panel: NSPanel?
@@ -424,5 +431,15 @@ class ToolbarState: ObservableObject {
         guard let panel else { return }
         shortcutTooltip.show(label: label, shortcut: shortcut,
                              buttonCenterX: buttonCenterX, above: panel)
+    }
+
+    // MARK: – Device loading (shared)
+
+    /// カメラ・マイクデバイスを一括取得。各 View の `.task { await state.loadDevices() }` から呼ぶ。
+    func loadDevices() async {
+        cameraDevices = AVCaptureDevice.cameraDevices()
+        activeCamId   = activeCamId ?? cameraDevices.first?.uniqueID
+        micDevices    = AVCaptureDevice.micDevices()
+        activeMicId   = activeMicId ?? micDevices.first?.uniqueID
     }
 }

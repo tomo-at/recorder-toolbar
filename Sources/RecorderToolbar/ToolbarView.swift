@@ -171,7 +171,6 @@ struct V5UploadProgressBar: View {
 struct TypeSelectView: View {
     @ObservedObject var state: ToolbarState
     @ObservedObject var settings: SettingsState
-    @State private var activeCamId: String?
 
     init(state: ToolbarState) {
         self.state    = state
@@ -211,9 +210,9 @@ struct TypeSelectView: View {
                         else  { state.shortcutTooltip.hide() }
                     }
 
-                CamOnlySegment(activeId: activeCamId) { h in
+                CamOnlySegment(activeId: state.activeCamId) { h in
                     guard let panel = state.panel else { return }
-                    if h, let id = activeCamId {
+                    if h, let id = state.activeCamId {
                         state.showCameraPreview(deviceId: id, above: panel)
                     } else {
                         state.hideCameraPreview()
@@ -239,11 +238,7 @@ struct TypeSelectView: View {
                 UploadProgressBarView(progress: state.uploadProgress)
             }
         }
-        .task { await loadCameraDevice() }
-    }
-
-    private func loadCameraDevice() async {
-        activeCamId = AVCaptureDevice.cameraDevices().first?.uniqueID
+        .task { await state.loadDevices() }
     }
 }
 
@@ -251,10 +246,6 @@ struct TypeSelectView: View {
 
 struct WindowSelectView: View {
     @ObservedObject var state: ToolbarState
-    @State private var cameraDevices: [AVCaptureDevice] = []
-    @State private var micDevices:    [AVCaptureDevice] = []
-    @State private var activeCamId:   String?           = nil
-    @State private var activeMicId:   String?           = nil
 
     var body: some View {
         HStack(spacing: 0) {
@@ -270,16 +261,16 @@ struct WindowSelectView: View {
             HStack(spacing: 0) {
                 // Camera + Mic (8px gap between them, 8px right padding)
                 HStack(spacing: 8) {
-                    CameraSegment(devices: cameraDevices, activeId: $activeCamId,
+                    CameraSegment(devices: state.cameraDevices, activeId: $state.activeCamId,
                                   onHoverChanged: { h in
                                       guard let panel = state.panel else { return }
-                                      if h, let id = activeCamId {
+                                      if h, let id = state.activeCamId {
                                           state.showCameraPreview(deviceId: id, above: panel)
                                       } else {
                                           state.hideCameraPreview()
                                       }
                                   })
-                    MicSegment(devices: micDevices, activeId: $activeMicId)
+                    MicSegment(devices: state.micDevices, activeId: $state.activeMicId)
                 }
                 .padding(.trailing, 8)
 
@@ -317,17 +308,10 @@ struct WindowSelectView: View {
             }
         }
         .task {
-            await loadDevices()
+            await state.loadDevices()
         }
         .keyboardShortcut(.escape, modifiers: [])
         .onExitCommand { state.appState = .typeSelect }
-    }
-
-    func loadDevices() async {
-        cameraDevices = AVCaptureDevice.cameraDevices()
-        activeCamId   = activeCamId ?? cameraDevices.first?.uniqueID
-        micDevices    = AVCaptureDevice.micDevices()
-        activeMicId   = activeMicId ?? micDevices.first?.uniqueID
     }
 }
 
@@ -457,7 +441,7 @@ struct SegmentButton: View {
                     .lineLimit(1)
             }
             .frame(width: 64, height: 48)
-            .background(isActive ? Color.white.opacity(0.16) : (hovering && !isDisabled ? Color.white.opacity(0.08) : .clear))
+            .background(isActive ? Color.white.opacity(0.16) : (hovering && !isDisabled ? Color.highlightPrimary : .clear))
             .cornerRadius(4)
         }
         .buttonStyle(.plain)
@@ -504,10 +488,10 @@ struct ActionButton: View {
             .frame(width: 80, height: 36)
             .background(hovering
                 ? Color.white.opacity(0.14)
-                : Color.white.opacity(0.08))
+                : Color.highlightPrimary)
             .overlay(
                 RoundedRectangle(cornerRadius: 6)
-                    .stroke(Color.white.opacity(0.08), lineWidth: 1)
+                    .stroke(Color.highlightPrimary, lineWidth: 1)
             )
             .cornerRadius(6)
         }
@@ -519,7 +503,7 @@ struct ActionButton: View {
 struct ToolbarDivider: View {
     var body: some View {
         Rectangle()
-            .fill(Color.white.opacity(0.08))
+            .fill(Color.highlightPrimary)
             .frame(width: 1)
             .padding(.vertical, 8)
             .padding(.horizontal, 4)
@@ -532,10 +516,6 @@ struct ToolbarDivider: View {
 struct TypeSelectViewV2: View {
     @ObservedObject var state: ToolbarState
     @ObservedObject var settings: SettingsState
-    @State private var cameraDevices: [AVCaptureDevice] = []
-    @State private var micDevices:    [AVCaptureDevice] = []
-    @State private var activeCamId:   String?           = nil
-    @State private var activeMicId:   String?           = nil
 
     init(state: ToolbarState) {
         self.state    = state
@@ -576,9 +556,9 @@ struct TypeSelectViewV2: View {
                             else  { state.shortcutTooltip.hide() }
                         }
 
-                    CamOnlySegment(activeId: activeCamId) { h in
+                    CamOnlySegment(activeId: state.activeCamId) { h in
                         guard let panel = state.panel else { return }
-                        if h, let id = activeCamId {
+                        if h, let id = state.activeCamId {
                             state.showCameraPreview(deviceId: id, above: panel)
                         } else {
                             state.hideCameraPreview()
@@ -591,16 +571,16 @@ struct TypeSelectViewV2: View {
 
                 // Camera + Mic (always visible in V2)
                 HStack(spacing: 8) {
-                    CameraSegment(devices: cameraDevices, activeId: $activeCamId,
+                    CameraSegment(devices: state.cameraDevices, activeId: $state.activeCamId,
                                   onHoverChanged: { h in
                                       guard let panel = state.panel else { return }
-                                      if h, let id = activeCamId {
+                                      if h, let id = state.activeCamId {
                                           state.showCameraPreview(deviceId: id, above: panel)
                                       } else {
                                           state.hideCameraPreview()
                                       }
                                   })
-                    MicSegment(devices: micDevices, activeId: $activeMicId)
+                    MicSegment(devices: state.micDevices, activeId: $state.activeMicId)
                 }
                 .padding(.trailing, 8)
 
@@ -618,14 +598,7 @@ struct TypeSelectViewV2: View {
             }
             .padding(.horizontal, 8)
         }
-        .task { await loadDevices() }
-    }
-
-    private func loadDevices() async {
-        cameraDevices = AVCaptureDevice.cameraDevices()
-        activeCamId   = activeCamId ?? cameraDevices.first?.uniqueID
-        micDevices    = AVCaptureDevice.micDevices()
-        activeMicId   = activeMicId ?? micDevices.first?.uniqueID
+        .task { await state.loadDevices() }
     }
 }
 
@@ -656,7 +629,7 @@ struct SegmentedControlItem: View {
             .background(
                 RoundedRectangle(cornerRadius: 8)   // inner radius = outer(10) - padding(2)
                     .fill(isActive  ? Color.white.opacity(0.16)
-                          : hovering ? Color.white.opacity(0.08)
+                          : hovering ? Color.highlightPrimary
                           : Color.clear)
             )
         }
@@ -667,10 +640,6 @@ struct SegmentedControlItem: View {
 
 struct TypeSelectViewV3: View {
     @ObservedObject var state: ToolbarState
-    @State private var cameraDevices: [AVCaptureDevice] = []
-    @State private var micDevices:    [AVCaptureDevice] = []
-    @State private var activeCamId:   String?           = nil
-    @State private var activeMicId:   String?           = nil
 
     var body: some View {
         HStack(spacing: 0) {
@@ -709,7 +678,7 @@ struct TypeSelectViewV3: View {
                                          label: "Cam only") {}
                         .onHover { h in
                             guard let panel = state.panel else { return }
-                            if h, let id = activeCamId {
+                            if h, let id = state.activeCamId {
                                 state.showCameraPreview(deviceId: id, above: panel)
                             } else {
                                 state.hideCameraPreview()
@@ -725,16 +694,16 @@ struct TypeSelectViewV3: View {
 
                 // Camera + Mic (always visible)
                 HStack(spacing: 8) {
-                    CameraSegment(devices: cameraDevices, activeId: $activeCamId,
+                    CameraSegment(devices: state.cameraDevices, activeId: $state.activeCamId,
                                   onHoverChanged: { h in
                                       guard let panel = state.panel else { return }
-                                      if h, let id = activeCamId {
+                                      if h, let id = state.activeCamId {
                                           state.showCameraPreview(deviceId: id, above: panel)
                                       } else {
                                           state.hideCameraPreview()
                                       }
                                   })
-                    MicSegment(devices: micDevices, activeId: $activeMicId)
+                    MicSegment(devices: state.micDevices, activeId: $state.activeMicId)
                 }
                 .padding(.trailing, 8)
 
@@ -750,14 +719,7 @@ struct TypeSelectViewV3: View {
             }
             .padding(.horizontal, 8)
         }
-        .task { await loadDevices() }
-    }
-
-    private func loadDevices() async {
-        cameraDevices = AVCaptureDevice.cameraDevices()
-        activeCamId   = activeCamId ?? cameraDevices.first?.uniqueID
-        micDevices    = AVCaptureDevice.micDevices()
-        activeMicId   = activeMicId ?? micDevices.first?.uniqueID
+        .task { await state.loadDevices() }
     }
 }
 
@@ -779,7 +741,7 @@ struct ToolbarHeader: View {
             .background(Color.black.opacity(0.24))
             .overlay(alignment: .bottom) {
                 Rectangle()
-                    .fill(Color.white.opacity(0.08))
+                    .fill(Color.highlightPrimary)
                     .frame(height: 0.5)
             }
     }
@@ -789,10 +751,6 @@ struct ToolbarHeader: View {
 struct TypeSelectViewV4: View {
     @ObservedObject var state: ToolbarState
     @ObservedObject var settings: SettingsState
-    @State private var cameraDevices: [AVCaptureDevice] = []
-    @State private var micDevices:    [AVCaptureDevice] = []
-    @State private var activeCamId:   String?           = nil
-    @State private var activeMicId:   String?           = nil
 
     init(state: ToolbarState) {
         self.state    = state
@@ -849,7 +807,7 @@ struct TypeSelectViewV4: View {
                 SegmentedControlItem(icon: "person.crop.rectangle.fill", label: "Cam only") {}
                     .onHover { h in
                         guard let panel = state.panel else { return }
-                        if h, let id = activeCamId {
+                        if h, let id = state.activeCamId {
                             state.showCameraPreview(deviceId: id, above: panel)
                         } else {
                             state.hideCameraPreview()
@@ -859,16 +817,16 @@ struct TypeSelectViewV4: View {
                 ToolbarDivider()
 
                 HStack(spacing: 8) {
-                    CameraSegment(devices: cameraDevices, activeId: $activeCamId,
+                    CameraSegment(devices: state.cameraDevices, activeId: $state.activeCamId,
                                   onHoverChanged: { h in
                                       guard let panel = state.panel else { return }
-                                      if h, let id = activeCamId {
+                                      if h, let id = state.activeCamId {
                                           state.showCameraPreview(deviceId: id, above: panel)
                                       } else {
                                           state.hideCameraPreview()
                                       }
                                   })
-                    MicSegment(devices: micDevices, activeId: $activeMicId)
+                    MicSegment(devices: state.micDevices, activeId: $state.activeMicId)
                 }
                 .padding(.trailing, 8)
 
@@ -885,24 +843,13 @@ struct TypeSelectViewV4: View {
                 }
             }
         }
-        .task { await loadDevices() }
-    }
-
-    private func loadDevices() async {
-        cameraDevices = AVCaptureDevice.cameraDevices()
-        activeCamId   = activeCamId ?? cameraDevices.first?.uniqueID
-        micDevices    = AVCaptureDevice.micDevices()
-        activeMicId   = activeMicId ?? micDevices.first?.uniqueID
+        .task { await state.loadDevices() }
     }
 }
 
 // Layout (346px): [Cam+Mic+trail(144)] [div(9)] [Settings(64)] [div(9)] [lead(8)+Record+trail(16)]
 struct WindowSelectViewV4: View {
     @ObservedObject var state: ToolbarState
-    @State private var cameraDevices: [AVCaptureDevice] = []
-    @State private var micDevices:    [AVCaptureDevice] = []
-    @State private var activeCamId:   String?           = nil
-    @State private var activeMicId:   String?           = nil
 
     var body: some View {
         VStack(spacing: 0) {
@@ -910,16 +857,16 @@ struct WindowSelectViewV4: View {
 
             HStack(spacing: 0) {
                 HStack(spacing: 8) {
-                    CameraSegment(devices: cameraDevices, activeId: $activeCamId,
+                    CameraSegment(devices: state.cameraDevices, activeId: $state.activeCamId,
                                   onHoverChanged: { h in
                                       guard let panel = state.panel else { return }
-                                      if h, let id = activeCamId {
+                                      if h, let id = state.activeCamId {
                                           state.showCameraPreview(deviceId: id, above: panel)
                                       } else {
                                           state.hideCameraPreview()
                                       }
                                   })
-                    MicSegment(devices: micDevices, activeId: $activeMicId)
+                    MicSegment(devices: state.micDevices, activeId: $state.activeMicId)
                 }
                 .padding(.trailing, 8)
 
@@ -955,14 +902,7 @@ struct WindowSelectViewV4: View {
                 .padding(.trailing, 16)
             }
         }
-        .task { await loadDevices() }
-    }
-
-    func loadDevices() async {
-        cameraDevices = AVCaptureDevice.cameraDevices()
-        activeCamId   = activeCamId ?? cameraDevices.first?.uniqueID
-        micDevices    = AVCaptureDevice.micDevices()
-        activeMicId   = activeMicId ?? micDevices.first?.uniqueID
+        .task { await state.loadDevices() }
     }
 }
 
@@ -1069,7 +1009,7 @@ struct SelectionConfirmView: View {
             // Bottom separator between preview and controls
             .overlay(alignment: .bottom) {
                 Rectangle()
-                    .fill(Color.white.opacity(0.08))
+                    .fill(Color.highlightPrimary)
                     .frame(height: 1)
             }
 
@@ -1081,7 +1021,7 @@ struct SelectionConfirmView: View {
                         .font(.system(size: 12, weight: .medium))
                         .foregroundColor(.white)
                         .frame(width: 56, height: 28)
-                        .background(cancelHovering ? Color.white.opacity(0.08) : Color.clear)
+                        .background(cancelHovering ? Color.highlightPrimary : Color.clear)
                         .cornerRadius(6)
                 }
                 .buttonStyle(.plain)
@@ -1111,7 +1051,7 @@ struct SelectionConfirmView: View {
         .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
         .overlay(
             RoundedRectangle(cornerRadius: 12, style: .continuous)
-                .strokeBorder(Color.white.opacity(0.08), lineWidth: 1)
+                .strokeBorder(Color.highlightPrimary, lineWidth: 1)
         )
         .task {
             cameraDeviceId = AVCaptureDevice.cameraDevices().first?.uniqueID

@@ -296,7 +296,7 @@ private struct MenuBackground: View {
 private struct MenuDivider: View {
     var body: some View {
         Rectangle()
-            .fill(Color.white.opacity(0.08))
+            .fill(Color.highlightPrimary)
             .frame(height: 1)
             .padding(.vertical, 4)
     }
@@ -358,7 +358,7 @@ private struct SettingsMenuItem: View {
         }
         .padding(6)
         .frame(maxWidth: .infinity, minHeight: 28)
-        .background(hovering ? Color.white.opacity(0.08) : .clear)
+        .background(hovering ? Color.highlightPrimary : .clear)
         .cornerRadius(6)
         .contentShape(Rectangle())
         .onHover { h in hovering = h; onHover(h) }
@@ -393,7 +393,7 @@ private struct UserProfileRow: View {
         }
         .padding(6)
         .frame(maxWidth: .infinity, minHeight: 28)
-        .background(hovering ? Color.white.opacity(0.08) : .clear)
+        .background(hovering ? Color.highlightPrimary : .clear)
         .cornerRadius(6)
         .contentShape(Rectangle())
         .onHover { h in hovering = h }

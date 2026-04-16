@@ -28,13 +28,13 @@ struct CameraSegment: View {
                     .cornerRadius(4)
                 Text(label)
                     .font(.system(size: 11))
-                    .foregroundColor(.white)
+                    .foregroundColor(Color(white: 0.69))
                     .lineLimit(1)
                     .truncationMode(.tail)
                     .frame(maxWidth: 60)
             }
             .frame(width: 64, height: 48)
-            .background(hovering ? Color.white.opacity(0.08) : .clear)
+            .background(hovering ? Color.highlightPrimary : .clear)
             .cornerRadius(4)
         }
         .buttonStyle(.plain)
@@ -67,7 +67,7 @@ struct CamOnlySegment: View {
                     .lineLimit(1)
             }
             .frame(width: 64, height: 48)
-            .background(hovering ? Color.white.opacity(0.08) : .clear)
+            .background(hovering ? Color.highlightPrimary : .clear)
             .cornerRadius(4)
         }
         .buttonStyle(.plain)
@@ -104,13 +104,13 @@ struct MicSegment: View {
                     .frame(width: 12, height: 20)
                 Text(label)
                     .font(.system(size: 11))
-                    .foregroundColor(.white)
+                    .foregroundColor(Color(white: 0.69))
                     .lineLimit(1)
                     .truncationMode(.tail)
                     .frame(maxWidth: 60)
             }
             .frame(width: 64, height: 48)
-            .background(hovering ? Color.white.opacity(0.08) : .clear)
+            .background(hovering ? Color.highlightPrimary : .clear)
             .cornerRadius(4)
         }
         .buttonStyle(.plain)
