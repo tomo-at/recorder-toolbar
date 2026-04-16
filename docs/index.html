@@ -459,11 +459,54 @@
       margin-top: 7px;
     }
 
+    /* ── Settings options ──────────────────────────────────────── */
+    .settings-groups {
+      display: flex;
+      flex-direction: column;
+      gap: 40px;
+      margin-top: 8px;
+    }
+    .settings-group-title {
+      font-size: 12px;
+      font-weight: 600;
+      letter-spacing: 0.07em;
+      text-transform: uppercase;
+      color: var(--color-text-tertiary);
+      margin-bottom: 10px;
+    }
+    .settings-options {
+      border: 1px solid var(--color-highlight-1);
+      border-radius: var(--radius-md);
+      overflow: hidden;
+    }
+    .settings-option {
+      display: flex;
+      gap: 24px;
+      padding: 14px 18px;
+      border-top: 1px solid var(--color-highlight-1);
+    }
+    .settings-option:first-child { border-top: none; }
+    .settings-option-name {
+      flex-shrink: 0;
+      width: 200px;
+      font-size: 14px;
+      font-weight: 600;
+      color: var(--color-text-primary);
+      line-height: 20px;
+    }
+    .settings-option-desc {
+      font-size: 14px;
+      line-height: 20px;
+      color: var(--color-text-secondary);
+    }
+
     /* ── Responsive ────────────────────────────────────────────── */
     @media (max-width: 600px) {
       .hero-headline { font-size: 28px; }
       .preview-info { flex-direction: column; align-items: flex-start; }
       .variation-info { flex-direction: column; align-items: flex-start; }
+      .settings-option { flex-direction: column; gap: 4px; }
+      .settings-option-name { width: auto; }
     }
   </style>
 </head>
@@ -474,6 +517,7 @@
     <span class="nav-wordmark">Recorder Toolbar</span>
     <ul class="nav-links">
       <li><a href="#overview">Overview</a></li>
+      <li><a href="#settings">Settings</a></li>
       <li><a href="#flow">Flow</a></li>
       <li><a href="#specs">Specs</a></li>
       <li><a href="https://github.com/tomo-at/recorder-toolbar" target="_blank">GitHub ↗</a></li>
@@ -507,10 +551,37 @@
         <span class="variation-index-num">V4</span>
         <span class="variation-index-name">Message header</span>
       </a>
+      <a class="variation-index-item" href="#v5">
+        <span class="variation-index-num">V5</span>
+        <span class="variation-index-name">Configurable</span>
+      </a>
     </nav>
 
     <!-- Variation cards -->
     <div class="variation-grid">
+
+      <!-- Variation 5 -->
+      <div class="variation-card" id="v5">
+        <div class="variation-video">
+          <video src="toolbar-demo-v5.mp4" autoplay loop muted playsinline></video>
+        </div>
+        <div class="variation-info">
+          <div>
+            <div class="variation-title">
+              Variation 5 — Configurable prototype
+              <span class="variation-badge variation-badge--new" style="margin-left:8px;vertical-align:middle;">New</span>
+            </div>
+            <div class="variation-meta">3 independent axes: Default style · Recording · Uploading — switchable at runtime via Prototype Settings</div>
+          </div>
+          <a class="download-btn"
+             href="https://github.com/tomo-at/recorder-toolbar/archive/refs/heads/main.zip">
+            <svg width="14" height="14" viewBox="0 0 14 14" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <path d="M7 1v8M4 6l3 3 3-3M2 11h10" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>
+            Download source
+          </a>
+        </div>
+      </div>
 
       <!-- Variation 1 -->
       <div class="variation-card" id="v1">
@@ -541,7 +612,6 @@
           <div>
             <div class="variation-title">
               Variation 2 — Compact, always-on devices
-              <span class="variation-badge variation-badge--new" style="margin-left:8px;vertical-align:middle;">New</span>
             </div>
             <div class="variation-meta">Camera &amp; mic always visible · 550 px typeSelect · person.crop.rectangle.fill cam-only icon</div>
           </div>
@@ -586,7 +656,6 @@
           <div>
             <div class="variation-title">
               Variation 4 — Message Header
-              <span class="variation-badge variation-badge--new" style="margin-left:8px;vertical-align:middle;">New</span>
             </div>
             <div class="variation-meta">Contextual message header · no X button · 482 px typeSelect · 66 px tall</div>
           </div>
@@ -600,6 +669,94 @@
         </div>
       </div>
 
+    </div>
+  </section>
+
+  <!-- Settings -->
+  <section class="section" id="settings">
+    <div class="section-inner">
+      <div class="section-header">
+        <p class="section-label">Prototype Settings</p>
+        <h2 class="section-title">Configuration options</h2>
+        <p class="section-body">
+          V5 exposes three independent axes — Default style, Recording, and Uploading.
+          Each can be changed at runtime from Prototype Settings without restarting,
+          producing 5 × 3 × 4 = 60 distinct combinations to explore.
+        </p>
+      </div>
+
+      <div class="settings-groups">
+
+        <!-- Default style -->
+        <div>
+          <p class="settings-group-title">Default style</p>
+          <div class="settings-options">
+            <div class="settings-option">
+              <div class="settings-option-name">Step by step</div>
+              <div class="settings-option-desc">Recording type buttons are shown first. Camera and microphone controls are hidden until a type is selected, minimising the number of controls visible at a glance.</div>
+            </div>
+            <div class="settings-option">
+              <div class="settings-option-name">Revealed all</div>
+              <div class="settings-option-desc">All controls — recording type, camera, mic, and settings — are visible from the initial state. Reduces the number of steps for users who already know what they want.</div>
+            </div>
+            <div class="settings-option">
+              <div class="settings-option-name">Revealed all (compact)</div>
+              <div class="settings-option-desc">Same as Revealed all but with a denser layout and tighter label spacing. Keeps all controls accessible while reducing the toolbar's total width.</div>
+            </div>
+            <div class="settings-option">
+              <div class="settings-option-name">Message</div>
+              <div class="settings-option-desc">A 16 px contextual header sits above the main controls, showing a short message that updates per state — e.g., "Choose a recording type" or "Recording in progress". Toolbar height increases to 66 px.</div>
+            </div>
+            <div class="settings-option">
+              <div class="settings-option-name">Horizontal layout</div>
+              <div class="settings-option-desc">All controls are arranged in a single horizontal row at a reduced 48 px height. Prioritises a low vertical footprint over label legibility.</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Recording -->
+        <div>
+          <p class="settings-group-title">Recording</p>
+          <div class="settings-options">
+            <div class="settings-option">
+              <div class="settings-option-name">Toolbar</div>
+              <div class="settings-option-desc">Window and display selection is handled directly in the toolbar. After the user clicks a target, a Record button appears inline — the confirmation step stays within the toolbar.</div>
+            </div>
+            <div class="settings-option">
+              <div class="settings-option-name">Select to start</div>
+              <div class="settings-option-desc">Clicking a window or display immediately starts the recording countdown, skipping the explicit Record button. Optimised for speed.</div>
+            </div>
+            <div class="settings-option">
+              <div class="settings-option-name">Selected region</div>
+              <div class="settings-option-desc">A persistent indicator shows the selected region inside the toolbar. The user can review their selection before tapping Record to begin.</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Uploading -->
+        <div>
+          <p class="settings-group-title">Uploading</p>
+          <div class="settings-options">
+            <div class="settings-option">
+              <div class="settings-option-name">Toolbar</div>
+              <div class="settings-option-desc">A 2 px progress bar overlays the top edge of the toolbar while the file uploads. On completion, a badge appears on the Settings icon and the All Videos count increments.</div>
+            </div>
+            <div class="settings-option">
+              <div class="settings-option-name">Toolbar + Complete message</div>
+              <div class="settings-option-desc">Same 2 px progress bar during upload. On completion, a small banner floats 8 px above the toolbar showing "Upload complete", a View video link, and a dismiss button.</div>
+            </div>
+            <div class="settings-option">
+              <div class="settings-option-name">Menu bar + Notification</div>
+              <div class="settings-option-desc">Upload progress is shown as an animated arc around the menu bar icon. A system notification is delivered on completion, with the menu bar icon briefly showing a checkmark.</div>
+            </div>
+            <div class="settings-option">
+              <div class="settings-option-name">Upload mode</div>
+              <div class="settings-option-desc">The entire toolbar is replaced by a dedicated upload UI showing a labelled progress bar. On completion, the toolbar shows "Upload complete ✓" with View video and New recording actions.</div>
+            </div>
+          </div>
+        </div>
+
+      </div>
     </div>
   </section>
 
@@ -660,6 +817,17 @@
         <li><span class="change-dot"></span>The Settings menu gains a <strong>Divider + Quit Airtime</strong> option at the bottom, which calls <code>NSApp.terminate(nil)</code>.</li>
         <li><span class="change-dot"></span>The segmented control wrapper background is removed; type-selector items sit directly in the HStack with per-item hover highlights only.</li>
       </ul>
+
+      <h3 style="font-size:17px;font-weight:600;color:var(--color-text-primary);margin:32px 0 12px;letter-spacing:-0.01em;">
+        What changed in Variation 5
+      </h3>
+      <ul class="change-list">
+        <li><span class="change-dot"></span>All layout, recording-flow, and upload-feedback styles are unified into a single build controlled by three independent axes in <strong>Prototype Settings</strong> — no need to switch build targets to compare variations.</li>
+        <li><span class="change-dot"></span>New <strong>Horizontal layout</strong> default style: a compact 48 px single-row toolbar with no header bar.</li>
+        <li><span class="change-dot"></span>New <strong>Revealed all (compact)</strong> default style: a denser version of Revealed all with tighter icon and label spacing.</li>
+        <li><span class="change-dot"></span>New <strong>Upload mode</strong>: the entire toolbar is replaced by an upload progress view, transitioning to a completion state with View video and New recording actions on finish.</li>
+        <li><span class="change-dot"></span>New <strong>Toolbar + Complete message</strong>: a floating 24 px banner appears above the toolbar on upload completion, with a View video link and a dismiss button.</li>
+      </ul>
     </div>
   </section>
 
@@ -717,7 +885,8 @@
           <span>
             <strong>Recording</strong> — Toolbar shows a live timer,
             <strong>Pause / Resume</strong>, <strong>Restart</strong>, and <strong>Stop</strong>.
-            Stopping returns to Type Select and hides all overlays.
+            Stopping returns to Type Select and triggers the upload flow
+            configured in Prototype Settings.
           </span>
         </li>
       </ol>
@@ -747,7 +916,8 @@
             <strong>V1:</strong> 389 × 56 px (type/window/display) · 297 × 56 px (countdown/recording)<br>
             <strong>V2:</strong> 550 × 56 px (typeSelect) · 389 × 56 px (window/displaySelect) · 297 × 56 px (countdown/recording)<br>
             <strong>V3:</strong> 554 × 56 px (typeSelect) · 389 × 56 px (window/displaySelect) · 297 × 56 px (countdown/recording)<br>
-            <strong>V4:</strong> 482 × 66 px (typeSelect) · 346 × 66 px (window/displaySelect) · 253 × 66 px (countdown) · 297 × 66 px (recording)
+            <strong>V4:</strong> 482 × 66 px (typeSelect) · 346 × 66 px (window/displaySelect) · 253 × 66 px (countdown) · 297 × 66 px (recording)<br>
+            <strong>V5:</strong> Width and height vary by Default style axis (56 px or 66 px tall; 48 px for Horizontal)
           </td>
         </tr>
         <tr>
