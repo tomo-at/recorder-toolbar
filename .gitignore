@@ -1,3 +1,7 @@
 .build/
 .swiftpm/xcode/
 .mcp.json
+.DS_Store
+.claude/
+.lgtm/
+.playwright-mcp/

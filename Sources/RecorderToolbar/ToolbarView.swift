@@ -472,7 +472,7 @@ struct SegmentButton: View {
                     }
                 Text(label)
                     .font(.system(size: 11))
-                    .foregroundColor(Color(white: 0.69))
+                    .foregroundColor(Color.contentTertiary)
                     .lineLimit(1)
             }
             .frame(width: 64, height: 48)
@@ -657,7 +657,7 @@ struct SegmentedControlItem: View {
                     .frame(width: 20, height: 20)
                 Text(label)
                     .font(.system(size: 11))
-                    .foregroundColor(isActive ? .white : Color(white: 0.69))
+                    .foregroundColor(isActive ? .white : Color.contentTertiary)
                     .lineLimit(1)
             }
             .frame(width: 64, height: 44)

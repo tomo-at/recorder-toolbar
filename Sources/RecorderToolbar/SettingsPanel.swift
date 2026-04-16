@@ -390,7 +390,7 @@ private struct UserProfileRow: View {
             Button(action: onSignOut) {
                 Text("Sign out")
                     .font(.system(size: 12))
-                    .foregroundColor(Color(red: 1.0, green: 0.427, blue: 0.298))
+                    .foregroundColor(Color.modelessDestructive)
             }
             .buttonStyle(.plain)
         }
