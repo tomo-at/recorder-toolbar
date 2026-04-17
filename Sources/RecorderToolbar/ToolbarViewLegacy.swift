@@ -201,15 +201,14 @@ struct RecordingView: View {
                 // Primary window (not removable when it's the only window)
                 if let primary = state.recordedWindows.first {
                     WindowSegmentButton(window: primary,
-                                        removable: state.windowRecordingCount >= 2) {
-                        state.removeWindowViaToolbar(primary)
-                    }
+                                        removable: state.windowRecordingCount >= 2,
+                                        onRemove:  { state.removeWindowViaToolbar(primary) },
+                                        onReplace: { state.changeWindowViaToolbar() })
                 }
                 // Additional windows (removable)
                 ForEach(state.recordedWindows.dropFirst()) { window in
-                    WindowSegmentButton(window: window, removable: true) {
-                        state.removeWindowViaToolbar(window)
-                    }
+                    WindowSegmentButton(window: window, removable: true,
+                                        onRemove: { state.removeWindowViaToolbar(window) })
                 }
                 // Add button — only when below max (2 windows)
                 if state.windowRecordingCount < 2 {
@@ -252,17 +251,23 @@ struct RecordingView: View {
 }
 
 /// Window button styled like SegmentButton (VStack icon+label, 64×48).
-/// When removable is false, hover has no effect.
+/// removable=true: hover shows "Remove" (destructive). removable=false: hover shows "Change" (replace primary).
 struct WindowSegmentButton: View {
     let window: DetectedWindow
     var removable: Bool = true
     var onRemove: () -> Void = {}
+    var onReplace: () -> Void = {}
     @State private var hovering = false
 
     var body: some View {
-        Button(action: removable ? onRemove : {}) {
+        Button(action: removable ? onRemove : onReplace) {
             VStack(spacing: 4) {
-                if let icon = window.appIcon {
+                if !removable && hovering {
+                    Image(systemName: "arrow.trianglehead.2.clockwise")
+                        .font(.system(size: 14))
+                        .foregroundColor(.white)
+                        .frame(width: 20, height: 20)
+                } else if let icon = window.appIcon {
                     Image(nsImage: icon)
                         .resizable()
                         .frame(width: 20, height: 20)
@@ -272,11 +277,18 @@ struct WindowSegmentButton: View {
                         .foregroundColor(.white)
                         .frame(width: 20, height: 20)
                 }
-                Text(removable && hovering ? "Remove" : String(window.appName.prefix(7)))
-                    .font(.system(size: 11))
-                    .foregroundColor(removable && hovering ? .accentDestructive : .contentTertiary)
-                    .lineLimit(1)
-                    .animation(nil, value: hovering)
+                Group {
+                    if !removable && hovering {
+                        Text("Change").foregroundColor(Color.contentTertiary)
+                    } else if removable && hovering {
+                        Text("Remove").foregroundColor(Color.accentDestructive)
+                    } else {
+                        Text(String(window.appName.prefix(7))).foregroundColor(Color.contentTertiary)
+                    }
+                }
+                .font(.system(size: 11))
+                .lineLimit(1)
+                .animation(nil, value: hovering)
             }
             .frame(width: 64, height: 48)
             .background(hovering ? Color.highlightPrimary : .clear)

@@ -129,14 +129,21 @@ struct HorizontalRecordingView: View {
     var body: some View {
         HStack(spacing: 4) {
             if showWindowControls {
-                if state.windowRecordingCount >= 2 {
-                    ForEach(state.recordedWindows) { window in
-                        HWindowButton(window: window) {
-                            state.removeWindowViaToolbar(window)
-                        }
-                    }
-                } else {
-                    HActionButton(icon: "macwindow", label: "Add") {
+                // Primary window (always shown, never removable when it's the only window)
+                if let primary = state.recordedWindows.first {
+                    HWindowButton(window: primary,
+                                  removable: state.windowRecordingCount >= 2,
+                                  onRemove:  { state.removeWindowViaToolbar(primary) },
+                                  onReplace: { state.changeWindowViaToolbar() })
+                }
+                // Additional windows (removable)
+                ForEach(state.recordedWindows.dropFirst()) { window in
+                    HWindowButton(window: window, removable: true,
+                                  onRemove: { state.removeWindowViaToolbar(window) })
+                }
+                // Add button — only when below max (2 windows)
+                if state.windowRecordingCount < 2 {
+                    HActionButton(icon: "plus", label: "Add") {
                         state.addWindowViaToolbar()
                     }
                 }
@@ -460,16 +467,24 @@ struct HActionButton: View {
     }
 }
 
-/// Window button for toolbar controls multi-recording: shows app icon + name, hover → "Remove".
+/// Window button for toolbar controls multi-recording.
+/// removable=true: hover shows "Remove" (destructive). removable=false: hover shows "Change" (replace primary).
 struct HWindowButton: View {
     let window: DetectedWindow
-    let onRemove: () -> Void
+    var removable: Bool = true
+    var onRemove: () -> Void = {}
+    var onReplace: () -> Void = {}
     @State private var hovering = false
 
     var body: some View {
-        Button(action: onRemove) {
+        Button(action: removable ? onRemove : onReplace) {
             HStack(spacing: 4) {
-                if let icon = window.appIcon {
+                if !removable && hovering {
+                    Image(systemName: "arrow.trianglehead.2.clockwise")
+                        .font(.system(size: 16))
+                        .foregroundColor(.white)
+                        .frame(width: 20, height: 20)
+                } else if let icon = window.appIcon {
                     Image(nsImage: icon)
                         .resizable()
                         .frame(width: 20, height: 20)
@@ -479,12 +494,19 @@ struct HWindowButton: View {
                         .foregroundColor(.white)
                         .frame(width: 20, height: 20)
                 }
-                Text(hovering ? "Remove" : String(window.appName.prefix(9)))
-                    .font(.system(size: 13))
-                    .foregroundColor(hovering ? .accentDestructive : .white)
-                    .lineLimit(1)
-                    .truncationMode(.tail)
-                    .animation(nil, value: hovering)
+                Group {
+                    if !removable && hovering {
+                        Text("Change").foregroundColor(.white)
+                    } else if removable && hovering {
+                        Text("Remove").foregroundColor(Color.accentDestructive)
+                    } else {
+                        Text(String(window.appName.prefix(9))).foregroundColor(.white)
+                    }
+                }
+                .font(.system(size: 13))
+                .lineLimit(1)
+                .truncationMode(.tail)
+                .animation(nil, value: hovering)
             }
             .fixedSize(horizontal: true, vertical: false)
             .padding(.horizontal, 8)

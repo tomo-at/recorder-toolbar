@@ -151,6 +151,14 @@ class ToolbarState: ObservableObject {
             self.overlay.pauseTracking()
         }
 
+        // Replacement window selected via change-window overlay (toolbar controls pattern)
+        overlay.onSelectReplacement = { [weak self] window in
+            guard let self, let panel = self.panel else { return }
+            self.overlay.exitAddWindowSelection(keepingAbove: panel)
+            self.handleWindowReplace(with: window)
+            self.overlay.pauseTracking()
+        }
+
         // Display selected: same pattern.
         displayOverlay.onSelect = { [weak self] in
             guard let self else { return }
@@ -338,9 +346,11 @@ class ToolbarState: ObservableObject {
         switch state {
         case .recording, .countdown:
             if s.addWindowPattern == .toolbarControls && isWindowRecording {
-                // Window controls section width: Addボタン or 2ウィンドウボタン + Divider
-                let extra: CGFloat = windowRecordingCount >= 2 ? 220 : 110
-                newW = isHorizontal ? (365 + extra) : (297 + extra)
+                // Count 1: primary window button + Add button + divider
+                // Count 2: primary window button + secondary window button + divider (no Add)
+                let extraH: CGFloat = windowRecordingCount >= 2 ? 215 : 195
+                let extraV: CGFloat = 140  // SegmentButton 64×2 + divider 9 (same for both counts)
+                newW = isHorizontal ? (365 + extraH) : (297 + extraV)
             } else {
                 newW = isHorizontal ? 365 : 297
             }
@@ -570,8 +580,19 @@ class ToolbarState: ObservableObject {
         overlay.startAddWindowSelection(keepingAbove: panel)
     }
 
+    func changeWindowViaToolbar() {
+        guard let panel else { return }
+        overlay.startChangeWindowSelection(keepingAbove: panel)
+    }
+
     func removeWindowViaToolbar(_ window: DetectedWindow) {
         handleWindowRemove(window)
+    }
+
+    private func handleWindowReplace(with newWindow: DetectedWindow) {
+        overlay.replaceRecordedWindow(with: newWindow)
+        recordedWindows = overlay.recordedWindowsList
+        resizePanel(for: appState)
     }
 
     func togglePause() { paused = !paused }

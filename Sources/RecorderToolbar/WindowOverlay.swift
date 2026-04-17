@@ -96,11 +96,15 @@ final class OverlayController {
     var onHoverRecordedWindow: ((DetectedWindow?) -> Void)?
     /// Called when the user selects a window via the add-window overlay (toolbar controls pattern).
     var onSelectAdditional: ((DetectedWindow) -> Void)?
+    /// Called when the user selects a replacement window via the change-window overlay.
+    var onSelectReplacement: ((DetectedWindow) -> Void)?
 
     /// True when the overlay is in lightweight recording mode (no dim, different click handler).
     private(set) var isRecordingMode: Bool = false
     /// True while the user is picking an additional window to record (toolbar controls pattern).
     private var isInAddMode: Bool = false
+    /// True while the user is picking a replacement for the primary window.
+    private var isInChangeMode: Bool = false
     /// ID of the window that was originally selected when recording started. Never removable.
     private var primaryRecordedWindowId: Int? = nil
 
@@ -201,6 +205,29 @@ final class OverlayController {
             hoveredRecordedWindowId = nil
             onHoverRecordedWindow?(nil)
         }
+    }
+
+    /// Replace the primary recorded window with a new one (toolbar controls Change action).
+    func replaceRecordedWindow(with newWindow: DetectedWindow) {
+        guard !state.additionalRecordedWindows.isEmpty else { return }
+        state.additionalRecordedWindows[0] = newWindow
+    }
+
+    /// Enter change-window selection mode: shows dim overlay so user can pick a replacement
+    /// for the primary window. All currently-recorded windows are excluded.
+    func startChangeWindowSelection(keepingAbove toolbar: NSPanel) {
+        stopTracking()
+        isInChangeMode  = true
+        isInAddMode     = false
+        isRecordingMode = false
+        state.isDimmed  = true
+        state.frozenWindow  = nil
+        state.hoveredWindow = nil
+        state.isSelected    = false
+        let recorded = state.additionalRecordedWindows.map(\.id)
+        allWindows = enumerateWindows().filter { !recorded.contains($0.id) }
+        toolbar.orderFrontRegardless()
+        startTracking()
     }
 
     /// Enter add-window selection mode (toolbar controls pattern):
@@ -431,6 +458,12 @@ final class OverlayController {
     }
 
     private func handleClick() {
+        if isInChangeMode {
+            guard let w = state.hoveredWindow else { return }
+            isInChangeMode = false
+            onSelectReplacement?(w)
+            return
+        }
         if isInAddMode {
             guard let w = state.hoveredWindow else { return }
             isInAddMode = false
