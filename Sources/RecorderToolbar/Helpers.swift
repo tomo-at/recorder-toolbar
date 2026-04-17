@@ -190,17 +190,19 @@ final class ShortcutTooltipController {
 
 // MARK: – Window multi-recording dialog
 
+// Dialog sizes match Figma exactly:
+//   Multi-dialog:  3 × 122px buttons + 2 × 8px gaps + 2 × 12px padding = 406 × 56px
+//   Remove dialog: 1 × 158px button  +               + 2 × 12px padding = 182 × 56px
+
 private struct DialogPrimaryButtonStyle: ButtonStyle {
     func makeBody(configuration: Configuration) -> some View {
         configuration.label
             .font(.system(size: 13, weight: .medium))
             .foregroundColor(.white)
-            .frame(maxWidth: .infinity)
-            .frame(height: 32)
-            .padding(.horizontal, 8)
+            .frame(maxWidth: .infinity, minHeight: 32, maxHeight: 32)
             .background(
-                RoundedRectangle(cornerRadius: 100, style: .continuous)
-                    .fill(Color(red: 0/255, green: 136/255, blue: 255/255)
+                Capsule()
+                    .fill(Color(red: 0, green: 136/255, blue: 1.0)
                           .opacity(configuration.isPressed ? 0.7 : 1.0))
             )
     }
@@ -211,11 +213,9 @@ private struct DialogSecondaryButtonStyle: ButtonStyle {
         configuration.label
             .font(.system(size: 13, weight: .medium))
             .foregroundColor(Color.black.opacity(0.85))
-            .frame(maxWidth: .infinity)
-            .frame(height: 32)
-            .padding(.horizontal, 8)
+            .frame(maxWidth: .infinity, minHeight: 32, maxHeight: 32)
             .background(
-                RoundedRectangle(cornerRadius: 100, style: .continuous)
+                Capsule()
                     .fill(Color(red: 230/255, green: 230/255, blue: 230/255)
                           .opacity(configuration.isPressed ? 0.7 : 1.0))
             )
@@ -227,11 +227,9 @@ private struct DialogDestructiveButtonStyle: ButtonStyle {
         configuration.label
             .font(.system(size: 13, weight: .medium))
             .foregroundColor(Color(red: 1.0, green: 56/255, blue: 60/255))
-            .frame(maxWidth: .infinity)
-            .frame(height: 32)
-            .padding(.horizontal, 8)
+            .frame(maxWidth: .infinity, minHeight: 32, maxHeight: 32)
             .background(
-                RoundedRectangle(cornerRadius: 100, style: .continuous)
+                Capsule()
                     .fill(Color(red: 1.0, green: 56/255, blue: 60/255)
                           .opacity(configuration.isPressed ? 0.45 : 0.23))
             )
@@ -239,6 +237,7 @@ private struct DialogDestructiveButtonStyle: ButtonStyle {
 }
 
 /// Click-during-recording dialog: Cancel / Add window / Switch window (horizontal pill buttons).
+/// Fixed size 406 × 56px.
 struct WindowMultiDialogView: View {
     let onSwitch:  () -> Void
     let onAdd:     () -> Void
@@ -254,12 +253,14 @@ struct WindowMultiDialogView: View {
                 .buttonStyle(DialogPrimaryButtonStyle())
         }
         .padding(12)
-        .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 10, style: .continuous))
+        .frame(width: 406, height: 56)
+        .background(Capsule().fill(.regularMaterial))
         .environment(\.colorScheme, .light)
     }
 }
 
-/// Hover-during-multirecording dialog: "Remove window" shown outside the recorded window.
+/// Hover-during-recording dialog: "Remove window" shown above the recorded window.
+/// Fixed size 182 × 56px.
 struct WindowRemoveDialogView: View {
     let onRemove: () -> Void
 
@@ -267,7 +268,8 @@ struct WindowRemoveDialogView: View {
         Button("Remove window", action: onRemove)
             .buttonStyle(DialogDestructiveButtonStyle())
             .padding(12)
-            .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 10, style: .continuous))
+            .frame(width: 182, height: 56)
+            .background(Capsule().fill(.regularMaterial))
             .environment(\.colorScheme, .light)
     }
 }
@@ -283,11 +285,11 @@ final class WindowMultiDialogController {
         panel?.orderOut(nil)
         panel = nil
 
+        let size    = CGSize(width: 406, height: 56)
         let view    = WindowMultiDialogView(onSwitch: onSwitch, onAdd: onAdd, onCancel: onCancel)
         let hosting = NSHostingView(rootView: view)
         hosting.wantsLayer             = true
         hosting.layer?.backgroundColor = .clear
-        let size = CGSize(width: 290, height: hosting.fittingSize.height)
         hosting.setFrameSize(size)
 
         let p = NSPanel(contentRect: NSRect(origin: .zero, size: size),
@@ -330,20 +332,21 @@ final class WindowMultiDialogController {
     }
 }
 
-/// Floating "Remove window" dialog shown above a recorded window on hover (multi-recording mode).
+/// Floating "Remove window" dialog shown above a recorded window on hover.
 @MainActor
 final class WindowRemoveDialogController {
     private var panel: NSPanel?
 
     func show(for window: DetectedWindow, above toolbar: NSPanel,
               onRemove: @escaping () -> Void) {
-        guard panel == nil else { return }
+        panel?.orderOut(nil)
+        panel = nil
 
+        let size    = CGSize(width: 182, height: 56)
         let view    = WindowRemoveDialogView(onRemove: onRemove)
         let hosting = NSHostingView(rootView: view)
         hosting.wantsLayer             = true
         hosting.layer?.backgroundColor = .clear
-        let size = hosting.fittingSize
         hosting.setFrameSize(size)
 
         let p = NSPanel(contentRect: NSRect(origin: .zero, size: size),
