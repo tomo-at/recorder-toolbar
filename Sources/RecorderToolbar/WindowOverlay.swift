@@ -125,6 +125,10 @@ final class OverlayController {
     /// border-only (no dim), different click handler. Called after recording starts.
     func transitionToLightweight(keepingAbove toolbar: NSPanel) {
         stopTracking()
+        // Persist the originally-selected window as a recorded window before clearing it.
+        if let original = state.frozenWindow {
+            state.additionalRecordedWindows = [original]
+        }
         state.frozenWindow = nil
         state.isSelected   = false
         state.isDimmed     = false
@@ -132,6 +136,11 @@ final class OverlayController {
         allWindows         = enumerateWindows()
         toolbar.orderFrontRegardless()
         startTracking()
+    }
+
+    /// Replace all persistently-recorded windows with a single new window (Switch action).
+    func switchRecordedWindow(to window: DetectedWindow) {
+        state.additionalRecordedWindows = [window]
     }
 
     func hide() {

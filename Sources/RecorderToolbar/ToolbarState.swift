@@ -511,6 +511,7 @@ class ToolbarState: ObservableObject {
     }
 
     private func handleWindowSwitch(to window: DetectedWindow) {
+        overlay.switchRecordedWindow(to: window)
         if settingsPanel.state.v5DefaultStyle == .message {
             setTemporaryHeaderMessage("Switched to \(window.appName)")
         }
