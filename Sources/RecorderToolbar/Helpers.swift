@@ -199,21 +199,9 @@ final class ShortcutTooltipController {
 //            --color-modeless-teal (#79dde8) / --color-modeless-black (#000000)
 //            --color-accent-destructive (#ff6d4c)
 
-// NSViewRepresentable providing behindWindow backdrop blur without extra color tint.
-private struct BackdropBlur: NSViewRepresentable {
-    func makeNSView(context: Context) -> NSVisualEffectView {
-        let v = NSVisualEffectView()
-        v.blendingMode = .behindWindow
-        v.material     = .hudWindow
-        v.state        = .active
-        return v
-    }
-    func updateNSView(_ nsView: NSVisualEffectView, context: Context) {}
-}
-
 // Ghost button (Cancel / Remove): highlightPrimary fill + layer blur on background only.
-// Uses SwiftUI .blur() (layer blur) matching Figma spec — NOT backdrop filter.
-// Blur is applied to the background shape only; label text stays sharp.
+// Matches Figma spec: .background(highlightPrimary) + .blur(radius:8) on the shape layer.
+// Label text is rendered above the blurred background and stays sharp.
 private struct DSGhostButtonStyle: ButtonStyle {
     func makeBody(configuration: Configuration) -> some View {
         configuration.label
@@ -231,7 +219,7 @@ private struct DSGhostButtonStyle: ButtonStyle {
     }
 }
 
-// Primary button (Add window): solid teal fill, black text
+// Primary button (Add window): solid teal fill, black text — no blur
 private struct DSPrimaryButtonStyle: ButtonStyle {
     func makeBody(configuration: Configuration) -> some View {
         configuration.label
@@ -243,18 +231,21 @@ private struct DSPrimaryButtonStyle: ButtonStyle {
     }
 }
 
-// Shared container: backdrop blur + modelessOverlay tint + highlight border
+// Shared container: modelessOverlay fill + highlight border + layer blur on background.
+// Matches Figma spec: .background(modelessOverlay) + .blur(radius:8) on the container shape.
+// Content (buttons) is layered above and stays sharp.
 private struct DSDialogContainer<Content: View>: View {
     let content: Content
     init(@ViewBuilder content: () -> Content) { self.content = content() }
 
     var body: some View {
         ZStack {
-            BackdropBlur()
-                .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
-            RoundedRectangle(cornerRadius: 14, style: .continuous).fill(Color.modelessOverlay)
-            RoundedRectangle(cornerRadius: 14, style: .continuous)
-                .strokeBorder(Color.highlightPrimary, lineWidth: 1)
+            ZStack {
+                RoundedRectangle(cornerRadius: 14, style: .continuous).fill(Color.modelessOverlay)
+                RoundedRectangle(cornerRadius: 14, style: .continuous)
+                    .strokeBorder(Color.highlightPrimary, lineWidth: 1)
+            }
+            .blur(radius: 8)
             content
         }
     }
