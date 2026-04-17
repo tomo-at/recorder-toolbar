@@ -381,7 +381,7 @@ struct PerScreenOverlayView: View {
             ForEach(state.additionalRecordedWindows, id: \.id) { w in
                 let f = adjustedFrame(for: w)
                 if CGRect(origin: .zero, size: screen.frame.size).intersects(f) {
-                    RoundedRectangle(cornerRadius: 10, style: .continuous)
+                    RoundedRectangle(cornerRadius: 26, style: .continuous)
                         .strokeBorder(Color.selectionOrange, lineWidth: 2)
                         .frame(width: f.width, height: f.height)
                         .position(x: f.midX, y: f.midY)
@@ -428,8 +428,8 @@ struct PerScreenOverlayView: View {
                 path.addRoundedRect(
                     in: CGRect(x: holeCX - holeW / 2, y: holeCY - holeH / 2,
                                width: holeW, height: holeH),
-                    cornerRadii: .init(topLeading: 10, bottomLeading: 10,
-                                       bottomTrailing: 10, topTrailing: 10)
+                    cornerRadii: .init(topLeading: 26, bottomLeading: 26,
+                                       bottomTrailing: 26, topTrailing: 26)
                 )
             }
             ctx.fill(path, with: .color(.white), style: FillStyle(eoFill: true))
@@ -467,7 +467,7 @@ struct WindowBadgeView: View {
     var body: some View {
         ZStack {
             // Orange border — thinner in recording mode
-            RoundedRectangle(cornerRadius: 10, style: .continuous)
+            RoundedRectangle(cornerRadius: 26, style: .continuous)
                 .strokeBorder(Color.selectionOrange, lineWidth: isDimmed ? 3 : 2)
                 .frame(width: frame.width, height: frame.height)
 

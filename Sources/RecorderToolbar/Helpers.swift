@@ -190,6 +190,23 @@ final class ShortcutTooltipController {
 
 // MARK: – Window multi-recording dialog
 
+/// Explicit blue button style — needed because nonactivatingPanel never becomes key/active,
+/// which causes .borderedProminent to render gray regardless of .tint(.blue).
+private struct BlueButtonStyle: ButtonStyle {
+    func makeBody(configuration: Configuration) -> some View {
+        configuration.label
+            .foregroundColor(.white)
+            .font(.system(size: 14))
+            .frame(maxWidth: .infinity)
+            .padding(.vertical, 7)
+            .background(
+                RoundedRectangle(cornerRadius: 8)
+                    .fill(Color(red: 0/255, green: 122/255, blue: 255/255)
+                          .opacity(configuration.isPressed ? 0.75 : 1.0))
+            )
+    }
+}
+
 /// macOS-style dialog that appears at the top of a newly clicked window during recording.
 /// Lets the user switch to the new window or add it to the recording.
 struct WindowMultiDialogView: View {
@@ -213,18 +230,14 @@ struct WindowMultiDialogView: View {
                 // Switch + Add side by side, both blue
                 HStack(spacing: 8) {
                     Button(action: onSwitch) {
-                        Text("Switch window").frame(maxWidth: .infinity)
+                        Text("Switch window")
                     }
-                    .buttonStyle(.borderedProminent)
-                    .tint(.blue)
-                    .controlSize(.large)
+                    .buttonStyle(BlueButtonStyle())
 
                     Button(action: onAdd) {
-                        Text("Add window").frame(maxWidth: .infinity)
+                        Text("Add window")
                     }
-                    .buttonStyle(.borderedProminent)
-                    .tint(.blue)
-                    .controlSize(.large)
+                    .buttonStyle(BlueButtonStyle())
                 }
 
                 Button(action: onCancel) {
