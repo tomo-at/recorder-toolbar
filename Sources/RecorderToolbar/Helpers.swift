@@ -210,34 +210,35 @@ struct WindowMultiDialogView: View {
             }
 
             VStack(spacing: 8) {
-                Button(action: onSwitch) {
-                    Text("Switch window")
-                        .frame(maxWidth: .infinity)
-                }
-                .buttonStyle(.borderedProminent)
-                .controlSize(.regular)
+                // Switch + Add side by side, both blue
+                HStack(spacing: 8) {
+                    Button(action: onSwitch) {
+                        Text("Switch window").frame(maxWidth: .infinity)
+                    }
+                    .buttonStyle(.borderedProminent)
+                    .tint(.blue)
+                    .controlSize(.large)
 
-                Button(action: onAdd) {
-                    Text("Add window")
-                        .frame(maxWidth: .infinity)
+                    Button(action: onAdd) {
+                        Text("Add window").frame(maxWidth: .infinity)
+                    }
+                    .buttonStyle(.borderedProminent)
+                    .tint(.blue)
+                    .controlSize(.large)
                 }
-                .buttonStyle(.bordered)
-                .controlSize(.regular)
 
                 Button(action: onCancel) {
-                    Text("Cancel")
-                        .frame(maxWidth: .infinity)
-                        .foregroundColor(.secondary)
+                    Text("Cancel").frame(maxWidth: .infinity)
                 }
-                .buttonStyle(.plain)
+                .buttonStyle(.bordered)
+                .controlSize(.large)
             }
         }
         .padding(20)
-        .frame(width: 260)
+        .frame(width: 300)
         .background(
             RoundedRectangle(cornerRadius: 14)
                 .fill(Color(nsColor: .windowBackgroundColor))
-                .shadow(color: .black.opacity(0.22), radius: 24, x: 0, y: 8)
         )
     }
 }
@@ -258,7 +259,7 @@ final class WindowMultiDialogController {
         let hosting = NSHostingView(rootView: view)
         hosting.wantsLayer             = true
         hosting.layer?.backgroundColor = .clear
-        let size = CGSize(width: 260, height: hosting.fittingSize.height)
+        let size = CGSize(width: 300, height: hosting.fittingSize.height)
         hosting.setFrameSize(size)
 
         let p = NSPanel(contentRect: NSRect(origin: .zero, size: size),
@@ -268,7 +269,7 @@ final class WindowMultiDialogController {
         p.level              = toolbar.level
         p.backgroundColor    = .clear
         p.isOpaque           = false
-        p.hasShadow          = false
+        p.hasShadow          = true   // system shadow (SwiftUI shadow gets clipped by panel bounds)
         p.collectionBehavior = [.canJoinAllSpaces, .fullScreenAuxiliary]
         p.appearance         = NSAppearance(named: .aqua)   // light macOS dialog style
         p.contentView        = hosting
@@ -288,13 +289,16 @@ final class WindowMultiDialogController {
         panel = p
     }
 
-    func dismiss() {
-        guard let p = panel else { return }
+    func dismiss(completion: (() -> Void)? = nil) {
+        guard let p = panel else { completion?(); return }
         panel = nil
         NSAnimationContext.runAnimationGroup({ ctx in
             ctx.duration = 0.1
             p.animator().alphaValue = 0
-        }, completionHandler: { p.orderOut(nil) })
+        }, completionHandler: {
+            p.orderOut(nil)
+            completion?()
+        })
     }
 }
 
