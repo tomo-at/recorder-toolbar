@@ -119,9 +119,6 @@ class ToolbarState: ObservableObject {
                     onAdd: { [weak self] in
                         self?.windowMultiDialog.dismiss()
                         self?.handleWindowAdd(w)
-                    },
-                    onCancel: { [weak self] in
-                        self?.windowMultiDialog.dismiss()
                     }
                 )
             } else {

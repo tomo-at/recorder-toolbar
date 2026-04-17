@@ -199,27 +199,34 @@ final class ShortcutTooltipController {
 //            --color-modeless-teal (#79dde8) / --color-modeless-black (#000000)
 //            --color-accent-destructive (#ff6d4c)
 
-// Ghost button (Cancel / Remove): highlightPrimary fill + layer blur on background only.
-// Matches Figma spec: .background(highlightPrimary) + .blur(radius:8) on the shape layer.
-// Label text is rendered above the blurred background and stays sharp.
+// NSViewRepresentable providing behindWindow backdrop blur without extra color tint.
+private struct BackdropBlur: NSViewRepresentable {
+    func makeNSView(context: Context) -> NSVisualEffectView {
+        let v = NSVisualEffectView()
+        v.blendingMode = .behindWindow
+        v.material     = .hudWindow
+        v.state        = .active
+        return v
+    }
+    func updateNSView(_ nsView: NSVisualEffectView, context: Context) {}
+}
+
+// Ghost button (Remove): BackdropBlur + highlightPrimary tint
 private struct DSGhostButtonStyle: ButtonStyle {
     func makeBody(configuration: Configuration) -> some View {
-        configuration.label
-            .frame(width: 108, height: 28)
-            .background {
-                ZStack {
-                    RoundedRectangle(cornerRadius: 6, style: .continuous)
-                        .fill(Color.highlightPrimary)
-                    RoundedRectangle(cornerRadius: 6, style: .continuous)
-                        .strokeBorder(Color.highlightPrimary, lineWidth: 1)
-                }
-                .blur(radius: 8)
-            }
-            .opacity(configuration.isPressed ? 0.7 : 1.0)
+        ZStack {
+            BackdropBlur()
+                .clipShape(RoundedRectangle(cornerRadius: 6, style: .continuous))
+            Color.highlightPrimary
+                .clipShape(RoundedRectangle(cornerRadius: 6, style: .continuous))
+            configuration.label
+        }
+        .frame(width: 108, height: 28)
+        .opacity(configuration.isPressed ? 0.7 : 1.0)
     }
 }
 
-// Primary button (Add window): solid teal fill, black text — no blur
+// Primary button (Add window): solid teal fill, black text
 private struct DSPrimaryButtonStyle: ButtonStyle {
     func makeBody(configuration: Configuration) -> some View {
         configuration.label
@@ -231,50 +238,37 @@ private struct DSPrimaryButtonStyle: ButtonStyle {
     }
 }
 
-// Shared container: modelessOverlay fill + highlight border + layer blur on background.
-// Matches Figma spec: .background(modelessOverlay) + .blur(radius:8) on the container shape.
-// Content (buttons) is layered above and stays sharp.
+// Shared container: BackdropBlur + modelessOverlay tint + highlight border
 private struct DSDialogContainer<Content: View>: View {
     let content: Content
     init(@ViewBuilder content: () -> Content) { self.content = content() }
 
     var body: some View {
         ZStack {
-            ZStack {
-                RoundedRectangle(cornerRadius: 14, style: .continuous).fill(Color.modelessOverlay)
-                RoundedRectangle(cornerRadius: 14, style: .continuous)
-                    .strokeBorder(Color.highlightPrimary, lineWidth: 1)
-            }
-            .blur(radius: 8)
+            BackdropBlur()
+                .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
+            RoundedRectangle(cornerRadius: 14, style: .continuous).fill(Color.modelessOverlay)
+            RoundedRectangle(cornerRadius: 14, style: .continuous)
+                .strokeBorder(Color.highlightPrimary, lineWidth: 1)
             content
         }
     }
 }
 
-/// Click-during-recording dialog: Cancel (ghost) + Add window (teal). 240×44px content.
+/// Hover-during-recording dialog: Add window (teal only). 124×44px content.
 struct WindowMultiDialogView: View {
-    let onAdd:    () -> Void
-    let onCancel: () -> Void
+    let onAdd: () -> Void
 
     var body: some View {
         DSDialogContainer {
-            HStack(spacing: 8) {
-                Button(action: onCancel) {
-                    Text("Cancel")
-                        .font(.system(size: 12, weight: .medium))
-                        .foregroundColor(.white)
-                }
-                .buttonStyle(DSGhostButtonStyle())
-
-                Button(action: onAdd) {
-                    Text("Add window")
-                        .font(.system(size: 12, weight: .medium))
-                        .foregroundColor(.modelessBlack)
-                }
-                .buttonStyle(DSPrimaryButtonStyle())
+            Button(action: onAdd) {
+                Text("Add window")
+                    .font(.system(size: 12, weight: .medium))
+                    .foregroundColor(.modelessBlack)
             }
+            .buttonStyle(DSPrimaryButtonStyle())
         }
-        .frame(width: 240, height: 44)
+        .frame(width: 124, height: 44)
         .shadow(color: Color.shadowMedium, radius: 8, x: 0, y: 8)
         .padding(20)
     }
@@ -304,15 +298,14 @@ final class WindowMultiDialogController {
     private var panel: NSPanel?
 
     func show(for window: DetectedWindow, above toolbar: NSPanel,
-              onAdd: @escaping () -> Void,
-              onCancel: @escaping () -> Void) {
+              onAdd: @escaping () -> Void) {
         panel?.orderOut(nil)
         panel = nil
 
-        let content  = CGSize(width: 240, height: 44)
+        let content  = CGSize(width: 124, height: 44)
         let pad: CGFloat = 20
         let size    = CGSize(width: content.width + 2*pad, height: content.height + 2*pad)
-        let view    = WindowMultiDialogView(onAdd: onAdd, onCancel: onCancel)
+        let view    = WindowMultiDialogView(onAdd: onAdd)
         let hosting = NSHostingView(rootView: view)
         hosting.wantsLayer             = true
         hosting.layer?.backgroundColor = .clear
