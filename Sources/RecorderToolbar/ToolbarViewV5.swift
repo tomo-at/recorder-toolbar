@@ -25,6 +25,7 @@ struct V5TypeSelect: View {
             case .revealedAllCompact: RevealedAllCompactTypeSelectView(state: state)
             }
         }
+        .frame(maxHeight: .infinity)
         .overlay(alignment: .top) {
             let showsProgress = (settings.v5UploadStyle == .toolbar || settings.v5UploadStyle == .toolbarWithCompleteMessage) && state.isUploading
             if showsProgress {
