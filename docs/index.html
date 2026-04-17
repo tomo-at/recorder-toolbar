@@ -379,7 +379,7 @@
         <video src="toolbar-demo-v5.mp4" autoplay loop muted playsinline></video>
       </div>
       <div class="demo-info">
-        <div class="demo-meta">3 independent axes: Default style · Recording · Uploading — switchable at runtime via Prototype Settings</div>
+        <div class="demo-meta">4 independent axes: Default style · Recording · Uploading · Add window — switchable at runtime via Prototype Settings</div>
         <a class="download-btn"
            href="https://github.com/tomo-at/recorder-toolbar/archive/refs/heads/main.zip">
           <svg width="14" height="14" viewBox="0 0 14 14" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -398,9 +398,9 @@
         <p class="section-label">Prototype Settings</p>
         <h2 class="section-title">Configuration options</h2>
         <p class="section-body">
-          The prototype exposes three independent axes — Default style, Recording, and Uploading.
+          The prototype exposes four independent axes — Default style, Recording, Uploading, and Add window.
           Each can be changed at runtime without restarting,
-          producing 5 × 3 × 4 = 60 distinct combinations to explore.
+          producing 5 × 3 × 4 × 2 = 120 distinct combinations to explore.
         </p>
       </div>
 
@@ -471,6 +471,21 @@
             <div class="settings-option">
               <div class="settings-option-name">Upload mode</div>
               <div class="settings-option-desc">The entire toolbar is replaced by a dedicated upload UI showing a labelled progress bar. On completion, the toolbar shows "Upload complete ✓" with View video and New recording actions.</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Add window -->
+        <div>
+          <p class="settings-group-title">Add window</p>
+          <div class="settings-options">
+            <div class="settings-option">
+              <div class="settings-option-name">Hover on Window</div>
+              <div class="settings-option-desc">During recording, hovering over an unrecorded window reveals an <strong>Add window</strong> dialog above it. Hovering over an already-recorded window (when two windows are active) shows a <strong>Remove</strong> dialog. Dialogs dismiss automatically when the cursor leaves.</div>
+            </div>
+            <div class="settings-option">
+              <div class="settings-option-name">Toolbar controls</div>
+              <div class="settings-option-desc">An <strong>Add</strong> button (with a window icon) appears on the left side of the recording toolbar. Clicking it activates a full-screen window selector — already-recorded windows are excluded. Once a second window is selected, the toolbar replaces the Add button with two app-icon buttons. Hovering a button changes its label to <strong>Remove</strong> in red; clicking removes that window from the recording session.</div>
             </div>
           </div>
         </div>
