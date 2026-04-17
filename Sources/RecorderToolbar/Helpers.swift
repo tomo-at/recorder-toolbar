@@ -199,18 +199,34 @@ final class ShortcutTooltipController {
 //            --color-modeless-teal (#79dde8) / --color-modeless-black (#000000)
 //            --color-accent-destructive (#ff6d4c)
 
-// Ghost button (secondary): highlightPrimary fill, no blur (container provides backdrop blur)
+// NSViewRepresentable providing behindWindow backdrop blur without extra color tint.
+private struct BackdropBlur: NSViewRepresentable {
+    func makeNSView(context: Context) -> NSVisualEffectView {
+        let v = NSVisualEffectView()
+        v.blendingMode = .behindWindow
+        v.material     = .hudWindow
+        v.state        = .active
+        return v
+    }
+    func updateNSView(_ nsView: NSVisualEffectView, context: Context) {}
+}
+
+// Ghost button (Cancel / Remove): backdrop blur + highlightPrimary tint
 private struct DSGhostButtonStyle: ButtonStyle {
     func makeBody(configuration: Configuration) -> some View {
-        configuration.label
-            .frame(width: 108, height: 28)
-            .background(Color.highlightPrimary,
-                        in: RoundedRectangle(cornerRadius: 6, style: .continuous))
-            .opacity(configuration.isPressed ? 0.7 : 1.0)
+        ZStack {
+            BackdropBlur()
+                .clipShape(RoundedRectangle(cornerRadius: 6, style: .continuous))
+            Color.highlightPrimary
+                .clipShape(RoundedRectangle(cornerRadius: 6, style: .continuous))
+            configuration.label
+        }
+        .frame(width: 108, height: 28)
+        .opacity(configuration.isPressed ? 0.7 : 1.0)
     }
 }
 
-// Primary button: teal fill, black text
+// Primary button (Add window): solid teal fill, black text
 private struct DSPrimaryButtonStyle: ButtonStyle {
     func makeBody(configuration: Configuration) -> some View {
         configuration.label
@@ -222,14 +238,15 @@ private struct DSPrimaryButtonStyle: ButtonStyle {
     }
 }
 
-// Shared container background for DS dialogs: modelessOverlay fill + highlight border.
-// Blur and shadow removed temporarily for color verification.
+// Shared container: backdrop blur + modelessOverlay tint + highlight border
 private struct DSDialogContainer<Content: View>: View {
     let content: Content
     init(@ViewBuilder content: () -> Content) { self.content = content() }
 
     var body: some View {
         ZStack {
+            BackdropBlur()
+                .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
             RoundedRectangle(cornerRadius: 14, style: .continuous).fill(Color.modelessOverlay)
             RoundedRectangle(cornerRadius: 14, style: .continuous)
                 .strokeBorder(Color.highlightPrimary, lineWidth: 1)
