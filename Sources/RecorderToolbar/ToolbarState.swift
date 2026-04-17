@@ -58,7 +58,6 @@ class ToolbarState: ObservableObject {
 
     private var isWindowRecording    = false
     private var windowRecordingCount = 0
-    private var isDialogShowing      = false
     private var headerMessageTask:   Task<Void, Never>?
 
     private var timer:              AnyCancellable?
@@ -110,21 +109,24 @@ class ToolbarState: ObservableObject {
         }
         overlay.onCancel = { [weak self] in self?.exitSelecting() }
 
-        // Window clicked during recording → show the add/switch dialog
-        overlay.onSelectDuringRecording = { [weak self] window in
+        // Hover over an unrecorded window during recording → show the add-window dialog
+        overlay.onHoverUnrecordedWindow = { [weak self] window in
             guard let self, let panel = self.panel else { return }
-            guard self.windowRecordingCount < 2, !self.isDialogShowing else { return }
-            self.isDialogShowing = true
-            self.windowMultiDialog.show(
-                for: window, above: panel,
-                onAdd: { [weak self] in
-                    self?.windowMultiDialog.dismiss { [weak self] in self?.isDialogShowing = false }
-                    self?.handleWindowAdd(window)
-                },
-                onCancel: { [weak self] in
-                    self?.windowMultiDialog.dismiss { [weak self] in self?.isDialogShowing = false }
-                }
-            )
+            if let w = window {
+                guard self.windowRecordingCount < 2 else { return }
+                self.windowMultiDialog.show(
+                    for: w, above: panel,
+                    onAdd: { [weak self] in
+                        self?.windowMultiDialog.dismiss()
+                        self?.handleWindowAdd(w)
+                    },
+                    onCancel: { [weak self] in
+                        self?.windowMultiDialog.dismiss()
+                    }
+                )
+            } else {
+                self.windowMultiDialog.dismiss()
+            }
         }
 
         // Hover over a recorded window during multi-recording → show/hide the remove dialog
@@ -440,7 +442,6 @@ class ToolbarState: ObservableObject {
         // Reset window recording state
         isWindowRecording    = false
         windowRecordingCount = 0
-        isDialogShowing      = false
         windowMultiDialog.dismiss()
         windowRemoveDialog.hide()
         headerMessageTask?.cancel()

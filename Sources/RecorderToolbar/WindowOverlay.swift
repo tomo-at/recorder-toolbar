@@ -88,8 +88,9 @@ final class OverlayController {
 
     var onSelect: (() -> Void)?
     var onCancel: (() -> Void)?
-    /// Called when a window is clicked during recording mode (instead of onSelect).
-    var onSelectDuringRecording: ((DetectedWindow) -> Void)?
+    /// Called when hovering over an unrecorded window during recording (for Add-window dialog).
+    /// Passes nil when leaving the unrecorded window (with 500 ms delay).
+    var onHoverUnrecordedWindow: ((DetectedWindow?) -> Void)?
     /// Called when the hovered window changes during multi-recording (count ≥ 2).
     /// Passes nil when leaving a recorded window.
     var onHoverRecordedWindow: ((DetectedWindow?) -> Void)?
@@ -97,8 +98,10 @@ final class OverlayController {
     /// True when the overlay is in lightweight recording mode (no dim, different click handler).
     private(set) var isRecordingMode: Bool = false
 
-    private var hoveredRecordedWindowId: Int? = nil
-    private var leaveRecordedWindowTask: Task<Void, Never>? = nil
+    private var hoveredRecordedWindowId:   Int? = nil
+    private var leaveRecordedWindowTask:   Task<Void, Never>? = nil
+    private var hoveredUnrecordedWindowId: Int? = nil
+    private var leaveUnrecordedWindowTask: Task<Void, Never>? = nil
 
     /// CG-coordinate bounds of the frozen (clicked) window. Nil before any selection.
     var frozenWindowBounds: CGRect? { state.frozenWindow?.bounds }
@@ -162,6 +165,10 @@ final class OverlayController {
         leaveRecordedWindowTask          = nil
         hoveredRecordedWindowId          = nil
         onHoverRecordedWindow?(nil)
+        leaveUnrecordedWindowTask?.cancel()
+        leaveUnrecordedWindowTask        = nil
+        hoveredUnrecordedWindowId        = nil
+        onHoverUnrecordedWindow?(nil)
     }
 
     func selectCurrent() { if state.hoveredWindow != nil { onSelect?() } }
@@ -321,6 +328,34 @@ final class OverlayController {
                 }
             }
         }
+
+        // In recording mode, detect hover over unrecorded windows to show the add-window dialog.
+        if isRecordingMode {
+            let hw = state.hoveredWindow
+            let isRecorded: Bool = {
+                guard let hw else { return false }
+                return (hw.id == state.frozenWindow?.id) ||
+                       state.additionalRecordedWindows.contains(where: { $0.id == hw.id })
+            }()
+            let unrecorded: DetectedWindow? = (hw != nil && !isRecorded) ? hw : nil
+            let newId = unrecorded?.id
+            if newId != hoveredUnrecordedWindowId {
+                if let u = unrecorded {
+                    leaveUnrecordedWindowTask?.cancel()
+                    leaveUnrecordedWindowTask = nil
+                    hoveredUnrecordedWindowId = newId
+                    onHoverUnrecordedWindow?(u)
+                } else {
+                    leaveUnrecordedWindowTask?.cancel()
+                    leaveUnrecordedWindowTask = Task { @MainActor [weak self] in
+                        try? await Task.sleep(nanoseconds: 500_000_000)
+                        guard !Task.isCancelled else { return }
+                        self?.hoveredUnrecordedWindowId = nil
+                        self?.onHoverUnrecordedWindow?(nil)
+                    }
+                }
+            }
+        }
     }
 
     private func cycleStack(forward: Bool) {
@@ -340,15 +375,9 @@ final class OverlayController {
     }
 
     private func handleClick() {
-        guard let w = state.hoveredWindow else { return }
-        if isRecordingMode {
-            let alreadyRecorded = (w.id == state.frozenWindow?.id) ||
-                                  state.additionalRecordedWindows.contains(where: { $0.id == w.id })
-            guard !alreadyRecorded else { return }
-            onSelectDuringRecording?(w)
-        } else {
-            onSelect?()
-        }
+        guard !isRecordingMode else { return }
+        guard state.hoveredWindow != nil else { return }
+        onSelect?()
     }
 
     // MARK: – Window enumeration

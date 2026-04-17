@@ -222,14 +222,27 @@ private struct DSPrimaryButtonStyle: ButtonStyle {
     }
 }
 
-// Shared container background for DS dialogs: blur + modelessOverlay tint + highlight border
+// Shared container background for DS dialogs: modelessOverlay fill + highlight border
+// NSViewRepresentable provides behindWindow blur without adding extra color tint.
+private struct BackdropBlur: NSViewRepresentable {
+    func makeNSView(context: Context) -> NSVisualEffectView {
+        let v = NSVisualEffectView()
+        v.blendingMode = .behindWindow
+        v.material     = .hudWindow
+        v.state        = .active
+        return v
+    }
+    func updateNSView(_ nsView: NSVisualEffectView, context: Context) {}
+}
+
 private struct DSDialogContainer<Content: View>: View {
     let content: Content
     init(@ViewBuilder content: () -> Content) { self.content = content() }
 
     var body: some View {
         ZStack {
-            RoundedRectangle(cornerRadius: 14, style: .continuous).fill(.thinMaterial)
+            BackdropBlur()
+                .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
             RoundedRectangle(cornerRadius: 14, style: .continuous).fill(Color.modelessOverlay)
             RoundedRectangle(cornerRadius: 14, style: .continuous)
                 .strokeBorder(Color.highlightPrimary, lineWidth: 1)
