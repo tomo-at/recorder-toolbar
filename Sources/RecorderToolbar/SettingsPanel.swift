@@ -317,7 +317,7 @@ private struct MenuBackground: View {
     var body: some View {
         ZStack {
             RoundedRectangle(cornerRadius: 14)
-                .fill(Color(red: 0.22, green: 0.22, blue: 0.22))
+                .fill(Color.bgTooltip)
             RoundedRectangle(cornerRadius: 14)
                 .strokeBorder(Color.white.opacity(0.15), lineWidth: 1)
         }

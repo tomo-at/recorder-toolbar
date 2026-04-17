@@ -67,11 +67,12 @@ struct SegmentButton: View {
     }
 }
 
-// MARK: – Upload progress bar (V1)
+// MARK: – Upload progress bar
 
-/// 4px progress bar shown above the toolbar during uploads.
+/// Thin progress bar shown above the toolbar during uploads. height: 4 for V1, 2 for V5.
 struct UploadProgressBarView: View {
     let progress: Double
+    var height: CGFloat = 4
 
     var body: some View {
         GeometryReader { geo in
@@ -81,37 +82,7 @@ struct UploadProgressBarView: View {
                     .frame(width: geo.size.width * CGFloat(max(0, min(1, progress))))
             }
         }
-        .frame(height: 4)
-    }
-}
-
-struct ActionButton: View {
-    let icon:   String
-    let label:  String
-    let action: () -> Void
-    @State private var hovering = false
-
-    var body: some View {
-        Button(action: action) {
-            HStack(spacing: 4) {
-                Image(systemName: icon)
-                    .font(.system(size: 12))
-                Text(label)
-                    .font(.system(size: 12, weight: .medium))
-            }
-            .foregroundColor(.white)
-            .frame(width: 80, height: 36)
-            .background(hovering
-                ? Color.white.opacity(0.14)
-                : Color.highlightPrimary)
-            .overlay(
-                RoundedRectangle(cornerRadius: 6)
-                    .stroke(Color.highlightPrimary, lineWidth: 1)
-            )
-            .cornerRadius(6)
-        }
-        .buttonStyle(.plain)
-        .onHover { hovering = $0 }
+        .frame(height: height)
     }
 }
 
@@ -162,7 +133,7 @@ struct ShortcutTooltipView: View {
         }
         .padding(.horizontal, 10)
         .padding(.vertical, 6)
-        .background(Color(red: 0.22, green: 0.22, blue: 0.22))
+        .background(Color.bgTooltip)
         .clipShape(RoundedRectangle(cornerRadius: 6))
         .overlay(
             RoundedRectangle(cornerRadius: 6)

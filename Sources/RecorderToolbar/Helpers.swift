@@ -33,6 +33,9 @@ extension Color {
     static let shadowMedium         = Color.black.opacity(0x7A/255)                              // #0000007A
     static let shadowLarge          = Color.black.opacity(0xB8/255)                              // #000000B8
 
+    // ── UI surface colors ──────────────────────────────────
+    static let bgTooltip       = Color(red: 0.22, green: 0.22, blue: 0.22)              // #383838 (tooltip / menu popup bg)
+
     // ── Legacy aliases（旧名、DS 正式名へ移行予定）─────────
     static let selectionOrange = modelessDestructive                    // 旧 #FF6D4C
     static let recordRed       = Color(red: 0xD6/255, green: 0x40/255, blue: 0x2F/255)  // #D6402F (DS light accent-destructive)

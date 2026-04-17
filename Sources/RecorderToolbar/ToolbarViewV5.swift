@@ -29,7 +29,7 @@ struct V5TypeSelect: View {
         .overlay(alignment: .top) {
             let showsProgress = (settings.v5UploadStyle == .toolbar || settings.v5UploadStyle == .toolbarWithCompleteMessage) && state.isUploading
             if showsProgress {
-                V5UploadProgressBar(progress: state.uploadProgress)
+                UploadProgressBarView(progress: state.uploadProgress, height: 2)
                     .padding(.top, settings.v5DefaultStyle == .message ? 16 : 0)
             }
         }
@@ -117,21 +117,6 @@ struct V5MaybeHeadered<Content: View>: View {
         } else {
             content
         }
-    }
-}
-
-/// V5: thin (2px) upload progress bar overlay.
-struct V5UploadProgressBar: View {
-    let progress: Double
-    var body: some View {
-        GeometryReader { geo in
-            ZStack(alignment: .leading) {
-                Rectangle().fill(Color.modelessBlack24)
-                Rectangle().fill(Color.modelessTeal)
-                    .frame(width: geo.size.width * CGFloat(max(0, min(1, progress))))
-            }
-        }
-        .frame(height: 2)
     }
 }
 

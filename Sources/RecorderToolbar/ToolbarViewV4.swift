@@ -239,7 +239,7 @@ struct SelectionConfirmView: View {
     @State private var cameraDeviceId: String? = nil
     @State private var cancelHovering = false
 
-    private let panelBg = Color(red: 18/255.0, green: 24/255.0, blue: 26/255.0)
+    private let panelBg = Color.bgSecondary
 
     var body: some View {
         VStack(spacing: 0) {
