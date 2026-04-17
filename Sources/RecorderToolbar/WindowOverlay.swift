@@ -145,10 +145,6 @@ final class OverlayController {
     }
 
     /// Replace all persistently-recorded windows with a single new window (Switch action).
-    func switchRecordedWindow(to window: DetectedWindow) {
-        state.additionalRecordedWindows = [window]
-    }
-
     func hide() {
         stopTracking()
         screenOverlays.forEach { $0.dismiss(animated: true) }
@@ -303,7 +299,7 @@ final class OverlayController {
         state.stackCount = currentStack.count
 
         // In recording mode, detect hover over any recorded window to show the remove dialog.
-        if isRecordingMode && !state.additionalRecordedWindows.isEmpty {
+        if isRecordingMode && state.additionalRecordedWindows.count >= 2 {
             let matched = state.additionalRecordedWindows.first(where: {
                 $0.id == state.hoveredWindow?.id
             })

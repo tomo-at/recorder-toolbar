@@ -117,10 +117,6 @@ class ToolbarState: ObservableObject {
             self.isDialogShowing = true
             self.windowMultiDialog.show(
                 for: window, above: panel,
-                onSwitch: { [weak self] in
-                    self?.windowMultiDialog.dismiss { [weak self] in self?.isDialogShowing = false }
-                    self?.handleWindowSwitch(to: window)
-                },
                 onAdd: { [weak self] in
                     self?.windowMultiDialog.dismiss { [weak self] in self?.isDialogShowing = false }
                     self?.handleWindowAdd(window)
@@ -520,13 +516,6 @@ class ToolbarState: ObservableObject {
             guard !Task.isCancelled else { return }
             self?.headerOverrideMessage = nil
             self?.headerMessageTask = nil
-        }
-    }
-
-    private func handleWindowSwitch(to window: DetectedWindow) {
-        overlay.switchRecordedWindow(to: window)
-        if settingsPanel.state.v5DefaultStyle == .message {
-            setTemporaryHeaderMessage("Switched to \(window.appName)")
         }
     }
 
