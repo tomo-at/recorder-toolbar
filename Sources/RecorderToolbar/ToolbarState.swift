@@ -56,8 +56,9 @@ class ToolbarState: ObservableObject {
     let windowMultiDialog      = WindowMultiDialogController()
     let windowRemoveDialog     = WindowRemoveDialogController()
 
-    private var isWindowRecording    = false
-    private var windowRecordingCount = 0
+    @Published var isWindowRecording:    Bool             = false
+    @Published var windowRecordingCount: Int              = 0
+    @Published var recordedWindows:      [DetectedWindow] = []
     private var headerMessageTask:   Task<Void, Never>?
 
     private var timer:              AnyCancellable?
@@ -110,8 +111,10 @@ class ToolbarState: ObservableObject {
         overlay.onCancel = { [weak self] in self?.exitSelecting() }
 
         // Hover over an unrecorded window during recording → show the add-window dialog
+        // (only active when addWindowPattern == .hoverOnWindow)
         overlay.onHoverUnrecordedWindow = { [weak self] window in
             guard let self, let panel = self.panel else { return }
+            guard self.settingsPanel.state.addWindowPattern == .hoverOnWindow else { return }
             if let w = window {
                 guard self.windowRecordingCount < 2 else { return }
                 self.windowMultiDialog.show(
@@ -127,14 +130,25 @@ class ToolbarState: ObservableObject {
         }
 
         // Hover over a recorded window during multi-recording → show/hide the remove dialog
+        // (only active when addWindowPattern == .hoverOnWindow)
         overlay.onHoverRecordedWindow = { [weak self] window in
             guard let self, let panel = self.panel else { return }
+            guard self.settingsPanel.state.addWindowPattern == .hoverOnWindow else { return }
             if let w = window {
                 self.windowRemoveDialog.show(for: w, above: panel,
                     onRemove: { [weak self] in self?.handleWindowRemove(w) })
             } else {
                 self.windowRemoveDialog.hide()
             }
+        }
+
+        // Window selected via add-window overlay (toolbar controls pattern)
+        overlay.onSelectAdditional = { [weak self] window in
+            guard let self, let panel = self.panel else { return }
+            self.overlay.exitAddWindowSelection(keepingAbove: panel)
+            self.handleWindowAdd(window)
+            // Return to no-tracking state until the next Add press
+            self.overlay.pauseTracking()
         }
 
         // Display selected: same pattern.
@@ -177,7 +191,8 @@ class ToolbarState: ObservableObject {
         Publishers.MergeMany(
             settingsPanel.state.$v5DefaultStyle.dropFirst().map { _ in () }.eraseToAnyPublisher(),
             settingsPanel.state.$v5RecordingStyle.dropFirst().map { _ in () }.eraseToAnyPublisher(),
-            settingsPanel.state.$v5UploadStyle.dropFirst().map { _ in () }.eraseToAnyPublisher()
+            settingsPanel.state.$v5UploadStyle.dropFirst().map { _ in () }.eraseToAnyPublisher(),
+            settingsPanel.state.$addWindowPattern.dropFirst().map { _ in () }.eraseToAnyPublisher()
         )
         .sink { [weak self] in
             guard let self else { return }
@@ -322,7 +337,13 @@ class ToolbarState: ObservableObject {
         let newW: CGFloat
         switch state {
         case .recording, .countdown:
-            newW = isHorizontal ? 365 : 297
+            if s.addWindowPattern == .toolbarControls && isWindowRecording {
+                // Window controls section width: Addボタン or 2ウィンドウボタン + Divider
+                let extra: CGFloat = windowRecordingCount >= 2 ? 220 : 110
+                newW = isHorizontal ? (365 + extra) : (297 + extra)
+            } else {
+                newW = isHorizontal ? 365 : 297
+            }
         case .typeSelect:
             switch s.protoVersion {
             case .v1: newW = 345
@@ -427,6 +448,14 @@ class ToolbarState: ObservableObject {
             isWindowRecording    = true
             windowRecordingCount = 1
             overlay.transitionToLightweight(keepingAbove: panel)
+            recordedWindows = overlay.recordedWindowsList
+            // resizePanel was already called via handleStateChange before isWindowRecording was
+            // set, so call it again now that the correct width can be computed.
+            resizePanel(for: .recording)
+            // In toolbar controls mode, hover tracking is only needed during add-mode.
+            if settingsPanel.state.addWindowPattern == .toolbarControls {
+                overlay.pauseTracking()
+            }
         }
     }
 
@@ -439,6 +468,7 @@ class ToolbarState: ObservableObject {
         // Reset window recording state
         isWindowRecording    = false
         windowRecordingCount = 0
+        recordedWindows      = []
         windowMultiDialog.dismiss()
         windowRemoveDialog.hide()
         headerMessageTask?.cancel()
@@ -520,6 +550,8 @@ class ToolbarState: ObservableObject {
     private func handleWindowAdd(_ window: DetectedWindow) {
         windowRecordingCount += 1
         overlay.addRecordedWindow(window)
+        recordedWindows = overlay.recordedWindowsList
+        resizePanel(for: appState)
         if settingsPanel.state.v5DefaultStyle == .message {
             setTemporaryHeaderMessage("Recording \(windowRecordingCount) windows")
         }
@@ -528,7 +560,18 @@ class ToolbarState: ObservableObject {
     private func handleWindowRemove(_ window: DetectedWindow) {
         windowRecordingCount = max(1, windowRecordingCount - 1)
         overlay.removeRecordedWindow(window)
+        recordedWindows = overlay.recordedWindowsList
         windowRemoveDialog.hide()
+        resizePanel(for: appState)
+    }
+
+    func addWindowViaToolbar() {
+        guard let panel else { return }
+        overlay.startAddWindowSelection(keepingAbove: panel)
+    }
+
+    func removeWindowViaToolbar(_ window: DetectedWindow) {
+        handleWindowRemove(window)
     }
 
     func togglePause() { paused = !paused }

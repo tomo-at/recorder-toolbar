@@ -20,6 +20,8 @@ final class SettingsState: ObservableObject {
     // All-videos count cleared when user opens All videos.
     @Published var settingsBadge:   Bool = false
     @Published var allVideosCount:  Int  = 0
+    // Add window pattern
+    @Published var addWindowPattern: AddWindowPattern = .hoverOnWindow
 
     enum CountdownOption: String, CaseIterable {
         case none  = "None"
@@ -73,6 +75,18 @@ final class SettingsState: ObservableObject {
         }
     }
 
+    /// ウィンドウ追加のインタラクションパターン
+    enum AddWindowPattern: String, CaseIterable {
+        case hoverOnWindow   = "hoverOnWindow"
+        case toolbarControls = "toolbarControls"
+        var label: String {
+            switch self {
+            case .hoverOnWindow:   return "Hover on Window"
+            case .toolbarControls: return "Toolbar controls"
+            }
+        }
+    }
+
     /// V5 のアップロード演出スタイル
     enum UploadStyle: String, CaseIterable {
         case toolbar                    = "toolbar"
@@ -92,9 +106,10 @@ final class SettingsState: ObservableObject {
     // MARK: – UserDefaults 永続化
 
     private var cancellables: Set<AnyCancellable> = []
-    private static let kV5DefaultStyle   = "v5DefaultStyle"
-    private static let kV5RecordingStyle = "v5RecordingStyle"
-    private static let kV5UploadStyle    = "v5UploadStyle"
+    private static let kV5DefaultStyle    = "v5DefaultStyle"
+    private static let kV5RecordingStyle  = "v5RecordingStyle"
+    private static let kV5UploadStyle     = "v5UploadStyle"
+    private static let kAddWindowPattern  = "addWindowPattern"
 
     init() {
         let d = UserDefaults.standard
@@ -107,6 +122,9 @@ final class SettingsState: ObservableObject {
         if let v = d.string(forKey: Self.kV5UploadStyle).flatMap(UploadStyle.init(rawValue:)) {
             v5UploadStyle = v
         }
+        if let v = d.string(forKey: Self.kAddWindowPattern).flatMap(AddWindowPattern.init(rawValue:)) {
+            addWindowPattern = v
+        }
 
         $v5DefaultStyle.dropFirst()
             .sink { d.set($0.rawValue, forKey: Self.kV5DefaultStyle) }
@@ -116,6 +134,9 @@ final class SettingsState: ObservableObject {
             .store(in: &cancellables)
         $v5UploadStyle.dropFirst()
             .sink { d.set($0.rawValue, forKey: Self.kV5UploadStyle) }
+            .store(in: &cancellables)
+        $addWindowPattern.dropFirst()
+            .sink { d.set($0.rawValue, forKey: Self.kAddWindowPattern) }
             .store(in: &cancellables)
     }
 }

@@ -10,7 +10,7 @@ final class PrototypeSettingsWindowController: NSWindowController {
     init(state: SettingsState) {
         self.state = state
         let window = NSWindow(
-            contentRect: NSRect(x: 0, y: 0, width: 360, height: 480),
+            contentRect: NSRect(x: 0, y: 0, width: 360, height: 600),
             styleMask: [.titled, .closable],
             backing: .buffered,
             defer: false
@@ -41,16 +41,18 @@ struct PrototypeSettingsView: View {
     @ObservedObject var state: SettingsState
     let onClose: () -> Void
 
-    @State private var draftDefault:   SettingsState.DefaultStyle
-    @State private var draftRecording: SettingsState.RecordingStyle
-    @State private var draftUpload:    SettingsState.UploadStyle
+    @State private var draftDefault:          SettingsState.DefaultStyle
+    @State private var draftRecording:        SettingsState.RecordingStyle
+    @State private var draftUpload:           SettingsState.UploadStyle
+    @State private var draftAddWindowPattern: SettingsState.AddWindowPattern
 
     init(state: SettingsState, onClose: @escaping () -> Void) {
         self.state   = state
         self.onClose = onClose
-        _draftDefault   = State(initialValue: state.v5DefaultStyle)
-        _draftRecording = State(initialValue: state.v5RecordingStyle)
-        _draftUpload    = State(initialValue: state.v5UploadStyle)
+        _draftDefault          = State(initialValue: state.v5DefaultStyle)
+        _draftRecording        = State(initialValue: state.v5RecordingStyle)
+        _draftUpload           = State(initialValue: state.v5UploadStyle)
+        _draftAddWindowPattern = State(initialValue: state.addWindowPattern)
     }
 
     var body: some View {
@@ -92,6 +94,19 @@ struct PrototypeSettingsView: View {
                 .labelsHidden()
             }
 
+            Divider()
+
+            // Add window
+            section(title: "Add window") {
+                Picker("", selection: $draftAddWindowPattern) {
+                    ForEach(SettingsState.AddWindowPattern.allCases, id: \.self) { opt in
+                        Text(opt.label).tag(opt)
+                    }
+                }
+                .pickerStyle(.radioGroup)
+                .labelsHidden()
+            }
+
             Spacer(minLength: 0)
 
             HStack {
@@ -99,16 +114,17 @@ struct PrototypeSettingsView: View {
                 Button("Cancel") { onClose() }
                     .keyboardShortcut(.cancelAction)
                 Button("Apply") {
-                    state.v5DefaultStyle   = draftDefault
-                    state.v5RecordingStyle = draftRecording
-                    state.v5UploadStyle    = draftUpload
+                    state.v5DefaultStyle    = draftDefault
+                    state.v5RecordingStyle  = draftRecording
+                    state.v5UploadStyle     = draftUpload
+                    state.addWindowPattern  = draftAddWindowPattern
                     onClose()
                 }
                 .keyboardShortcut(.defaultAction)
             }
         }
         .padding(20)
-        .frame(width: 360, height: 480)
+        .frame(width: 360, height: 600)
     }
 
     @ViewBuilder

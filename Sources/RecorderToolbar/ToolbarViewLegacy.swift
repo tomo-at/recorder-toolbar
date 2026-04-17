@@ -183,9 +183,34 @@ struct CountdownToolbarView: View {
 
 struct RecordingView: View {
     @ObservedObject var state: ToolbarState
+    @ObservedObject var settings: SettingsState
+
+    init(state: ToolbarState) {
+        self.state    = state
+        self.settings = state.settingsPanel.state
+    }
+
+    private var showWindowControls: Bool {
+        settings.addWindowPattern == .toolbarControls && state.isWindowRecording
+    }
 
     var body: some View {
         HStack(spacing: 0) {
+            if showWindowControls {
+                if state.windowRecordingCount >= 2 {
+                    ForEach(state.recordedWindows) { window in
+                        WindowSegmentButton(window: window) {
+                            state.removeWindowViaToolbar(window)
+                        }
+                    }
+                } else {
+                    SegmentButton(icon: "macwindow", label: "Add") {
+                        state.addWindowViaToolbar()
+                    }
+                }
+                ToolbarDivider()
+            }
+
             SegmentButton(icon: "arrow.counterclockwise", label: "Restart") {
                 state.stopRecording(upload: false)
             }
@@ -214,6 +239,42 @@ struct RecordingView: View {
             .frame(width: 80, height: 48)
         }
         .padding(.horizontal, 8)
+    }
+}
+
+/// Window button styled like SegmentButton (VStack icon+label, 64×48).
+/// Hover changes label to "Remove" in destructive red.
+struct WindowSegmentButton: View {
+    let window: DetectedWindow
+    let onRemove: () -> Void
+    @State private var hovering = false
+
+    var body: some View {
+        Button(action: onRemove) {
+            VStack(spacing: 4) {
+                if let icon = window.appIcon {
+                    Image(nsImage: icon)
+                        .resizable()
+                        .frame(width: 20, height: 20)
+                } else {
+                    Image(systemName: "macwindow")
+                        .font(.system(size: 14))
+                        .foregroundColor(.white)
+                        .frame(width: 20, height: 20)
+                }
+                Text(hovering ? "Remove" : String(window.appName.prefix(7)))
+                    .font(.system(size: 11))
+                    .foregroundColor(hovering ? .accentDestructive : .contentTertiary)
+                    .lineLimit(1)
+                    .animation(nil, value: hovering)
+            }
+            .frame(width: 64, height: 48)
+            .background(hovering ? Color.highlightPrimary : .clear)
+            .cornerRadius(4)
+        }
+        .buttonStyle(.plain)
+        .onHover { hovering = $0 }
+        .help(window.appName)
     }
 }
 

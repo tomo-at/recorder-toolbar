@@ -94,9 +94,13 @@ final class OverlayController {
     /// Called when the hovered window changes during multi-recording (count ≥ 2).
     /// Passes nil when leaving a recorded window.
     var onHoverRecordedWindow: ((DetectedWindow?) -> Void)?
+    /// Called when the user selects a window via the add-window overlay (toolbar controls pattern).
+    var onSelectAdditional: ((DetectedWindow) -> Void)?
 
     /// True when the overlay is in lightweight recording mode (no dim, different click handler).
     private(set) var isRecordingMode: Bool = false
+    /// True while the user is picking an additional window to record (toolbar controls pattern).
+    private var isInAddMode: Bool = false
     /// ID of the window that was originally selected when recording started. Never removable.
     private var primaryRecordedWindowId: Int? = nil
 
@@ -107,6 +111,9 @@ final class OverlayController {
 
     /// CG-coordinate bounds of the frozen (clicked) window. Nil before any selection.
     var frozenWindowBounds: CGRect? { state.frozenWindow?.bounds }
+
+    /// Current list of all persistently-recorded windows (primary + added).
+    var recordedWindowsList: [DetectedWindow] { state.additionalRecordedWindows }
 
     // MARK: – Public API
 
@@ -161,6 +168,7 @@ final class OverlayController {
         state.isDimmed                   = true
         state.additionalRecordedWindows  = []
         isRecordingMode                  = false
+        isInAddMode                      = false
         primaryRecordedWindowId          = nil
         currentStack                     = []
         cycleIndex                       = 0
@@ -193,6 +201,44 @@ final class OverlayController {
             hoveredRecordedWindowId = nil
             onHoverRecordedWindow?(nil)
         }
+    }
+
+    /// Enter add-window selection mode (toolbar controls pattern):
+    /// shows dim overlay so user can click a new window to add. Existing borders persist.
+    /// Already-recorded windows are excluded so they cannot be selected again.
+    func startAddWindowSelection(keepingAbove toolbar: NSPanel) {
+        stopTracking()
+        isInAddMode     = true
+        isRecordingMode = false
+        state.isDimmed  = true
+        state.frozenWindow  = nil
+        state.hoveredWindow = nil
+        state.isSelected    = false
+        // Exclude already-recorded windows so they can't be re-added
+        let recorded = state.additionalRecordedWindows.map(\.id)
+        allWindows = enumerateWindows().filter { !recorded.contains($0.id) }
+        toolbar.orderFrontRegardless()
+        startTracking()
+    }
+
+    /// Stop event tracking while keeping overlay windows and borders visible.
+    /// Used by toolbar controls pattern to suppress hover detection between add-mode sessions.
+    func pauseTracking() {
+        stopTracking()
+    }
+
+    /// Return to lightweight recording mode after add-window selection finishes.
+    func exitAddWindowSelection(keepingAbove toolbar: NSPanel) {
+        stopTracking()
+        isInAddMode     = false
+        isRecordingMode = true
+        state.isDimmed  = false
+        state.frozenWindow  = nil
+        state.hoveredWindow = nil
+        state.isSelected    = false
+        allWindows          = enumerateWindows()
+        toolbar.orderFrontRegardless()
+        startTracking()
     }
 
     // MARK: – Event tracking
@@ -385,6 +431,12 @@ final class OverlayController {
     }
 
     private func handleClick() {
+        if isInAddMode {
+            guard let w = state.hoveredWindow else { return }
+            isInAddMode = false
+            onSelectAdditional?(w)
+            return
+        }
         guard !isRecordingMode else { return }
         guard state.hoveredWindow != nil else { return }
         onSelect?()
