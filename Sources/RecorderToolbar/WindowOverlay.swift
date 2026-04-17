@@ -309,11 +309,11 @@ final class OverlayController {
 
         state.stackCount = currentStack.count
 
-        // In recording mode, detect hover over additional (non-primary) recorded windows
-        // to show the remove dialog. primary window is never removable.
+        // In recording mode, detect hover over any recorded window to show the remove dialog.
+        // Only active when 2+ windows are recorded (count >= 2 = primary + at least one added).
         if isRecordingMode && state.additionalRecordedWindows.count >= 2 {
             let matched = state.additionalRecordedWindows.first(where: {
-                $0.id == state.hoveredWindow?.id && $0.id != primaryRecordedWindowId
+                $0.id == state.hoveredWindow?.id
             })
             let newId = matched?.id
             if newId != hoveredRecordedWindowId {

@@ -262,7 +262,8 @@ struct WindowMultiDialogView: View {
             }
         }
         .frame(width: 240, height: 44)
-        .padding(4)
+        .shadow(color: Color.shadowMedium, radius: 8, x: 0, y: 8)
+        .padding(20)
     }
 }
 
@@ -280,7 +281,8 @@ struct WindowRemoveDialogView: View {
             .buttonStyle(DSGhostButtonStyle())
         }
         .frame(width: 124, height: 44)
-        .padding(4)
+        .shadow(color: Color.shadowMedium, radius: 8, x: 0, y: 8)
+        .padding(20)
     }
 }
 
@@ -295,7 +297,7 @@ final class WindowMultiDialogController {
         panel = nil
 
         let content  = CGSize(width: 240, height: 44)
-        let pad: CGFloat = 4
+        let pad: CGFloat = 20
         let size    = CGSize(width: content.width + 2*pad, height: content.height + 2*pad)
         let view    = WindowMultiDialogView(onAdd: onAdd, onCancel: onCancel)
         let hosting = NSHostingView(rootView: view)
@@ -354,7 +356,7 @@ final class WindowRemoveDialogController {
         panel = nil
 
         let content  = CGSize(width: 124, height: 44)
-        let pad: CGFloat = 4
+        let pad: CGFloat = 20
         let size    = CGSize(width: content.width + 2*pad, height: content.height + 2*pad)
         let view    = WindowRemoveDialogView(onRemove: onRemove)
         let hosting = NSHostingView(rootView: view)
