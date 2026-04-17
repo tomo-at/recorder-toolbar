@@ -54,6 +54,7 @@ class ToolbarState: ObservableObject {
     let selectionConfirmPanel  = SelectionConfirmPanelController()
     let uploadCompleteBanner   = UploadCompleteBannerController()
     let windowMultiDialog      = WindowMultiDialogController()
+    let windowRemoveDialog     = WindowRemoveDialogController()
 
     private var isWindowRecording    = false
     private var windowRecordingCount = 0
@@ -128,6 +129,17 @@ class ToolbarState: ObservableObject {
                     self?.windowMultiDialog.dismiss { [weak self] in self?.isDialogShowing = false }
                 }
             )
+        }
+
+        // Hover over a recorded window during multi-recording → show/hide the remove dialog
+        overlay.onHoverRecordedWindow = { [weak self] window in
+            guard let self, let panel = self.panel else { return }
+            if let w = window {
+                self.windowRemoveDialog.show(for: w, above: panel,
+                    onRemove: { [weak self] in self?.handleWindowRemove(w) })
+            } else {
+                self.windowRemoveDialog.hide()
+            }
         }
 
         // Display selected: same pattern.
@@ -434,6 +446,7 @@ class ToolbarState: ObservableObject {
         windowRecordingCount = 0
         isDialogShowing      = false
         windowMultiDialog.dismiss()
+        windowRemoveDialog.hide()
         headerMessageTask?.cancel()
         headerMessageTask    = nil
         headerOverrideMessage = nil
@@ -523,6 +536,12 @@ class ToolbarState: ObservableObject {
         if settingsPanel.state.v5DefaultStyle == .message {
             setTemporaryHeaderMessage("Recording \(windowRecordingCount) windows")
         }
+    }
+
+    private func handleWindowRemove(_ window: DetectedWindow) {
+        windowRecordingCount = max(1, windowRecordingCount - 1)
+        overlay.removeRecordedWindow(window)
+        windowRemoveDialog.hide()
     }
 
     func togglePause() { paused = !paused }

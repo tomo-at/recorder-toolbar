@@ -190,69 +190,85 @@ final class ShortcutTooltipController {
 
 // MARK: – Window multi-recording dialog
 
-/// Explicit blue button style — needed because nonactivatingPanel never becomes key/active,
-/// which causes .borderedProminent to render gray regardless of .tint(.blue).
-private struct BlueButtonStyle: ButtonStyle {
+private struct DialogPrimaryButtonStyle: ButtonStyle {
     func makeBody(configuration: Configuration) -> some View {
         configuration.label
+            .font(.system(size: 13, weight: .medium))
             .foregroundColor(.white)
-            .font(.system(size: 14))
             .frame(maxWidth: .infinity)
-            .padding(.vertical, 7)
+            .frame(height: 32)
+            .padding(.horizontal, 8)
             .background(
-                RoundedRectangle(cornerRadius: 8)
-                    .fill(Color(red: 0/255, green: 122/255, blue: 255/255)
-                          .opacity(configuration.isPressed ? 0.75 : 1.0))
+                RoundedRectangle(cornerRadius: 100, style: .continuous)
+                    .fill(Color(red: 0/255, green: 136/255, blue: 255/255)
+                          .opacity(configuration.isPressed ? 0.7 : 1.0))
             )
     }
 }
 
-/// macOS-style dialog that appears at the top of a newly clicked window during recording.
-/// Lets the user switch to the new window or add it to the recording.
+private struct DialogSecondaryButtonStyle: ButtonStyle {
+    func makeBody(configuration: Configuration) -> some View {
+        configuration.label
+            .font(.system(size: 13, weight: .medium))
+            .foregroundColor(Color.black.opacity(0.85))
+            .frame(maxWidth: .infinity)
+            .frame(height: 32)
+            .padding(.horizontal, 8)
+            .background(
+                RoundedRectangle(cornerRadius: 100, style: .continuous)
+                    .fill(Color(red: 230/255, green: 230/255, blue: 230/255)
+                          .opacity(configuration.isPressed ? 0.7 : 1.0))
+            )
+    }
+}
+
+private struct DialogDestructiveButtonStyle: ButtonStyle {
+    func makeBody(configuration: Configuration) -> some View {
+        configuration.label
+            .font(.system(size: 13, weight: .medium))
+            .foregroundColor(Color(red: 1.0, green: 56/255, blue: 60/255))
+            .frame(maxWidth: .infinity)
+            .frame(height: 32)
+            .padding(.horizontal, 8)
+            .background(
+                RoundedRectangle(cornerRadius: 100, style: .continuous)
+                    .fill(Color(red: 1.0, green: 56/255, blue: 60/255)
+                          .opacity(configuration.isPressed ? 0.45 : 0.23))
+            )
+    }
+}
+
+/// Click-during-recording dialog: Cancel / Add window / Switch window (horizontal pill buttons).
 struct WindowMultiDialogView: View {
-    let windowLabel: String
     let onSwitch:  () -> Void
     let onAdd:     () -> Void
     let onCancel:  () -> Void
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 16) {
-            VStack(alignment: .leading, spacing: 4) {
-                Text("Add or switch?")
-                    .font(.system(size: 14, weight: .bold))
-                Text(windowLabel)
-                    .font(.system(size: 12))
-                    .foregroundColor(.secondary)
-                    .lineLimit(2)
-            }
-
-            VStack(spacing: 8) {
-                // Switch + Add side by side, both blue
-                HStack(spacing: 8) {
-                    Button(action: onSwitch) {
-                        Text("Switch window")
-                    }
-                    .buttonStyle(BlueButtonStyle())
-
-                    Button(action: onAdd) {
-                        Text("Add window")
-                    }
-                    .buttonStyle(BlueButtonStyle())
-                }
-
-                Button(action: onCancel) {
-                    Text("Cancel").frame(maxWidth: .infinity)
-                }
-                .buttonStyle(.bordered)
-                .controlSize(.large)
-            }
+        HStack(spacing: 8) {
+            Button("Cancel", action: onCancel)
+                .buttonStyle(DialogSecondaryButtonStyle())
+            Button("Add window", action: onAdd)
+                .buttonStyle(DialogPrimaryButtonStyle())
+            Button("Switch window", action: onSwitch)
+                .buttonStyle(DialogPrimaryButtonStyle())
         }
-        .padding(20)
-        .frame(width: 300)
-        .background(
-            RoundedRectangle(cornerRadius: 14)
-                .fill(Color(nsColor: .windowBackgroundColor))
-        )
+        .padding(12)
+        .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 10, style: .continuous))
+        .environment(\.colorScheme, .light)
+    }
+}
+
+/// Hover-during-multirecording dialog: "Remove window" shown outside the recorded window.
+struct WindowRemoveDialogView: View {
+    let onRemove: () -> Void
+
+    var body: some View {
+        Button("Remove window", action: onRemove)
+            .buttonStyle(DialogDestructiveButtonStyle())
+            .padding(12)
+            .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 10, style: .continuous))
+            .environment(\.colorScheme, .light)
     }
 }
 
@@ -267,12 +283,11 @@ final class WindowMultiDialogController {
         panel?.orderOut(nil)
         panel = nil
 
-        let view    = WindowMultiDialogView(windowLabel: window.displayLabel,
-                                             onSwitch: onSwitch, onAdd: onAdd, onCancel: onCancel)
+        let view    = WindowMultiDialogView(onSwitch: onSwitch, onAdd: onAdd, onCancel: onCancel)
         let hosting = NSHostingView(rootView: view)
         hosting.wantsLayer             = true
         hosting.layer?.backgroundColor = .clear
-        let size = CGSize(width: 300, height: hosting.fittingSize.height)
+        let size = CGSize(width: 290, height: hosting.fittingSize.height)
         hosting.setFrameSize(size)
 
         let p = NSPanel(contentRect: NSRect(origin: .zero, size: size),
@@ -282,16 +297,16 @@ final class WindowMultiDialogController {
         p.level              = toolbar.level
         p.backgroundColor    = .clear
         p.isOpaque           = false
-        p.hasShadow          = true   // system shadow (SwiftUI shadow gets clipped by panel bounds)
+        p.hasShadow          = true
         p.collectionBehavior = [.canJoinAllSpaces, .fullScreenAuxiliary]
-        p.appearance         = NSAppearance(named: .aqua)   // light macOS dialog style
+        p.appearance         = NSAppearance(named: .aqua)
         p.contentView        = hosting
         p.setContentSize(size)
 
-        // Position: centered horizontally on the window, 24 px below its top edge
+        // Centered on the window, 12 px inside from the top edge
         let windowTopY = NSScreen.primaryHeight - window.bounds.minY
         let x = window.bounds.midX - size.width / 2
-        let y = windowTopY - 24 - size.height
+        let y = windowTopY - 12 - size.height
         p.setFrameOrigin(NSPoint(x: x, y: y))
         p.alphaValue = 0
         p.orderFrontRegardless()
@@ -312,6 +327,59 @@ final class WindowMultiDialogController {
             p.orderOut(nil)
             completion?()
         })
+    }
+}
+
+/// Floating "Remove window" dialog shown above a recorded window on hover (multi-recording mode).
+@MainActor
+final class WindowRemoveDialogController {
+    private var panel: NSPanel?
+
+    func show(for window: DetectedWindow, above toolbar: NSPanel,
+              onRemove: @escaping () -> Void) {
+        guard panel == nil else { return }
+
+        let view    = WindowRemoveDialogView(onRemove: onRemove)
+        let hosting = NSHostingView(rootView: view)
+        hosting.wantsLayer             = true
+        hosting.layer?.backgroundColor = .clear
+        let size = hosting.fittingSize
+        hosting.setFrameSize(size)
+
+        let p = NSPanel(contentRect: NSRect(origin: .zero, size: size),
+                        styleMask: [.borderless, .nonactivatingPanel],
+                        backing: .buffered, defer: false)
+        p.isFloatingPanel    = true
+        p.level              = toolbar.level
+        p.backgroundColor    = .clear
+        p.isOpaque           = false
+        p.hasShadow          = true
+        p.collectionBehavior = [.canJoinAllSpaces, .fullScreenAuxiliary]
+        p.appearance         = NSAppearance(named: .aqua)
+        p.contentView        = hosting
+        p.setContentSize(size)
+
+        // Centered above the window's top edge (outside, to not block window clicks)
+        let windowTopY = NSScreen.primaryHeight - window.bounds.minY
+        let x = window.bounds.midX - size.width / 2
+        let y = windowTopY + 6
+        p.setFrameOrigin(NSPoint(x: x, y: y))
+        p.alphaValue = 0
+        p.orderFrontRegardless()
+        NSAnimationContext.runAnimationGroup { ctx in
+            ctx.duration = 0.15
+            p.animator().alphaValue = 1
+        }
+        panel = p
+    }
+
+    func hide() {
+        guard let p = panel else { return }
+        panel = nil
+        NSAnimationContext.runAnimationGroup({ ctx in
+            ctx.duration = 0.1
+            p.animator().alphaValue = 0
+        }, completionHandler: { p.orderOut(nil) })
     }
 }
 

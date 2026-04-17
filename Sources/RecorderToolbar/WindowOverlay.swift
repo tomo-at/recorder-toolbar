@@ -90,9 +90,15 @@ final class OverlayController {
     var onCancel: (() -> Void)?
     /// Called when a window is clicked during recording mode (instead of onSelect).
     var onSelectDuringRecording: ((DetectedWindow) -> Void)?
+    /// Called when the hovered window changes during multi-recording (count ≥ 2).
+    /// Passes nil when leaving a recorded window.
+    var onHoverRecordedWindow: ((DetectedWindow?) -> Void)?
 
     /// True when the overlay is in lightweight recording mode (no dim, different click handler).
     private(set) var isRecordingMode: Bool = false
+
+    private var hoveredRecordedWindowId: Int? = nil
+    private var leaveRecordedWindowTask: Task<Void, Never>? = nil
 
     /// CG-coordinate bounds of the frozen (clicked) window. Nil before any selection.
     var frozenWindowBounds: CGRect? { state.frozenWindow?.bounds }
@@ -156,6 +162,10 @@ final class OverlayController {
         currentStack                     = []
         cycleIndex                       = 0
         manualCycleActive                = false
+        leaveRecordedWindowTask?.cancel()
+        leaveRecordedWindowTask          = nil
+        hoveredRecordedWindowId          = nil
+        onHoverRecordedWindow?(nil)
     }
 
     func selectCurrent() { if state.hoveredWindow != nil { onSelect?() } }
@@ -165,6 +175,17 @@ final class OverlayController {
     func addRecordedWindow(_ window: DetectedWindow) {
         guard !state.additionalRecordedWindows.contains(where: { $0.id == window.id }) else { return }
         state.additionalRecordedWindows.append(window)
+    }
+
+    /// Remove a window from the persistently-recorded list (triggered by "Remove window" dialog).
+    func removeRecordedWindow(_ window: DetectedWindow) {
+        state.additionalRecordedWindows.removeAll { $0.id == window.id }
+        if hoveredRecordedWindowId == window.id {
+            leaveRecordedWindowTask?.cancel()
+            leaveRecordedWindowTask = nil
+            hoveredRecordedWindowId = nil
+            onHoverRecordedWindow?(nil)
+        }
     }
 
     // MARK: – Event tracking
@@ -280,6 +301,30 @@ final class OverlayController {
         }
 
         state.stackCount = currentStack.count
+
+        // In multi-recording mode (≥2 windows), detect hover over a recorded window.
+        if isRecordingMode && state.additionalRecordedWindows.count >= 2 {
+            let matched = state.additionalRecordedWindows.first(where: {
+                $0.id == state.hoveredWindow?.id
+            })
+            let newId = matched?.id
+            if newId != hoveredRecordedWindowId {
+                if let m = matched {
+                    leaveRecordedWindowTask?.cancel()
+                    leaveRecordedWindowTask = nil
+                    hoveredRecordedWindowId = newId
+                    onHoverRecordedWindow?(m)
+                } else {
+                    leaveRecordedWindowTask?.cancel()
+                    leaveRecordedWindowTask = Task { @MainActor [weak self] in
+                        try? await Task.sleep(nanoseconds: 500_000_000)
+                        guard !Task.isCancelled else { return }
+                        self?.hoveredRecordedWindowId = nil
+                        self?.onHoverRecordedWindow?(nil)
+                    }
+                }
+            }
+        }
     }
 
     private func cycleStack(forward: Bool) {
