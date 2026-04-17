@@ -211,18 +211,23 @@ private struct BackdropBlur: NSViewRepresentable {
     func updateNSView(_ nsView: NSVisualEffectView, context: Context) {}
 }
 
-// Ghost button (Cancel / Remove): backdrop blur + highlightPrimary tint
+// Ghost button (Cancel / Remove): highlightPrimary fill + layer blur on background only.
+// Uses SwiftUI .blur() (layer blur) matching Figma spec — NOT backdrop filter.
+// Blur is applied to the background shape only; label text stays sharp.
 private struct DSGhostButtonStyle: ButtonStyle {
     func makeBody(configuration: Configuration) -> some View {
-        ZStack {
-            BackdropBlur()
-                .clipShape(RoundedRectangle(cornerRadius: 6, style: .continuous))
-            Color.highlightPrimary
-                .clipShape(RoundedRectangle(cornerRadius: 6, style: .continuous))
-            configuration.label
-        }
-        .frame(width: 108, height: 28)
-        .opacity(configuration.isPressed ? 0.7 : 1.0)
+        configuration.label
+            .frame(width: 108, height: 28)
+            .background {
+                ZStack {
+                    RoundedRectangle(cornerRadius: 6, style: .continuous)
+                        .fill(Color.highlightPrimary)
+                    RoundedRectangle(cornerRadius: 6, style: .continuous)
+                        .strokeBorder(Color.highlightPrimary, lineWidth: 1)
+                }
+                .blur(radius: 8)
+            }
+            .opacity(configuration.isPressed ? 0.7 : 1.0)
     }
 }
 
