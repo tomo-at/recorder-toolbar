@@ -97,6 +97,8 @@ final class OverlayController {
 
     /// True when the overlay is in lightweight recording mode (no dim, different click handler).
     private(set) var isRecordingMode: Bool = false
+    /// ID of the window that was originally selected when recording started. Never removable.
+    private var primaryRecordedWindowId: Int? = nil
 
     private var hoveredRecordedWindowId:   Int? = nil
     private var leaveRecordedWindowTask:   Task<Void, Never>? = nil
@@ -136,6 +138,7 @@ final class OverlayController {
         stopTracking()
         // Persist the originally-selected window as a recorded window before clearing it.
         if let original = state.frozenWindow {
+            primaryRecordedWindowId = original.id
             state.additionalRecordedWindows = [original]
         }
         state.frozenWindow = nil
@@ -158,6 +161,7 @@ final class OverlayController {
         state.isDimmed                   = true
         state.additionalRecordedWindows  = []
         isRecordingMode                  = false
+        primaryRecordedWindowId          = nil
         currentStack                     = []
         cycleIndex                       = 0
         manualCycleActive                = false
@@ -305,10 +309,11 @@ final class OverlayController {
 
         state.stackCount = currentStack.count
 
-        // In recording mode, detect hover over any recorded window to show the remove dialog.
-        if isRecordingMode && !state.additionalRecordedWindows.isEmpty {
+        // In recording mode, detect hover over additional (non-primary) recorded windows
+        // to show the remove dialog. primary window is never removable.
+        if isRecordingMode && state.additionalRecordedWindows.count >= 2 {
             let matched = state.additionalRecordedWindows.first(where: {
-                $0.id == state.hoveredWindow?.id
+                $0.id == state.hoveredWindow?.id && $0.id != primaryRecordedWindowId
             })
             let newId = matched?.id
             if newId != hoveredRecordedWindowId {
@@ -318,25 +323,28 @@ final class OverlayController {
                     hoveredRecordedWindowId = newId
                     onHoverRecordedWindow?(m)
                 } else {
-                    leaveRecordedWindowTask?.cancel()
-                    leaveRecordedWindowTask = Task { @MainActor [weak self] in
-                        try? await Task.sleep(nanoseconds: 500_000_000)
-                        guard !Task.isCancelled else { return }
-                        self?.hoveredRecordedWindowId = nil
-                        self?.onHoverRecordedWindow?(nil)
+                    // Only start leave timer if not already running (prevents 100ms timer
+                    // from cancelling and resetting the task before it can fire).
+                    if leaveRecordedWindowTask == nil {
+                        leaveRecordedWindowTask = Task { @MainActor [weak self] in
+                            try? await Task.sleep(nanoseconds: 500_000_000)
+                            guard !Task.isCancelled else { return }
+                            self?.leaveRecordedWindowTask = nil
+                            self?.hoveredRecordedWindowId = nil
+                            self?.onHoverRecordedWindow?(nil)
+                        }
                     }
                 }
             }
         }
 
         // In recording mode, detect hover over unrecorded windows to show the add-window dialog.
+        // Uses additionalRecordedWindows (contains primary + added) since frozenWindow is nil.
         if isRecordingMode {
             let hw = state.hoveredWindow
-            let isRecorded: Bool = {
-                guard let hw else { return false }
-                return (hw.id == state.frozenWindow?.id) ||
-                       state.additionalRecordedWindows.contains(where: { $0.id == hw.id })
-            }()
+            let isRecorded = hw.map { w in
+                state.additionalRecordedWindows.contains(where: { $0.id == w.id })
+            } ?? false
             let unrecorded: DetectedWindow? = (hw != nil && !isRecorded) ? hw : nil
             let newId = unrecorded?.id
             if newId != hoveredUnrecordedWindowId {
@@ -346,12 +354,14 @@ final class OverlayController {
                     hoveredUnrecordedWindowId = newId
                     onHoverUnrecordedWindow?(u)
                 } else {
-                    leaveUnrecordedWindowTask?.cancel()
-                    leaveUnrecordedWindowTask = Task { @MainActor [weak self] in
-                        try? await Task.sleep(nanoseconds: 500_000_000)
-                        guard !Task.isCancelled else { return }
-                        self?.hoveredUnrecordedWindowId = nil
-                        self?.onHoverUnrecordedWindow?(nil)
+                    if leaveUnrecordedWindowTask == nil {
+                        leaveUnrecordedWindowTask = Task { @MainActor [weak self] in
+                            try? await Task.sleep(nanoseconds: 500_000_000)
+                            guard !Task.isCancelled else { return }
+                            self?.leaveUnrecordedWindowTask = nil
+                            self?.hoveredUnrecordedWindowId = nil
+                            self?.onHoverUnrecordedWindow?(nil)
+                        }
                     }
                 }
             }

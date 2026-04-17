@@ -222,27 +222,14 @@ private struct DSPrimaryButtonStyle: ButtonStyle {
     }
 }
 
-// Shared container background for DS dialogs: modelessOverlay fill + highlight border
-// NSViewRepresentable provides behindWindow blur without adding extra color tint.
-private struct BackdropBlur: NSViewRepresentable {
-    func makeNSView(context: Context) -> NSVisualEffectView {
-        let v = NSVisualEffectView()
-        v.blendingMode = .behindWindow
-        v.material     = .hudWindow
-        v.state        = .active
-        return v
-    }
-    func updateNSView(_ nsView: NSVisualEffectView, context: Context) {}
-}
-
+// Shared container background for DS dialogs: modelessOverlay fill + highlight border.
+// Blur and shadow removed temporarily for color verification.
 private struct DSDialogContainer<Content: View>: View {
     let content: Content
     init(@ViewBuilder content: () -> Content) { self.content = content() }
 
     var body: some View {
         ZStack {
-            BackdropBlur()
-                .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
             RoundedRectangle(cornerRadius: 14, style: .continuous).fill(Color.modelessOverlay)
             RoundedRectangle(cornerRadius: 14, style: .continuous)
                 .strokeBorder(Color.highlightPrimary, lineWidth: 1)
@@ -275,8 +262,7 @@ struct WindowMultiDialogView: View {
             }
         }
         .frame(width: 240, height: 44)
-        .shadow(color: Color.shadowMedium, radius: 8, x: 0, y: 8)
-        .padding(20)
+        .padding(4)
     }
 }
 
@@ -294,8 +280,7 @@ struct WindowRemoveDialogView: View {
             .buttonStyle(DSGhostButtonStyle())
         }
         .frame(width: 124, height: 44)
-        .shadow(color: Color.shadowMedium, radius: 8, x: 0, y: 8)
-        .padding(20)
+        .padding(4)
     }
 }
 
@@ -309,9 +294,8 @@ final class WindowMultiDialogController {
         panel?.orderOut(nil)
         panel = nil
 
-        // Content 240×44; extra 20px padding on each side for shadow bleed
         let content  = CGSize(width: 240, height: 44)
-        let pad: CGFloat = 20
+        let pad: CGFloat = 4
         let size    = CGSize(width: content.width + 2*pad, height: content.height + 2*pad)
         let view    = WindowMultiDialogView(onAdd: onAdd, onCancel: onCancel)
         let hosting = NSHostingView(rootView: view)
@@ -369,9 +353,8 @@ final class WindowRemoveDialogController {
         panel?.orderOut(nil)
         panel = nil
 
-        // Content 124×44; extra 20px padding on each side for shadow bleed
         let content  = CGSize(width: 124, height: 44)
-        let pad: CGFloat = 20
+        let pad: CGFloat = 4
         let size    = CGSize(width: content.width + 2*pad, height: content.height + 2*pad)
         let view    = WindowRemoveDialogView(onRemove: onRemove)
         let hosting = NSHostingView(rootView: view)
