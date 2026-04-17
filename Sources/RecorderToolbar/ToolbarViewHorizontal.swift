@@ -18,7 +18,7 @@ struct HorizontalTypeSelectView: View {
     var body: some View {
         HStack(spacing: 4) {
             HCaptureTypeButton(state: state)
-            ToolbarDivider()
+            ToolbarDivider(height: 16)
             HStack(spacing: 8) {
                 HCameraDropdown(devices: state.cameraDevices, activeId: $state.activeCamId,
                                 onHoverChanged: { h in
@@ -32,7 +32,7 @@ struct HorizontalTypeSelectView: View {
                 HMicDropdown(devices: state.micDevices, activeId: $state.activeMicId, showIcon: true)
             }
             .padding(.trailing, 8)
-            ToolbarDivider()
+            ToolbarDivider(height: 16)
             HSettingsButton(state: state, settings: settings)
         }
         .padding(.horizontal, 8)
@@ -63,7 +63,7 @@ struct HorizontalWindowSelectView: View {
 
             HStack(spacing: 4) {
                 HRecordButton { state.startCountdown() }
-                ToolbarDivider()
+                ToolbarDivider(height: 16)
                 HStack(spacing: 8) {
                     HCameraDropdown(devices: state.cameraDevices, activeId: $state.activeCamId,
                                     fixedWidth: 126,
@@ -78,7 +78,7 @@ struct HorizontalWindowSelectView: View {
                     HMicDropdown(devices: state.micDevices, activeId: $state.activeMicId,
                                  showIcon: true, fixedWidth: 126)
                 }
-                ToolbarDivider()
+                ToolbarDivider(height: 16)
                 HSettingsButton(state: state, settings: settings)
             }
             .padding(.horizontal, 8)
@@ -101,7 +101,7 @@ struct HorizontalCountdownView: View {
                           isDisabled: true) {}
             HActionButton(icon: "stop.fill", label: "Stop",
                           iconColor: .recordRed, isDisabled: true) {}
-            ToolbarDivider()
+            ToolbarDivider(height: 16)
             Text(String(format: "00:%02d", state.countdownSeconds))
                 .font(.system(size: 13, weight: .medium).monospacedDigit())
                 .foregroundColor(.white)
@@ -140,7 +140,7 @@ struct HorizontalRecordingView: View {
                         state.addWindowViaToolbar()
                     }
                 }
-                ToolbarDivider()
+                ToolbarDivider(height: 16)
             }
 
             HActionButton(icon: "arrow.counterclockwise", label: "Restart") {
@@ -156,7 +156,7 @@ struct HorizontalRecordingView: View {
                           iconColor: .recordRed) {
                 state.stopRecording()
             }
-            ToolbarDivider()
+            ToolbarDivider(height: 16)
             Text(state.timeString)
                 .font(.system(size: 13, weight: .medium).monospacedDigit())
                 .foregroundColor(.white)
@@ -281,6 +281,7 @@ struct HCameraDropdown: View {
     @Binding var activeId: String?
     var fixedWidth: CGFloat? = nil
     var showLabel: Bool = true
+    var height: CGFloat = 32
     var onHoverChanged: ((Bool) -> Void)? = nil
     @State private var hovering = false
     @State private var showMenu = false
@@ -318,7 +319,7 @@ struct HCameraDropdown: View {
                     .animation(.easeInOut(duration: 0.15), value: showMenu)
             }
             .padding(.horizontal, 4)
-            .frame(width: fixedWidth, height: 32)
+            .frame(width: fixedWidth, height: height)
             .background((hovering || showMenu) ? Color.highlightPrimary : .clear)
             .cornerRadius(6)
         }
@@ -340,6 +341,7 @@ struct HMicDropdown: View {
     var showIcon: Bool = true
     var showLabel: Bool = true
     var fixedWidth: CGFloat? = nil
+    var height: CGFloat = 32
     @State private var hovering = false
     @State private var showMenu = false
 
@@ -373,7 +375,7 @@ struct HMicDropdown: View {
                     .animation(.easeInOut(duration: 0.15), value: showMenu)
             }
             .padding(.horizontal, 4)
-            .frame(width: fixedWidth, height: 32)
+            .frame(width: fixedWidth, height: height)
             .background((hovering || showMenu) ? Color.highlightPrimary : .clear)
             .cornerRadius(6)
         }
@@ -390,6 +392,7 @@ struct HSettingsButton: View {
     @ObservedObject var state: ToolbarState
     @ObservedObject var settings: SettingsState
     var showChevron: Bool = false
+    var height: CGFloat = 32
     @State private var hovering = false
 
     var body: some View {
@@ -415,7 +418,7 @@ struct HSettingsButton: View {
                 }
             }
             .padding(.horizontal, 4)
-            .frame(width: showChevron ? 52 : 32, height: 32)
+            .frame(width: showChevron ? 52 : 32, height: height)
             .background((hovering || state.settingsPanel.isVisible) ? Color.highlightPrimary : .clear)
             .cornerRadius(6)
         }
@@ -577,7 +580,7 @@ struct RevealedAllCompactTypeSelectView: View {
 
                 HStack(spacing: 8) {
                     HCameraDropdown(devices: state.cameraDevices, activeId: $state.activeCamId,
-                                    fixedWidth: 52, showLabel: false,
+                                    fixedWidth: 52, showLabel: false, height: 48,
                                     onHoverChanged: { h in
                                         guard let panel = state.panel else { return }
                                         if h, let id = state.activeCamId {
@@ -587,13 +590,13 @@ struct RevealedAllCompactTypeSelectView: View {
                                         }
                                     })
                     HMicDropdown(devices: state.micDevices, activeId: $state.activeMicId,
-                                 showIcon: true, showLabel: false, fixedWidth: 52)
+                                 showIcon: true, showLabel: false, fixedWidth: 52, height: 48)
                 }
                 .padding(.trailing, 8)
 
                 ToolbarDivider()
 
-                HSettingsButton(state: state, settings: settings, showChevron: true)
+                HSettingsButton(state: state, settings: settings, showChevron: true, height: 48)
             }
             .padding(.horizontal, 8)
         }

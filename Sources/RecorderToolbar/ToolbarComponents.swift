@@ -116,11 +116,12 @@ struct ActionButton: View {
 }
 
 struct ToolbarDivider: View {
+    var height: CGFloat = 32
+
     var body: some View {
         Rectangle()
             .fill(Color.highlightPrimary)
-            .frame(width: 1)
-            .padding(.vertical, 8)
+            .frame(width: 1, height: height)
             .padding(.horizontal, 4)
     }
 }
