@@ -87,7 +87,8 @@ struct V5Recording: View {
         if settings.v5DefaultStyle == .horizontal {
             HorizontalRecordingView(state: state)
         } else {
-            V5MaybeHeadered(state: state, message: "Recording in progress") {
+            V5MaybeHeadered(state: state,
+                            message: state.headerOverrideMessage ?? "Recording in progress") {
                 RecordingView(state: state)
             }
         }

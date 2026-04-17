@@ -188,6 +188,116 @@ final class ShortcutTooltipController {
     }
 }
 
+// MARK: – Window multi-recording dialog
+
+/// macOS-style dialog that appears at the top of a newly clicked window during recording.
+/// Lets the user switch to the new window or add it to the recording.
+struct WindowMultiDialogView: View {
+    let windowLabel: String
+    let onSwitch:  () -> Void
+    let onAdd:     () -> Void
+    let onCancel:  () -> Void
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 16) {
+            VStack(alignment: .leading, spacing: 4) {
+                Text("Add or switch?")
+                    .font(.system(size: 14, weight: .bold))
+                Text(windowLabel)
+                    .font(.system(size: 12))
+                    .foregroundColor(.secondary)
+                    .lineLimit(2)
+            }
+
+            VStack(spacing: 8) {
+                Button(action: onSwitch) {
+                    Text("Switch window")
+                        .frame(maxWidth: .infinity)
+                }
+                .buttonStyle(.borderedProminent)
+                .controlSize(.regular)
+
+                Button(action: onAdd) {
+                    Text("Add window")
+                        .frame(maxWidth: .infinity)
+                }
+                .buttonStyle(.bordered)
+                .controlSize(.regular)
+
+                Button(action: onCancel) {
+                    Text("Cancel")
+                        .frame(maxWidth: .infinity)
+                        .foregroundColor(.secondary)
+                }
+                .buttonStyle(.plain)
+            }
+        }
+        .padding(20)
+        .frame(width: 260)
+        .background(
+            RoundedRectangle(cornerRadius: 14)
+                .fill(Color(nsColor: .windowBackgroundColor))
+                .shadow(color: .black.opacity(0.22), radius: 24, x: 0, y: 8)
+        )
+    }
+}
+
+@MainActor
+final class WindowMultiDialogController {
+    private var panel: NSPanel?
+
+    func show(for window: DetectedWindow, above toolbar: NSPanel,
+              onSwitch: @escaping () -> Void,
+              onAdd: @escaping () -> Void,
+              onCancel: @escaping () -> Void) {
+        panel?.orderOut(nil)
+        panel = nil
+
+        let view    = WindowMultiDialogView(windowLabel: window.displayLabel,
+                                             onSwitch: onSwitch, onAdd: onAdd, onCancel: onCancel)
+        let hosting = NSHostingView(rootView: view)
+        hosting.wantsLayer             = true
+        hosting.layer?.backgroundColor = .clear
+        let size = CGSize(width: 260, height: hosting.fittingSize.height)
+        hosting.setFrameSize(size)
+
+        let p = NSPanel(contentRect: NSRect(origin: .zero, size: size),
+                        styleMask: [.borderless, .nonactivatingPanel],
+                        backing: .buffered, defer: false)
+        p.isFloatingPanel    = true
+        p.level              = toolbar.level
+        p.backgroundColor    = .clear
+        p.isOpaque           = false
+        p.hasShadow          = false
+        p.collectionBehavior = [.canJoinAllSpaces, .fullScreenAuxiliary]
+        p.appearance         = NSAppearance(named: .aqua)   // light macOS dialog style
+        p.contentView        = hosting
+        p.setContentSize(size)
+
+        // Position: centered horizontally on the window, 24 px below its top edge
+        let windowTopY = NSScreen.primaryHeight - window.bounds.minY
+        let x = window.bounds.midX - size.width / 2
+        let y = windowTopY - 24 - size.height
+        p.setFrameOrigin(NSPoint(x: x, y: y))
+        p.alphaValue = 0
+        p.orderFrontRegardless()
+        NSAnimationContext.runAnimationGroup { ctx in
+            ctx.duration = 0.15
+            p.animator().alphaValue = 1
+        }
+        panel = p
+    }
+
+    func dismiss() {
+        guard let p = panel else { return }
+        panel = nil
+        NSAnimationContext.runAnimationGroup({ ctx in
+            ctx.duration = 0.1
+            p.animator().alphaValue = 0
+        }, completionHandler: { p.orderOut(nil) })
+    }
+}
+
 // MARK: – Upload complete banner (V5: Toolbar + Complete message style)
 
 /// Pill-shaped banner that floats above the toolbar after upload completes.

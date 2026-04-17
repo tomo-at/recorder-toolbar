@@ -30,6 +30,8 @@ class OverlayState: ObservableObject {
     @Published var frozenWindow: DetectedWindow?
     @Published var stackCount: Int = 0
     @Published var isSelected: Bool = false
+    /// False during recording window mode: shows border only, no dim layer.
+    @Published var isDimmed: Bool = true
 
     /// The window to render: frozen selection takes priority over live hover.
     var displayedWindow: DetectedWindow? { frozenWindow ?? hoveredWindow }
@@ -84,6 +86,11 @@ final class OverlayController {
 
     var onSelect: (() -> Void)?
     var onCancel: (() -> Void)?
+    /// Called when a window is clicked during recording mode (instead of onSelect).
+    var onSelectDuringRecording: ((DetectedWindow) -> Void)?
+
+    /// True when the overlay is in lightweight recording mode (no dim, different click handler).
+    private(set) var isRecordingMode: Bool = false
 
     /// CG-coordinate bounds of the frozen (clicked) window. Nil before any selection.
     var frozenWindowBounds: CGRect? { state.frozenWindow?.bounds }
@@ -112,6 +119,19 @@ final class OverlayController {
         state.isSelected = true
     }
 
+    /// Transition from frozen selection to lightweight recording mode:
+    /// border-only (no dim), different click handler. Called after recording starts.
+    func transitionToLightweight(keepingAbove toolbar: NSPanel) {
+        stopTracking()
+        state.frozenWindow = nil
+        state.isSelected   = false
+        state.isDimmed     = false
+        isRecordingMode    = true
+        allWindows         = enumerateWindows()
+        toolbar.orderFrontRegardless()
+        startTracking()
+    }
+
     func hide() {
         stopTracking()
         screenOverlays.forEach { $0.dismiss(animated: true) }
@@ -119,6 +139,8 @@ final class OverlayController {
         state.hoveredWindow = nil
         state.frozenWindow  = nil
         state.isSelected    = false
+        state.isDimmed      = true
+        isRecordingMode     = false
         currentStack        = []
         cycleIndex          = 0
         manualCycleActive   = false
@@ -259,7 +281,12 @@ final class OverlayController {
     }
 
     private func handleClick() {
-        if state.hoveredWindow != nil { onSelect?() }
+        guard let w = state.hoveredWindow else { return }
+        if isRecordingMode {
+            onSelectDuringRecording?(w)
+        } else {
+            onSelect?()
+        }
     }
 
     // MARK: – Window enumeration
@@ -312,16 +339,20 @@ struct PerScreenOverlayView: View {
 
     var body: some View {
         ZStack {
-            // Dark dim layer with a canvas-masked hole at the hovered window
-            Color.black.opacity(0.65)
-                .ignoresSafeArea()
-                .mask(dimMask)
+            // Dark dim layer — hidden in lightweight recording mode
+            if state.isDimmed {
+                Color.black.opacity(0.65)
+                    .ignoresSafeArea()
+                    .mask(dimMask)
+            }
 
             // Badge + orange border (frozenWindow when selected, hoveredWindow otherwise)
             if let w = state.displayedWindow {
                 let f = adjustedFrame(for: w)
                 if CGRect(origin: .zero, size: screen.frame.size).intersects(f) {
-                    WindowBadgeView(window: w, frame: f, showBadge: !state.isSelected)
+                    WindowBadgeView(window: w, frame: f,
+                                    showBadge: !state.isSelected && state.isDimmed,
+                                    isDimmed: state.isDimmed)
                         .transition(.opacity.animation(.easeInOut(duration: 0.15)))
                 }
             }
@@ -399,35 +430,39 @@ struct WindowBadgeView: View {
     let window: DetectedWindow
     let frame: CGRect
     var showBadge: Bool = true
+    /// False in lightweight recording mode: thinner border, no info card.
+    var isDimmed: Bool = true
 
     var body: some View {
         ZStack {
-            // Orange border drawn at the window's exact bounds
+            // Orange border — thinner in recording mode
             RoundedRectangle(cornerRadius: 8, style: .continuous)
-                .strokeBorder(Color.selectionOrange, lineWidth: 3)
+                .strokeBorder(Color.selectionOrange, lineWidth: isDimmed ? 3 : 2)
                 .frame(width: frame.width, height: frame.height)
 
-            // Info card centered over the window — hidden when window is frozen/selected
-            VStack(spacing: 6) {
-                if let icon = window.appIcon {
-                    Image(nsImage: icon)
-                        .resizable()
-                        .frame(width: 48, height: 48)
+            // Info card — only shown during initial selection (dimmed mode)
+            if isDimmed {
+                VStack(spacing: 6) {
+                    if let icon = window.appIcon {
+                        Image(nsImage: icon)
+                            .resizable()
+                            .frame(width: 48, height: 48)
+                    }
+                    Text(window.displayLabel)
+                        .font(.system(size: 22, weight: .semibold))
+                        .foregroundColor(.white)
+                        .lineLimit(2)
+                        .multilineTextAlignment(.center)
                 }
-                Text(window.displayLabel)
-                    .font(.system(size: 22, weight: .semibold))
-                    .foregroundColor(.white)
-                    .lineLimit(2)
-                    .multilineTextAlignment(.center)
+                .padding(.horizontal, 20)
+                .padding(.vertical, 14)
+                .background(.ultraThinMaterial)
+                .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
+                .environment(\.colorScheme, .dark)
+                .frame(maxWidth: max(frame.width - 32, 100))
+                .opacity(showBadge ? 1 : 0)
+                .animation(.easeOut(duration: 0.2), value: showBadge)
             }
-            .padding(.horizontal, 20)
-            .padding(.vertical, 14)
-            .background(.ultraThinMaterial)
-            .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
-            .environment(\.colorScheme, .dark)
-            .frame(maxWidth: max(frame.width - 32, 100))
-            .opacity(showBadge ? 1 : 0)
-            .animation(.easeOut(duration: 0.2), value: showBadge)
         }
         .position(x: frame.midX, y: frame.midY)
     }

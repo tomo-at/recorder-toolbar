@@ -34,6 +34,8 @@ class ToolbarState: ObservableObject {
     @Published var isUploading:     Bool   = false
     @Published var uploadProgress:  Double = 0.0
     @Published var uploadComplete:  Bool   = false
+    /// Temporary message that overrides the header in Message style during recording.
+    @Published var headerOverrideMessage: String? = nil
 
     // デバイス（全 View で共有。各 View の .task { await state.loadDevices() } から呼ぶ）
     @Published var cameraDevices: [AVCaptureDevice] = []
@@ -51,6 +53,11 @@ class ToolbarState: ObservableObject {
     let shortcutTooltip        = ShortcutTooltipController()
     let selectionConfirmPanel  = SelectionConfirmPanelController()
     let uploadCompleteBanner   = UploadCompleteBannerController()
+    let windowMultiDialog      = WindowMultiDialogController()
+
+    private var isWindowRecording    = false
+    private var windowRecordingCount = 0
+    private var headerMessageTask:   Task<Void, Never>?
 
     private var timer:              AnyCancellable?
     private var countdownTask:      Task<Void, Never>?
@@ -100,6 +107,25 @@ class ToolbarState: ObservableObject {
             }
         }
         overlay.onCancel = { [weak self] in self?.exitSelecting() }
+
+        // Window clicked during recording → show the add/switch dialog
+        overlay.onSelectDuringRecording = { [weak self] window in
+            guard let self, let panel = self.panel else { return }
+            self.windowMultiDialog.show(
+                for: window, above: panel,
+                onSwitch: { [weak self] in
+                    self?.windowMultiDialog.dismiss()
+                    self?.handleWindowSwitch(to: window)
+                },
+                onAdd: { [weak self] in
+                    self?.windowMultiDialog.dismiss()
+                    self?.handleWindowAdd(window)
+                },
+                onCancel: { [weak self] in
+                    self?.windowMultiDialog.dismiss()
+                }
+            )
+        }
 
         // Display selected: same pattern.
         displayOverlay.onSelect = { [weak self] in
@@ -385,6 +411,13 @@ class ToolbarState: ObservableObject {
                 guard let self, !self.paused else { return }
                 self.seconds += 1
             }
+
+        // If recording was started from window selection, keep overlay active (border only).
+        if overlay.frozenWindowBounds != nil, let panel {
+            isWindowRecording    = true
+            windowRecordingCount = 1
+            overlay.transitionToLightweight(keepingAbove: panel)
+        }
     }
 
     func stopRecording(upload: Bool = true) {
@@ -392,6 +425,14 @@ class ToolbarState: ObservableObject {
         timer    = nil
         seconds  = 0
         appState = .typeSelect
+
+        // Reset window recording state
+        isWindowRecording    = false
+        windowRecordingCount = 0
+        windowMultiDialog.dismiss()
+        headerMessageTask?.cancel()
+        headerMessageTask    = nil
+        headerOverrideMessage = nil
 
         guard upload else { return }
         let s = settingsPanel.state
@@ -450,6 +491,32 @@ class ToolbarState: ObservableObject {
     func dismissUploadComplete() {
         uploadComplete = false
         uploadCompleteBanner.hide()
+    }
+
+    // MARK: – Window multi-recording helpers
+
+    private func setTemporaryHeaderMessage(_ msg: String, duration: TimeInterval = 3) {
+        headerMessageTask?.cancel()
+        headerOverrideMessage = msg
+        headerMessageTask = Task { @MainActor [weak self] in
+            try? await Task.sleep(nanoseconds: UInt64(duration * 1_000_000_000))
+            guard !Task.isCancelled else { return }
+            self?.headerOverrideMessage = nil
+            self?.headerMessageTask = nil
+        }
+    }
+
+    private func handleWindowSwitch(to window: DetectedWindow) {
+        if settingsPanel.state.v5DefaultStyle == .message {
+            setTemporaryHeaderMessage("Switched to \(window.appName)")
+        }
+    }
+
+    private func handleWindowAdd(_ window: DetectedWindow) {
+        windowRecordingCount += 1
+        if settingsPanel.state.v5DefaultStyle == .message {
+            setTemporaryHeaderMessage("Recording \(windowRecordingCount) windows")
+        }
     }
 
     func togglePause() { paused = !paused }
