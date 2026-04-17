@@ -299,7 +299,7 @@ final class OverlayController {
         state.stackCount = currentStack.count
 
         // In recording mode, detect hover over any recorded window to show the remove dialog.
-        if isRecordingMode && state.additionalRecordedWindows.count >= 2 {
+        if isRecordingMode && !state.additionalRecordedWindows.isEmpty {
             let matched = state.additionalRecordedWindows.first(where: {
                 $0.id == state.hoveredWindow?.id
             })
@@ -342,6 +342,9 @@ final class OverlayController {
     private func handleClick() {
         guard let w = state.hoveredWindow else { return }
         if isRecordingMode {
+            let alreadyRecorded = (w.id == state.frozenWindow?.id) ||
+                                  state.additionalRecordedWindows.contains(where: { $0.id == w.id })
+            guard !alreadyRecorded else { return }
             onSelectDuringRecording?(w)
         } else {
             onSelect?()

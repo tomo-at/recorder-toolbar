@@ -199,19 +199,13 @@ final class ShortcutTooltipController {
 //            --color-modeless-teal (#79dde8) / --color-modeless-black (#000000)
 //            --color-accent-destructive (#ff6d4c)
 
-// Ghost button (secondary / destructive): glass fill + border, backdrop blur via .thin material
+// Ghost button (secondary): highlightPrimary fill, no blur (container provides backdrop blur)
 private struct DSGhostButtonStyle: ButtonStyle {
     func makeBody(configuration: Configuration) -> some View {
         configuration.label
             .frame(width: 108, height: 28)
-            .background(
-                Material.thin,
-                in: RoundedRectangle(cornerRadius: 6, style: .continuous)
-            )
-            .overlay(
-                RoundedRectangle(cornerRadius: 6, style: .continuous)
-                    .strokeBorder(Color.highlightPrimary, lineWidth: 1)
-            )
+            .background(Color.highlightPrimary,
+                        in: RoundedRectangle(cornerRadius: 6, style: .continuous))
             .opacity(configuration.isPressed ? 0.7 : 1.0)
     }
 }
@@ -228,62 +222,67 @@ private struct DSPrimaryButtonStyle: ButtonStyle {
     }
 }
 
-/// Click-during-recording dialog: Cancel (ghost) + Add window (teal). 240×44px.
+// Shared container background for DS dialogs: blur + modelessOverlay tint + highlight border
+private struct DSDialogContainer<Content: View>: View {
+    let content: Content
+    init(@ViewBuilder content: () -> Content) { self.content = content() }
+
+    var body: some View {
+        ZStack {
+            RoundedRectangle(cornerRadius: 14, style: .continuous).fill(.thinMaterial)
+            RoundedRectangle(cornerRadius: 14, style: .continuous).fill(Color.modelessOverlay)
+            RoundedRectangle(cornerRadius: 14, style: .continuous)
+                .strokeBorder(Color.highlightPrimary, lineWidth: 1)
+            content
+        }
+    }
+}
+
+/// Click-during-recording dialog: Cancel (ghost) + Add window (teal). 240×44px content.
 struct WindowMultiDialogView: View {
     let onAdd:    () -> Void
     let onCancel: () -> Void
 
     var body: some View {
-        HStack(spacing: 8) {
-            Button(action: onCancel) {
-                HStack(spacing: 4) {
-                    Text("\u{100284}")
-                        .font(.system(size: 12))
-                        .frame(width: 16, height: 16)
+        DSDialogContainer {
+            HStack(spacing: 8) {
+                Button(action: onCancel) {
                     Text("Cancel")
                         .font(.system(size: 12, weight: .medium))
-                }
-                .foregroundColor(.white)
-            }
-            .buttonStyle(DSGhostButtonStyle())
-
-            Button(action: onAdd) {
-                HStack(spacing: 4) {
-                    Text("\u{100284}")
-                        .font(.system(size: 12))
                         .foregroundColor(.white)
-                        .frame(width: 16, height: 16)
+                }
+                .buttonStyle(DSGhostButtonStyle())
+
+                Button(action: onAdd) {
                     Text("Add window")
                         .font(.system(size: 12, weight: .medium))
                         .foregroundColor(.modelessBlack)
                 }
+                .buttonStyle(DSPrimaryButtonStyle())
             }
-            .buttonStyle(DSPrimaryButtonStyle())
         }
-        .padding(8)
         .frame(width: 240, height: 44)
+        .shadow(color: Color.shadowMedium, radius: 8, x: 0, y: 8)
+        .padding(20)
     }
 }
 
-/// Hover-during-recording dialog: Remove (ghost, destructive text). 124×44px.
+/// Hover-during-recording dialog: Remove (ghost, destructive text). 124×44px content.
 struct WindowRemoveDialogView: View {
     let onRemove: () -> Void
 
     var body: some View {
-        Button(action: onRemove) {
-            HStack(spacing: 4) {
-                Text("\u{100284}")
-                    .font(.system(size: 12))
-                    .foregroundColor(.white)
-                    .frame(width: 16, height: 16)
+        DSDialogContainer {
+            Button(action: onRemove) {
                 Text("Remove")
                     .font(.system(size: 12, weight: .medium))
                     .foregroundColor(.accentDestructive)
             }
+            .buttonStyle(DSGhostButtonStyle())
         }
-        .buttonStyle(DSGhostButtonStyle())
-        .padding(8)
         .frame(width: 124, height: 44)
+        .shadow(color: Color.shadowMedium, radius: 8, x: 0, y: 8)
+        .padding(20)
     }
 }
 
@@ -297,7 +296,10 @@ final class WindowMultiDialogController {
         panel?.orderOut(nil)
         panel = nil
 
-        let size    = CGSize(width: 240, height: 44)
+        // Content 240×44; extra 20px padding on each side for shadow bleed
+        let content  = CGSize(width: 240, height: 44)
+        let pad: CGFloat = 20
+        let size    = CGSize(width: content.width + 2*pad, height: content.height + 2*pad)
         let view    = WindowMultiDialogView(onAdd: onAdd, onCancel: onCancel)
         let hosting = NSHostingView(rootView: view)
         hosting.wantsLayer             = true
@@ -311,16 +313,16 @@ final class WindowMultiDialogController {
         p.level              = toolbar.level
         p.backgroundColor    = .clear
         p.isOpaque           = false
-        p.hasShadow          = true
+        p.hasShadow          = false
         p.collectionBehavior = [.canJoinAllSpaces, .fullScreenAuxiliary]
         p.appearance         = NSAppearance(named: .darkAqua)
         p.contentView        = hosting
         p.setContentSize(size)
 
-        // Centered on the window, 12 px inside from the top edge
+        // Centered on the window, 12 px inside from the top edge; shift by pad for shadow space
         let windowTopY = NSScreen.primaryHeight - window.bounds.minY
-        let x = window.bounds.midX - size.width / 2
-        let y = windowTopY - 12 - size.height
+        let x = window.bounds.midX - content.width / 2 - pad
+        let y = windowTopY - 12 - content.height - pad
         p.setFrameOrigin(NSPoint(x: x, y: y))
         p.alphaValue = 0
         p.orderFrontRegardless()
@@ -354,7 +356,10 @@ final class WindowRemoveDialogController {
         panel?.orderOut(nil)
         panel = nil
 
-        let size    = CGSize(width: 124, height: 44)
+        // Content 124×44; extra 20px padding on each side for shadow bleed
+        let content  = CGSize(width: 124, height: 44)
+        let pad: CGFloat = 20
+        let size    = CGSize(width: content.width + 2*pad, height: content.height + 2*pad)
         let view    = WindowRemoveDialogView(onRemove: onRemove)
         let hosting = NSHostingView(rootView: view)
         hosting.wantsLayer             = true
@@ -368,7 +373,7 @@ final class WindowRemoveDialogController {
         p.level              = toolbar.level
         p.backgroundColor    = .clear
         p.isOpaque           = false
-        p.hasShadow          = true
+        p.hasShadow          = false
         p.collectionBehavior = [.canJoinAllSpaces, .fullScreenAuxiliary]
         p.appearance         = NSAppearance(named: .darkAqua)
         p.contentView        = hosting
@@ -376,8 +381,8 @@ final class WindowRemoveDialogController {
 
         // Centered above the window's top edge (outside, to not block window clicks)
         let windowTopY = NSScreen.primaryHeight - window.bounds.minY
-        let x = window.bounds.midX - size.width / 2
-        let y = windowTopY + 6
+        let x = window.bounds.midX - content.width / 2 - pad
+        let y = windowTopY + 6 - pad
         p.setFrameOrigin(NSPoint(x: x, y: y))
         p.alphaValue = 0
         p.orderFrontRegardless()
