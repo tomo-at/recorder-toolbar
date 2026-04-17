@@ -57,6 +57,7 @@ class ToolbarState: ObservableObject {
 
     private var isWindowRecording    = false
     private var windowRecordingCount = 0
+    private var isDialogShowing      = false
     private var headerMessageTask:   Task<Void, Never>?
 
     private var timer:              AnyCancellable?
@@ -111,18 +112,20 @@ class ToolbarState: ObservableObject {
         // Window clicked during recording → show the add/switch dialog
         overlay.onSelectDuringRecording = { [weak self] window in
             guard let self, let panel = self.panel else { return }
+            guard self.windowRecordingCount < 2, !self.isDialogShowing else { return }
+            self.isDialogShowing = true
             self.windowMultiDialog.show(
                 for: window, above: panel,
                 onSwitch: { [weak self] in
-                    self?.windowMultiDialog.dismiss()
+                    self?.windowMultiDialog.dismiss { [weak self] in self?.isDialogShowing = false }
                     self?.handleWindowSwitch(to: window)
                 },
                 onAdd: { [weak self] in
-                    self?.windowMultiDialog.dismiss()
+                    self?.windowMultiDialog.dismiss { [weak self] in self?.isDialogShowing = false }
                     self?.handleWindowAdd(window)
                 },
                 onCancel: { [weak self] in
-                    self?.windowMultiDialog.dismiss()
+                    self?.windowMultiDialog.dismiss { [weak self] in self?.isDialogShowing = false }
                 }
             )
         }
@@ -429,6 +432,7 @@ class ToolbarState: ObservableObject {
         // Reset window recording state
         isWindowRecording    = false
         windowRecordingCount = 0
+        isDialogShowing      = false
         windowMultiDialog.dismiss()
         headerMessageTask?.cancel()
         headerMessageTask    = nil
@@ -514,6 +518,7 @@ class ToolbarState: ObservableObject {
 
     private func handleWindowAdd(_ window: DetectedWindow) {
         windowRecordingCount += 1
+        overlay.addRecordedWindow(window)
         if settingsPanel.state.v5DefaultStyle == .message {
             setTemporaryHeaderMessage("Recording \(windowRecordingCount) windows")
         }

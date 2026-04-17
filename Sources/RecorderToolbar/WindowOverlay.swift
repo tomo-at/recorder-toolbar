@@ -32,6 +32,8 @@ class OverlayState: ObservableObject {
     @Published var isSelected: Bool = false
     /// False during recording window mode: shows border only, no dim layer.
     @Published var isDimmed: Bool = true
+    /// Windows added via "Add window" — persistent orange borders shown during recording.
+    @Published var additionalRecordedWindows: [DetectedWindow] = []
 
     /// The window to render: frozen selection takes priority over live hover.
     var displayedWindow: DetectedWindow? { frozenWindow ?? hoveredWindow }
@@ -136,18 +138,25 @@ final class OverlayController {
         stopTracking()
         screenOverlays.forEach { $0.dismiss(animated: true) }
         screenOverlays.removeAll()
-        state.hoveredWindow = nil
-        state.frozenWindow  = nil
-        state.isSelected    = false
-        state.isDimmed      = true
-        isRecordingMode     = false
-        currentStack        = []
-        cycleIndex          = 0
-        manualCycleActive   = false
+        state.hoveredWindow              = nil
+        state.frozenWindow               = nil
+        state.isSelected                 = false
+        state.isDimmed                   = true
+        state.additionalRecordedWindows  = []
+        isRecordingMode                  = false
+        currentStack                     = []
+        cycleIndex                       = 0
+        manualCycleActive                = false
     }
 
     func selectCurrent() { if state.hoveredWindow != nil { onSelect?() } }
     func cancel()         { onCancel?() }
+
+    /// Register a window as persistently recorded (shows constant orange border).
+    func addRecordedWindow(_ window: DetectedWindow) {
+        guard !state.additionalRecordedWindows.contains(where: { $0.id == window.id }) else { return }
+        state.additionalRecordedWindows.append(window)
+    }
 
     // MARK: – Event tracking
 
@@ -354,6 +363,17 @@ struct PerScreenOverlayView: View {
                                     showBadge: !state.isSelected && state.isDimmed,
                                     isDimmed: state.isDimmed)
                         .transition(.opacity.animation(.easeInOut(duration: 0.15)))
+                }
+            }
+
+            // Persistent orange borders for all additionally-recorded windows
+            ForEach(state.additionalRecordedWindows, id: \.id) { w in
+                let f = adjustedFrame(for: w)
+                if CGRect(origin: .zero, size: screen.frame.size).intersects(f) {
+                    RoundedRectangle(cornerRadius: 8, style: .continuous)
+                        .strokeBorder(Color.selectionOrange, lineWidth: 2)
+                        .frame(width: f.width, height: f.height)
+                        .position(x: f.midX, y: f.midY)
                 }
             }
         }
