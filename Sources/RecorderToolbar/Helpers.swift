@@ -281,20 +281,32 @@ struct WindowMultiDialogView: View {
     }
 }
 
-/// Hover-during-recording dialog: Remove (ghost, destructive text). 124×44px content.
-struct WindowRemoveDialogView: View {
-    let onRemove: () -> Void
+/// Hover-during-recording dialog: Switch only (1-window) or Remove + Switch (multi-window).
+/// Content: 124×44 (Switch only) or 240×44 (Remove + Switch).
+struct WindowHoverDialogView: View {
+    let onRemove: (() -> Void)?
+    let onSwitch: () -> Void
 
     var body: some View {
         DSDialogContainer {
-            Button(action: onRemove) {
-                Text("Remove")
-                    .font(.system(size: 12, weight: .medium))
-                    .foregroundColor(.accentDestructive)
+            HStack(spacing: 8) {
+                if let onRemove {
+                    Button(action: onRemove) {
+                        Text("Remove")
+                            .font(.system(size: 12, weight: .medium))
+                            .foregroundColor(.accentDestructive)
+                    }
+                    .buttonStyle(DSGhostButtonStyle())
+                }
+                Button(action: onSwitch) {
+                    Text("Switch")
+                        .font(.system(size: 12, weight: .medium))
+                        .foregroundColor(.contentPrimary)
+                }
+                .buttonStyle(DSGhostButtonStyle())
             }
-            .buttonStyle(DSGhostButtonStyle())
         }
-        .frame(width: 124, height: 44)
+        .frame(width: onRemove != nil ? 240 : 124, height: 44)
         .shadow(color: Color.shadowMedium, radius: 8, x: 0, y: 8)
         .padding(20)
     }
@@ -358,20 +370,21 @@ final class WindowMultiDialogController {
     }
 }
 
-/// Floating "Remove window" dialog shown above a recorded window on hover (multi-recording only).
+/// Floating hover dialog shown above a recorded window: Switch only (1 window) or Remove + Switch (2 windows).
 @MainActor
-final class WindowRemoveDialogController {
+final class WindowHoverDialogController {
     private var panel: NSPanel?
 
     func show(for window: DetectedWindow, above toolbar: NSPanel,
-              onRemove: @escaping () -> Void) {
+              onRemove: (() -> Void)?, onSwitch: @escaping () -> Void) {
         panel?.orderOut(nil)
         panel = nil
 
-        let content  = CGSize(width: 124, height: 44)
+        let contentW: CGFloat = onRemove != nil ? 240 : 124
+        let content  = CGSize(width: contentW, height: 44)
         let pad: CGFloat = 20
         let size    = CGSize(width: content.width + 2*pad, height: content.height + 2*pad)
-        let view    = WindowRemoveDialogView(onRemove: onRemove)
+        let view    = WindowHoverDialogView(onRemove: onRemove, onSwitch: onSwitch)
         let hosting = NSHostingView(rootView: view)
         hosting.wantsLayer             = true
         hosting.layer?.backgroundColor = .clear

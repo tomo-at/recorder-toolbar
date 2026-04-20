@@ -229,6 +229,12 @@ final class OverlayController {
         state.additionalRecordedWindows[0] = newWindow
     }
 
+    /// Replace a specific recorded window by identity (hover Switch action).
+    func replaceSpecificRecordedWindow(_ old: DetectedWindow, with new: DetectedWindow) {
+        guard let idx = state.additionalRecordedWindows.firstIndex(where: { $0.id == old.id }) else { return }
+        state.additionalRecordedWindows[idx] = new
+    }
+
     /// Enter change-window selection mode: shows dim overlay so user can pick a replacement
     /// for the primary window. All currently-recorded windows are excluded.
     func startChangeWindowSelection(keepingAbove toolbar: NSPanel) {
@@ -406,9 +412,8 @@ final class OverlayController {
 
         state.stackCount = currentStack.count
 
-        // In recording mode, detect hover over any recorded window to show the remove dialog.
-        // Only active when 2+ windows are recorded (count >= 2 = primary + at least one added).
-        if isRecordingMode && state.additionalRecordedWindows.count >= 2 {
+        // In recording mode, detect hover over any recorded window to show the hover dialog.
+        if isRecordingMode && !state.additionalRecordedWindows.isEmpty {
             let matched = state.additionalRecordedWindows.first(where: {
                 $0.id == state.hoveredWindow?.id
             })

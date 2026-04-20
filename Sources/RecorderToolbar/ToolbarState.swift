@@ -54,12 +54,13 @@ class ToolbarState: ObservableObject {
     let selectionConfirmPanel  = SelectionConfirmPanelController()
     let uploadCompleteBanner   = UploadCompleteBannerController()
     let windowMultiDialog      = WindowMultiDialogController()
-    let windowRemoveDialog     = WindowRemoveDialogController()
+    let windowHoverDialog      = WindowHoverDialogController()
 
     @Published var isWindowRecording:    Bool             = false
     @Published var windowRecordingCount: Int              = 0
     @Published var recordedWindows:      [DetectedWindow] = []
     private var headerMessageTask:   Task<Void, Never>?
+    private var switchTargetWindow:  DetectedWindow?      = nil
 
     private var timer:              AnyCancellable?
     private var countdownTask:      Task<Void, Never>?
@@ -138,16 +139,20 @@ class ToolbarState: ObservableObject {
             }
         }
 
-        // Hover over a recorded window during multi-recording → show/hide the remove dialog
+        // Hover over a recorded window → show Switch (1 window) or Remove+Switch (2 windows)
         // (only active when addWindowPattern == .hoverOnWindow)
         overlay.onHoverRecordedWindow = { [weak self] window in
             guard let self, let panel = self.panel else { return }
             guard self.settingsPanel.state.addWindowPattern == .hoverOnWindow else { return }
             if let w = window {
-                self.windowRemoveDialog.show(for: w, above: panel,
-                    onRemove: { [weak self] in self?.handleWindowRemove(w) })
+                let hasMultiple = self.windowRecordingCount >= 2
+                self.windowHoverDialog.show(
+                    for: w, above: panel,
+                    onRemove: hasMultiple ? { [weak self] in self?.handleWindowRemove(w) } : nil,
+                    onSwitch: { [weak self] in self?.switchWindowViaHover(w) }
+                )
             } else {
-                self.windowRemoveDialog.hide()
+                self.windowHoverDialog.hide()
             }
         }
 
@@ -160,12 +165,18 @@ class ToolbarState: ObservableObject {
             self.overlay.pauseTracking()
         }
 
-        // Replacement window selected via change-window overlay (toolbar controls pattern)
+        // Replacement window selected via change-window overlay (toolbar controls or hover Switch)
         overlay.onSelectReplacement = { [weak self] window in
             guard let self, let panel = self.panel else { return }
             self.overlay.exitAddWindowSelection(keepingAbove: panel)
-            self.handleWindowReplace(with: window)
-            self.overlay.pauseTracking()
+            if let target = self.switchTargetWindow {
+                self.switchTargetWindow = nil
+                self.handleWindowSwitchReplace(target: target, with: window)
+                // Resume hover tracking (hover Switch path — don't pauseTracking)
+            } else {
+                self.handleWindowReplace(with: window)
+                self.overlay.pauseTracking()
+            }
         }
 
         // Display selected: same pattern.
@@ -268,6 +279,7 @@ class ToolbarState: ObservableObject {
 
     func exitSelecting() {
         selectionMode = nil
+        switchTargetWindow = nil
         overlay.hide()
         displayOverlay.hide()
     }
@@ -503,7 +515,7 @@ class ToolbarState: ObservableObject {
         windowRecordingCount = 0
         recordedWindows      = []
         windowMultiDialog.dismiss()
-        windowRemoveDialog.hide()
+        windowHoverDialog.hide()
         headerMessageTask?.cancel()
         headerMessageTask    = nil
         headerOverrideMessage = nil
@@ -619,7 +631,21 @@ class ToolbarState: ObservableObject {
         windowRecordingCount = max(1, windowRecordingCount - 1)
         overlay.removeRecordedWindow(window)
         recordedWindows = overlay.recordedWindowsList
-        windowRemoveDialog.hide()
+        windowHoverDialog.hide()
+        resizePanel(for: appState)
+    }
+
+    private func switchWindowViaHover(_ target: DetectedWindow) {
+        guard let panel else { return }
+        switchTargetWindow = target
+        windowHoverDialog.hide()
+        windowMultiDialog.dismiss()
+        overlay.startChangeWindowSelection(keepingAbove: panel)
+    }
+
+    private func handleWindowSwitchReplace(target: DetectedWindow, with newWindow: DetectedWindow) {
+        overlay.replaceSpecificRecordedWindow(target, with: newWindow)
+        recordedWindows = overlay.recordedWindowsList
         resizePanel(for: appState)
     }
 
