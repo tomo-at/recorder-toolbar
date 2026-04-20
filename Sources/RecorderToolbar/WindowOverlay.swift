@@ -443,9 +443,10 @@ final class OverlayController {
                 } else {
                     // Only start leave timer if not already running (prevents 100ms timer
                     // from cancelling and resetting the task before it can fire).
+                    // 1200 ms: dialog is outside the window, cursor needs time to travel there.
                     if leaveRecordedWindowTask == nil {
                         leaveRecordedWindowTask = Task { @MainActor [weak self] in
-                            try? await Task.sleep(nanoseconds: 500_000_000)
+                            try? await Task.sleep(nanoseconds: 1_200_000_000)
                             guard !Task.isCancelled else { return }
                             self?.leaveRecordedWindowTask = nil
                             self?.hoveredRecordedWindowId = nil
