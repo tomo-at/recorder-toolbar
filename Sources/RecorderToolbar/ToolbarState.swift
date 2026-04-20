@@ -69,6 +69,15 @@ class ToolbarState: ObservableObject {
     private var escLocalMonitor:    Any?
     private var cancellables:       Set<AnyCancellable> = []
 
+    // MARK: – Preview mode
+    @Published var isPreviewMode = false
+    private var previewOriginalDefaultStyle:     SettingsState.DefaultStyle?
+    private var previewOriginalRecordingStyle:   SettingsState.RecordingStyle?
+    private var previewOriginalUploadStyle:      SettingsState.UploadStyle?
+    private var previewOriginalAddWindowPattern: SettingsState.AddWindowPattern?
+    private var previewClickMonitor: Any?
+    private var previewCancellables = Set<AnyCancellable>()
+
     /// V4 / V5(.selectedRegion) は選択確定後に SelectionConfirmPanel を出す。
     private var usesSelectionConfirmPanel: Bool {
         let s = settingsPanel.state
@@ -407,6 +416,16 @@ class ToolbarState: ObservableObject {
 
     // MARK: – Countdown & Recording
 
+    /// On launch: find the frontmost window, select it, and jump straight into recording
+    /// so the Add window feature can be tested without manual window selection.
+    func autoStartWithFrontmostWindow() {
+        guard let panel, let window = overlay.frontmostWindow() else { return }
+        overlay.show(keepingAbove: panel)
+        overlay.freezeToWindow(window)
+        appState = .windowSelect
+        startCountdown()
+    }
+
     func startCountdown() {
         if appState == .windowSelect  { overlay.freeze() }
         if appState == .displaySelect { displayOverlay.freeze() }
@@ -470,6 +489,7 @@ class ToolbarState: ObservableObject {
     }
 
     func stopRecording(upload: Bool = true) {
+        let wasPreviewMode = isPreviewMode
         timer?.cancel()
         timer    = nil
         seconds  = 0
@@ -484,6 +504,11 @@ class ToolbarState: ObservableObject {
         headerMessageTask?.cancel()
         headerMessageTask    = nil
         headerOverrideMessage = nil
+
+        if wasPreviewMode {
+            exitPreviewMode()
+            return
+        }
 
         guard upload else { return }
         let s = settingsPanel.state
@@ -523,9 +548,27 @@ class ToolbarState: ObservableObject {
                 self.uploadComplete = true
             }
             if s.v5UploadStyle == .toolbarWithCompleteMessage, let panel = self.panel {
-                self.uploadCompleteBanner.show(above: panel, onViewVideo: {}, onDismiss: { [weak self] in
+                self.uploadCompleteBanner.show(above: panel, onViewVideo: { [weak self] in
+                    self?.dismissUploadComplete()
+                }, onDismiss: { [weak self] in
                     self?.dismissUploadComplete()
                 })
+            }
+            // プレビュー時: ユーザー操作なしで終わるスタイルは自動でPrototype Settingsへ戻す
+            guard self.isPreviewMode else { return }
+            switch s.v5UploadStyle {
+            case .toolbar:
+                // バッジが表示された状態を少し見せてから戻る
+                try? await Task.sleep(nanoseconds: 1_500_000_000)
+                guard !Task.isCancelled else { return }
+                self.dismissUploadComplete()
+            case .menuBarNotification:
+                // AppDelegate がチェックマークを3秒表示するので、それより少し長く待って戻る
+                try? await Task.sleep(nanoseconds: 3_500_000_000)
+                guard !Task.isCancelled else { return }
+                self.dismissUploadComplete()
+            case .toolbarWithCompleteMessage, .uploadMode:
+                break  // バナー/Complete UIのボタンクリックで dismissUploadComplete() が呼ばれる
             }
         }
     }
@@ -537,11 +580,13 @@ class ToolbarState: ObservableObject {
         uploadProgress = 0
         uploadComplete = false
         uploadCompleteBanner.hide()
+        if isPreviewMode { exitPreviewMode() }
     }
 
     func dismissUploadComplete() {
         uploadComplete = false
         uploadCompleteBanner.hide()
+        if isPreviewMode { exitPreviewMode() }
     }
 
     // MARK: – Window multi-recording helpers
@@ -642,6 +687,79 @@ class ToolbarState: ObservableObject {
 
     var timeString: String {
         String(format: "%02d:%02d", seconds / 60, seconds % 60)
+    }
+
+    // MARK: – Preview actions
+
+    func previewDefaultStyle(_ style: SettingsState.DefaultStyle) {
+        previewOriginalDefaultStyle = settingsPanel.state.v5DefaultStyle
+        settingsPanel.state.v5DefaultStyle = style
+        isPreviewMode = true
+        // Install click monitor after window-close animation to avoid catching the close click
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.35) { [weak self] in
+            guard let self, self.isPreviewMode else { return }
+            self.previewClickMonitor = NSEvent.addGlobalMonitorForEvents(
+                matching: [.leftMouseDown, .rightMouseDown]
+            ) { [weak self] _ in
+                Task { @MainActor [weak self] in
+                    guard let self, self.isPreviewMode else { return }
+                    self.exitPreviewMode()
+                }
+            }
+        }
+    }
+
+    func previewRecordingStyle(_ style: SettingsState.RecordingStyle) {
+        previewOriginalRecordingStyle = settingsPanel.state.v5RecordingStyle
+        settingsPanel.state.v5RecordingStyle = style
+        isPreviewMode = true
+        $appState
+            .filter { $0 == .recording }
+            .first()
+            .receive(on: RunLoop.main)
+            .sink { [weak self] _ in self?.exitPreviewMode() }
+            .store(in: &previewCancellables)
+    }
+
+    func previewUploadStyle(_ style: SettingsState.UploadStyle) {
+        previewOriginalUploadStyle = settingsPanel.state.v5UploadStyle
+        settingsPanel.state.v5UploadStyle = style
+        isPreviewMode = true
+        startFakeUpload()
+    }
+
+    func previewAddWindowPattern(_ pattern: SettingsState.AddWindowPattern) {
+        previewOriginalAddWindowPattern = settingsPanel.state.addWindowPattern
+        settingsPanel.state.addWindowPattern = pattern
+        isPreviewMode = true
+        actuallyStartRecording()
+        // Simulate single-window recording so toolbar shows add-window controls
+        isWindowRecording    = true
+        windowRecordingCount = 1
+        resizePanel(for: .recording)
+    }
+
+    private func exitPreviewMode() {
+        isPreviewMode = false
+        previewCancellables.removeAll()
+        if let m = previewClickMonitor { NSEvent.removeMonitor(m); previewClickMonitor = nil }
+        // Restore original settings values
+        if let v = previewOriginalDefaultStyle     { settingsPanel.state.v5DefaultStyle    = v; previewOriginalDefaultStyle     = nil }
+        if let v = previewOriginalRecordingStyle   { settingsPanel.state.v5RecordingStyle  = v; previewOriginalRecordingStyle   = nil }
+        if let v = previewOriginalUploadStyle      { settingsPanel.state.v5UploadStyle     = v; previewOriginalUploadStyle      = nil }
+        if let v = previewOriginalAddWindowPattern { settingsPanel.state.addWindowPattern  = v; previewOriginalAddWindowPattern = nil }
+        // Fully reset toolbar to typeSelect regardless of current state
+        exitSelecting()
+        selectionConfirmPanel.dismiss()
+        countdownTask?.cancel(); countdownTask = nil; countdownOverlay.hide()
+        cancelUpload()   // isPreviewMode is already false so no recursion
+        if appState == .recording {
+            // Use stopRecording to clean up timer/window-recording state; wasPreviewMode will be false
+            stopRecording(upload: false)
+        } else {
+            appState = .typeSelect
+        }
+        settingsPanel.openPrototypeSettings()
     }
 
     // MARK: – View helpers (shared across TypeSelect variants)

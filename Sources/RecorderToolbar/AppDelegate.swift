@@ -74,6 +74,11 @@ class AppDelegate: NSObject, NSApplicationDelegate, UNUserNotificationCenterDele
         observeUploadState()
         requestNotificationPermission()
         state.settingsPanel.openPrototypeSettings()
+
+        let s = state.settingsPanel.state
+        if s.v5RecordingStyle == .selectToStart {
+            state.autoStartWithFrontmostWindow()
+        }
     }
 
     // MARK: – Menu Bar

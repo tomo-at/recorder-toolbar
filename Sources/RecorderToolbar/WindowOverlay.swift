@@ -135,6 +135,17 @@ final class OverlayController {
         startTracking()
     }
 
+    /// Returns the frontmost non-system on-screen window, used for auto-start on launch.
+    func frontmostWindow() -> DetectedWindow? {
+        enumerateWindows().first
+    }
+
+    /// Directly freeze to a given window without requiring a hover event.
+    func freezeToWindow(_ window: DetectedWindow) {
+        state.hoveredWindow = window
+        freeze()
+    }
+
     /// Stop tracking and keep the overlay frozen on the selected window.
     /// Saves hoveredWindow → frozenWindow FIRST so later updateHover tasks can't erase it.
     func freeze() {
