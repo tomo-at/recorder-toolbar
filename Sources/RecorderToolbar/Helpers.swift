@@ -214,11 +214,15 @@ private struct BackdropBlur: NSViewRepresentable {
     func updateNSView(_ nsView: NSVisualEffectView, context: Context) {}
 }
 
-// Ghost button (Remove): BackdropBlur + highlightPrimary tint
+// Ghost button (Remove): BackdropBlur + dark base + highlightPrimary tint
+// Black base is needed because BackdropBlur (.behindWindow) samples real screen
+// pixels — over a white window it turns gray without an explicit dark floor.
 private struct DSGhostButtonStyle: ButtonStyle {
     func makeBody(configuration: Configuration) -> some View {
         ZStack {
             BackdropBlur()
+                .clipShape(RoundedRectangle(cornerRadius: 6, style: .continuous))
+            Color.black.opacity(0.45)
                 .clipShape(RoundedRectangle(cornerRadius: 6, style: .continuous))
             Color.highlightPrimary
                 .clipShape(RoundedRectangle(cornerRadius: 6, style: .continuous))
