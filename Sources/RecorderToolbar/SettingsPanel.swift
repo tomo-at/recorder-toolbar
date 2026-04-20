@@ -13,7 +13,7 @@ final class SettingsState: ObservableObject {
     @Published var themeChoice:       ThemeOption = .auto
     @Published var protoVersion:      ProtoVersion = .v5
     // V5 軸（Prototype Settings ウィンドウから設定）
-    @Published var v5DefaultStyle:    DefaultStyle    = .revealedAll
+    @Published var v5DefaultStyle:    DefaultStyle    = .revealedAllCompact
     @Published var v5RecordingStyle:  RecordingStyle  = .toolbar
     @Published var v5UploadStyle:     UploadStyle     = .toolbar
     // Upload-complete badges — Settings dot cleared on Settings click,
@@ -21,7 +21,7 @@ final class SettingsState: ObservableObject {
     @Published var settingsBadge:   Bool = false
     @Published var allVideosCount:  Int  = 0
     // Add window pattern
-    @Published var addWindowPattern: AddWindowPattern = .hoverOnWindow
+    @Published var addWindowPattern: AddWindowPattern = .toolbarControls
 
     enum CountdownOption: String, CaseIterable {
         case none  = "None"
