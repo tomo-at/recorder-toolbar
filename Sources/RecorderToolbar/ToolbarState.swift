@@ -649,6 +649,12 @@ class ToolbarState: ObservableObject {
         resizePanel(for: appState)
     }
 
+    func switchWindowViaToolbar(_ window: DetectedWindow) {
+        guard let panel else { return }
+        switchTargetWindow = window
+        overlay.startChangeWindowSelection(keepingAbove: panel)
+    }
+
     func addWindowViaToolbar() {
         guard let panel else { return }
         overlay.startAddWindowSelection(keepingAbove: panel)

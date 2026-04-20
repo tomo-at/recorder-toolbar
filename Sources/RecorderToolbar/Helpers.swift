@@ -281,6 +281,33 @@ struct WindowMultiDialogView: View {
     }
 }
 
+/// Click popup in toolbar controls mode: Switch (top, optional) + Remove (bottom), vertically stacked.
+struct WindowToolbarActionView: View {
+    @Binding var isPresented: Bool
+    let onRemove: () -> Void
+    let onSwitch: (() -> Void)?
+
+    var body: some View {
+        VStack(spacing: 4) {
+            if let onSwitch {
+                Button(action: { isPresented = false; onSwitch() }) {
+                    Text("Switch")
+                        .font(.system(size: 12, weight: .medium))
+                        .foregroundColor(.contentPrimary)
+                }
+                .buttonStyle(DSGhostButtonStyle())
+            }
+            Button(action: { isPresented = false; onRemove() }) {
+                Text("Remove")
+                    .font(.system(size: 12, weight: .medium))
+                    .foregroundColor(.accentDestructive)
+            }
+            .buttonStyle(DSGhostButtonStyle())
+        }
+        .padding(8)
+    }
+}
+
 /// Hover-during-recording dialog: Switch only (1-window) or Remove + Switch (multi-window).
 /// Content: 124×44 (Switch only) or 240×44 (Remove + Switch).
 struct WindowHoverDialogView: View {

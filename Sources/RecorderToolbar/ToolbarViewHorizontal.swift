@@ -129,17 +129,17 @@ struct HorizontalRecordingView: View {
     var body: some View {
         HStack(spacing: 4) {
             if showWindowControls {
-                // Primary window (always shown, never removable when it's the only window)
+                // Primary window (always shown)
                 if let primary = state.recordedWindows.first {
                     HWindowButton(window: primary,
-                                  removable: state.windowRecordingCount >= 2,
-                                  onRemove:  { state.removeWindowViaToolbar(primary) },
-                                  onReplace: { state.changeWindowViaToolbar() })
+                                  onRemove: { state.removeWindowViaToolbar(primary) },
+                                  onSwitch: state.windowRecordingCount >= 2 ? { state.changeWindowViaToolbar() } : nil)
                 }
-                // Additional windows (removable)
+                // Additional windows
                 ForEach(state.recordedWindows.dropFirst()) { window in
-                    HWindowButton(window: window, removable: true,
-                                  onRemove: { state.removeWindowViaToolbar(window) })
+                    HWindowButton(window: window,
+                                  onRemove: { state.removeWindowViaToolbar(window) },
+                                  onSwitch: { state.switchWindowViaToolbar(window) })
                 }
                 // Add button — only when below max (2 windows)
                 if state.windowRecordingCount < 2 {
@@ -476,23 +476,18 @@ struct HActionButton: View {
 }
 
 /// Window button for toolbar controls multi-recording.
-/// removable=true: hover shows "Remove" (destructive). removable=false: hover shows "Change" (replace primary).
+/// Hover: subtle highlight. Click: popover with Remove only (1 window) or Switch + Remove (2 windows).
 struct HWindowButton: View {
     let window: DetectedWindow
-    var removable: Bool = true
     var onRemove: () -> Void = {}
-    var onReplace: () -> Void = {}
+    var onSwitch: (() -> Void)? = nil
     @State private var hovering = false
+    @State private var showPopup = false
 
     var body: some View {
-        Button(action: removable ? onRemove : onReplace) {
+        Button(action: { showPopup.toggle() }) {
             HStack(spacing: 4) {
-                if !removable && hovering {
-                    Image(systemName: "arrow.trianglehead.2.clockwise")
-                        .font(.system(size: 16))
-                        .foregroundColor(.white)
-                        .frame(width: 20, height: 20)
-                } else if let icon = window.appIcon {
+                if let icon = window.appIcon {
                     Image(nsImage: icon)
                         .resizable()
                         .frame(width: 20, height: 20)
@@ -502,20 +497,12 @@ struct HWindowButton: View {
                         .foregroundColor(.white)
                         .frame(width: 20, height: 20)
                 }
-                Group {
-                    if !removable && hovering {
-                        Text("Change").foregroundColor(.white)
-                    } else if removable && hovering {
-                        Text("Remove").foregroundColor(Color.accentDestructive)
-                    } else {
-                        Text(window.appName).foregroundColor(.white)
-                    }
-                }
-                .font(.system(size: 13))
-                .lineLimit(1)
-                .truncationMode(.tail)
-                .frame(maxWidth: 80)
-                .animation(nil, value: hovering)
+                Text(window.appName)
+                    .foregroundColor(.white)
+                    .font(.system(size: 13))
+                    .lineLimit(1)
+                    .truncationMode(.tail)
+                    .frame(maxWidth: 80)
             }
             .fixedSize(horizontal: true, vertical: false)
             .padding(.horizontal, 8)
@@ -526,6 +513,10 @@ struct HWindowButton: View {
         .buttonStyle(.plain)
         .onHover { hovering = $0 }
         .help(window.appName)
+        .popover(isPresented: $showPopup, arrowEdge: .bottom) {
+            WindowToolbarActionView(isPresented: $showPopup, onRemove: onRemove, onSwitch: onSwitch)
+                .environment(\.colorScheme, .dark)
+        }
     }
 }
 

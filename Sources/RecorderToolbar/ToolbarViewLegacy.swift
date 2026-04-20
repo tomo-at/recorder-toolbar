@@ -198,17 +198,17 @@ struct RecordingView: View {
     var body: some View {
         HStack(spacing: 0) {
             if showWindowControls {
-                // Primary window (not removable when it's the only window)
+                // Primary window (always shown)
                 if let primary = state.recordedWindows.first {
                     WindowSegmentButton(window: primary,
-                                        removable: state.windowRecordingCount >= 2,
-                                        onRemove:  { state.removeWindowViaToolbar(primary) },
-                                        onReplace: { state.changeWindowViaToolbar() })
+                                        onRemove: { state.removeWindowViaToolbar(primary) },
+                                        onSwitch: state.windowRecordingCount >= 2 ? { state.changeWindowViaToolbar() } : nil)
                 }
-                // Additional windows (removable)
+                // Additional windows
                 ForEach(state.recordedWindows.dropFirst()) { window in
-                    WindowSegmentButton(window: window, removable: true,
-                                        onRemove: { state.removeWindowViaToolbar(window) })
+                    WindowSegmentButton(window: window,
+                                        onRemove: { state.removeWindowViaToolbar(window) },
+                                        onSwitch: { state.switchWindowViaToolbar(window) })
                 }
                 // Add button — only when below max (2 windows)
                 if state.windowRecordingCount < 2 {
@@ -251,23 +251,18 @@ struct RecordingView: View {
 }
 
 /// Window button styled like SegmentButton (VStack icon+label, 64×48).
-/// removable=true: hover shows "Remove" (destructive). removable=false: hover shows "Change" (replace primary).
+/// Hover: subtle highlight. Click: popover with Remove only (1 window) or Switch + Remove (2 windows).
 struct WindowSegmentButton: View {
     let window: DetectedWindow
-    var removable: Bool = true
     var onRemove: () -> Void = {}
-    var onReplace: () -> Void = {}
+    var onSwitch: (() -> Void)? = nil
     @State private var hovering = false
+    @State private var showPopup = false
 
     var body: some View {
-        Button(action: removable ? onRemove : onReplace) {
+        Button(action: { showPopup.toggle() }) {
             VStack(spacing: 4) {
-                if !removable && hovering {
-                    Image(systemName: "arrow.trianglehead.2.clockwise")
-                        .font(.system(size: 14))
-                        .foregroundColor(.white)
-                        .frame(width: 20, height: 20)
-                } else if let icon = window.appIcon {
+                if let icon = window.appIcon {
                     Image(nsImage: icon)
                         .resizable()
                         .frame(width: 20, height: 20)
@@ -277,19 +272,11 @@ struct WindowSegmentButton: View {
                         .foregroundColor(.white)
                         .frame(width: 20, height: 20)
                 }
-                Group {
-                    if !removable && hovering {
-                        Text("Change").foregroundColor(Color.contentTertiary)
-                    } else if removable && hovering {
-                        Text("Remove").foregroundColor(Color.accentDestructive)
-                    } else {
-                        Text(window.appName).foregroundColor(Color.contentTertiary)
-                    }
-                }
-                .font(.system(size: 11))
-                .lineLimit(1)
-                .truncationMode(.tail)
-                .animation(nil, value: hovering)
+                Text(window.appName)
+                    .foregroundColor(Color.contentTertiary)
+                    .font(.system(size: 11))
+                    .lineLimit(1)
+                    .truncationMode(.tail)
             }
             .frame(width: 64, height: 48)
             .background(hovering ? Color.highlightPrimary : .clear)
@@ -298,6 +285,10 @@ struct WindowSegmentButton: View {
         .buttonStyle(.plain)
         .onHover { hovering = $0 }
         .help(window.appName)
+        .popover(isPresented: $showPopup, arrowEdge: .bottom) {
+            WindowToolbarActionView(isPresented: $showPopup, onRemove: onRemove, onSwitch: onSwitch)
+                .environment(\.colorScheme, .dark)
+        }
     }
 }
 
