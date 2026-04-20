@@ -73,6 +73,7 @@ class AppDelegate: NSObject, NSApplicationDelegate, UNUserNotificationCenterDele
         setupMenuBar()
         observeUploadState()
         requestNotificationPermission()
+        state.settingsPanel.openPrototypeSettings()
     }
 
     // MARK: – Menu Bar
