@@ -521,6 +521,11 @@ final class OverlayController {
         let skip: Set<String> = ["RecorderToolbar", "Dock", "Window Server",
                                   "SystemUIServer", "loginwindow"]
         let ownPID = ProcessInfo.processInfo.processIdentifier
+        let regularPIDs = Set(
+            NSWorkspace.shared.runningApplications
+                .filter { $0.activationPolicy == .regular }
+                .map { $0.processIdentifier }
+        )
 
         guard let list = CGWindowListCopyWindowInfo(
             [.excludeDesktopElements], kCGNullWindowID
@@ -531,6 +536,7 @@ final class OverlayController {
             guard
                 let layer   = info[kCGWindowLayer]    as? Int,    layer == 0,
                 let pid     = info[kCGWindowOwnerPID] as? pid_t,  pid != ownPID,
+                regularPIDs.contains(pid),
                 let appName = info[kCGWindowOwnerName] as? String, !skip.contains(appName),
                 let bd = info[kCGWindowBounds] as? [String: Any],
                 let r  = CGRect(dictionaryRepresentation: bd as CFDictionary),
