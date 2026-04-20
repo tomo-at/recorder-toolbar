@@ -59,6 +59,9 @@ private struct InstantTooltip: NSViewRepresentable {
 
 // MARK: – Window controller
 
+private let settingsWindowWidth:  CGFloat = 360
+private let settingsWindowHeight: CGFloat = 680
+
 @MainActor
 final class PrototypeSettingsWindowController: NSWindowController {
     private let state: SettingsState
@@ -69,7 +72,7 @@ final class PrototypeSettingsWindowController: NSWindowController {
         self.state        = state
         self.toolbarState = toolbarState
         let window = NSWindow(
-            contentRect: NSRect(x: 0, y: 0, width: 360, height: 680),
+            contentRect: NSRect(x: 0, y: 0, width: settingsWindowWidth, height: settingsWindowHeight),
             styleMask: [.titled, .closable],
             backing: .buffered,
             defer: false
@@ -269,7 +272,7 @@ struct PrototypeSettingsView: View {
             }
         }
         .padding(20)
-        .frame(width: 360, height: 680)
+        .frame(width: settingsWindowWidth, height: settingsWindowHeight)
     }
 
     @ViewBuilder

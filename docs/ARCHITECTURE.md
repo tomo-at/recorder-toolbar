@@ -11,6 +11,9 @@ CLAUDE.md から分離した参照テーブル。判断に必要なルールは 
 | `AppDelegate.swift` | ツールバー NSPanel 生成・ToolbarState 初期化・メニューバー・通知 |
 | `ToolbarState.swift` | AppState + 全コントローラー所有・カメラプレビュー・デバイス読み込み |
 | `ToolbarView.swift` | AppState × ProtoVersion ディスパッチ・V5 組み合わせビュー・共通コンポーネント |
+| `ToolbarViewLegacy.swift` | V1–V3 用全ビュー（TypeSelectView / TypeSelectViewV2 / TypeSelectViewV3 / WindowSelectView / CountdownToolbarView / RecordingView） |
+| `ToolbarViewV4.swift` | V4 用全ビュー（TypeSelectViewV4 / CountdownToolbarViewV4 / RecordingViewV4） |
+| `ToolbarViewHorizontal.swift` | V5 Horizontal スタイル用ビュー群（HorizontalTypeSelectView / HorizontalWindowSelectView / HorizontalRecordingView / RevealedAllCompactTypeSelectView） |
 | `WindowOverlay.swift` | ウィンドウ選択オーバーレイ（DetectedWindow・OverlayState・OverlayController） |
 | `DisplayOverlay.swift` | ディスプレイ選択オーバーレイ |
 | `PreviewOverlay.swift` | TypeSelect ホバープレビューオーバーレイ |
@@ -40,14 +43,13 @@ CLAUDE.md から分離した参照テーブル。判断に必要なルールは 
 
 | 要素 | サイズ |
 |---|---|
-| ツールバー高さ | 66 px（全バリアント共通。Message ヘッダー 16px + コントロール 50px） |
-| ツールバー幅（typeSelect） | V1: 345 / V2: 506 / V3: 510 / V4: 482 px |
-| ツールバー幅（countdown/recording） | 297 px |
-| WindowSelectView 幅 | 389 px |
-| Settings パネル | 257 × 350 px（V5 時 +28px） |
+| ツールバー高さ | 56 px（標準）/ 66 px（Message スタイル）/ 48 px（Horizontal スタイル） |
+| ツールバー幅（typeSelect） | V1: 345 / V2: 506 / V3: 510 / V4: 482 / V5-Compact: 470 px |
+| ツールバー幅（windowSelect） | 389 px（V1–V3）/ 482 px（V4・V5 Horizontal） |
+| ツールバー幅（countdown/recording） | 297 px（通常）/ 365 px（Horizontal） |
+| Prototype Settings ウィンドウ | 360 × 680 px |
 | カメラプレビューポップアップ | 320 × 240 px |
 | SegmentButton | 64 × 48 px |
-| CloseSection | 44 × 56 px |
 
 ---
 

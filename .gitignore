@@ -1,6 +1,8 @@
 .build/
 .swiftpm/xcode/
 DerivedData/
+xcuserdata/
+*.xcuserstate
 .mcp.json
 .DS_Store
 .claude/

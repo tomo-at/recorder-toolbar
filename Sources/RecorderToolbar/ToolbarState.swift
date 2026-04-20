@@ -344,6 +344,19 @@ class ToolbarState: ObservableObject {
         }
     }
 
+    // MARK: – Panel dimensions
+
+    private enum PanelDimensions {
+        static let v1Width:                  CGFloat = 345
+        static let v2Width:                  CGFloat = 506
+        static let v3Width:                  CGFloat = 510
+        static let v4Width:                  CGFloat = 482
+        static let v5CompactWidth:           CGFloat = 470
+        static let windowSelectWidth:        CGFloat = 389
+        static let recordingWidth:           CGFloat = 297
+        static let horizontalRecordingWidth: CGFloat = 365
+    }
+
     // MARK: – Panel resize
 
     private func resizePanel(for state: AppState) {
@@ -359,29 +372,29 @@ class ToolbarState: ObservableObject {
                 // Count 2: primary window button + secondary window button + divider (no Add)
                 let extraH: CGFloat = windowRecordingCount >= 2 ? 215 : 195
                 let extraV: CGFloat = 140  // SegmentButton 64×2 + divider 9 (same for both counts)
-                newW = isHorizontal ? (365 + extraH) : (297 + extraV)
+                newW = isHorizontal ? (PanelDimensions.horizontalRecordingWidth + extraH) : (PanelDimensions.recordingWidth + extraV)
             } else {
-                newW = isHorizontal ? 365 : 297
+                newW = isHorizontal ? PanelDimensions.horizontalRecordingWidth : PanelDimensions.recordingWidth
             }
         case .typeSelect:
             switch s.protoVersion {
-            case .v1: newW = 345
-            case .v2: newW = 506
-            case .v3: newW = 510
-            case .v4: newW = 482
+            case .v1: newW = PanelDimensions.v1Width
+            case .v2: newW = PanelDimensions.v2Width
+            case .v3: newW = PanelDimensions.v3Width
+            case .v4: newW = PanelDimensions.v4Width
             case .v5: newW = v5TypeSelectWidth(for: s.v5DefaultStyle)
             }
         case .windowSelect, .displaySelect:
             switch s.protoVersion {
-            case .v1, .v2, .v3: newW = 389  // WindowSelectView width
-            case .v4: newW = 482
+            case .v1, .v2, .v3: newW = PanelDimensions.windowSelectWidth
+            case .v4: newW = PanelDimensions.v4Width
             case .v5:
                 switch s.v5RecordingStyle {
                 case .selectToStart, .selectedRegion:
                     // typeSelect が出続けるので幅は defaultStyle に合わせる
                     newW = v5TypeSelectWidth(for: s.v5DefaultStyle)
                 case .toolbar:
-                    newW = isHorizontal ? 482 : 389
+                    newW = isHorizontal ? PanelDimensions.v4Width : PanelDimensions.windowSelectWidth
                 }
             }
         }
@@ -393,11 +406,11 @@ class ToolbarState: ObservableObject {
 
     private func v5TypeSelectWidth(for style: SettingsState.DefaultStyle) -> CGFloat {
         switch style {
-        case .stepByStep:        return 345  // V1 と同じ
-        case .revealedAll:       return 506  // V2 と同じ
-        case .message:           return 482  // V4 と同じ
-        case .horizontal:        return 482
-        case .revealedAllCompact: return 470
+        case .stepByStep:         return PanelDimensions.v1Width
+        case .revealedAll:        return PanelDimensions.v2Width
+        case .message:            return PanelDimensions.v4Width
+        case .horizontal:         return PanelDimensions.v4Width
+        case .revealedAllCompact: return PanelDimensions.v5CompactWidth
         }
     }
 
@@ -415,16 +428,6 @@ class ToolbarState: ObservableObject {
     }
 
     // MARK: – Countdown & Recording
-
-    /// On launch: find the frontmost window, select it, and jump straight into recording
-    /// so the Add window feature can be tested without manual window selection.
-    func autoStartWithFrontmostWindow() {
-        guard let panel, let window = overlay.frontmostWindow() else { return }
-        overlay.show(keepingAbove: panel)
-        overlay.freezeToWindow(window)
-        appState = .windowSelect
-        startCountdown()
-    }
 
     func startCountdown() {
         if appState == .windowSelect  { overlay.freeze() }
