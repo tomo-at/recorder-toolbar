@@ -281,23 +281,23 @@ struct WindowMultiDialogView: View {
     }
 }
 
-/// Click popup in toolbar controls mode: Switch (top, optional) + Remove (bottom), vertically stacked.
-struct WindowToolbarActionView: View {
-    @Binding var isPresented: Bool
+/// Content: Switch (top, optional) + Remove (bottom), vertically stacked.
+private struct WindowToolbarActionView: View {
+    let onDismiss: () -> Void
     let onRemove: () -> Void
     let onSwitch: (() -> Void)?
 
     var body: some View {
         VStack(spacing: 4) {
             if let onSwitch {
-                Button(action: { isPresented = false; onSwitch() }) {
+                Button(action: { onDismiss(); onSwitch() }) {
                     Text("Switch")
                         .font(.system(size: 12, weight: .medium))
                         .foregroundColor(.contentPrimary)
                 }
                 .buttonStyle(DSGhostButtonStyle())
             }
-            Button(action: { isPresented = false; onRemove() }) {
+            Button(action: { onDismiss(); onRemove() }) {
                 Text("Remove")
                     .font(.system(size: 12, weight: .medium))
                     .foregroundColor(.accentDestructive)
@@ -305,6 +305,113 @@ struct WindowToolbarActionView: View {
             .buttonStyle(DSGhostButtonStyle())
         }
         .padding(8)
+    }
+}
+
+/// DSDialogContainer-styled popup for toolbar controls window buttons.
+private struct WindowToolbarPopupView: View {
+    let onDismiss: () -> Void
+    let onRemove: () -> Void
+    let onSwitch: (() -> Void)?
+
+    var body: some View {
+        DSDialogContainer {
+            WindowToolbarActionView(onDismiss: onDismiss, onRemove: onRemove, onSwitch: onSwitch)
+        }
+        .frame(width: 124, height: onSwitch != nil ? 76 : 44)
+        .shadow(color: Color.shadowMedium, radius: 8, x: 0, y: 8)
+        .padding(20)
+    }
+}
+
+/// Captures the containing NSView's screen-space rect on demand.
+@MainActor
+final class ButtonFrameReader: ObservableObject {
+    fileprivate weak var capturedView: NSView?
+
+    var screenFrame: CGRect? {
+        guard let v = capturedView, let w = v.window else { return nil }
+        return w.convertToScreen(v.convert(v.bounds, to: nil))
+    }
+}
+
+struct ButtonFrameCaptureView: NSViewRepresentable {
+    let reader: ButtonFrameReader
+    func makeNSView(context: Context) -> NSView {
+        let v = NSView()
+        reader.capturedView = v
+        return v
+    }
+    func updateNSView(_ nsView: NSView, context: Context) { reader.capturedView = nsView }
+}
+
+/// Floating DSDialogContainer popup shown above a toolbar window button on click.
+@MainActor
+final class ToolbarWindowPopupController {
+    private var panel: NSPanel?
+    private var mouseMonitor: Any?
+
+    func show(at buttonFrame: CGRect, above toolbar: NSPanel,
+              onRemove: @escaping () -> Void, onSwitch: (() -> Void)?) {
+        panel?.orderOut(nil)
+        panel = nil
+        if let m = mouseMonitor { NSEvent.removeMonitor(m); mouseMonitor = nil }
+
+        let contentH: CGFloat = onSwitch != nil ? 76 : 44
+        let content  = CGSize(width: 124, height: contentH)
+        let pad: CGFloat = 20
+        let size    = CGSize(width: content.width + 2*pad, height: content.height + 2*pad)
+        let view    = WindowToolbarPopupView(
+            onDismiss: { [weak self] in self?.hide() },
+            onRemove: onRemove,
+            onSwitch: onSwitch
+        )
+        let hosting = NSHostingView(rootView: view)
+        hosting.wantsLayer             = true
+        hosting.layer?.backgroundColor = .clear
+        hosting.setFrameSize(size)
+
+        let p = NSPanel(contentRect: NSRect(origin: .zero, size: size),
+                        styleMask: [.borderless, .nonactivatingPanel],
+                        backing: .buffered, defer: false)
+        p.isFloatingPanel    = true
+        p.level              = toolbar.level
+        p.backgroundColor    = .clear
+        p.isOpaque           = false
+        p.hasShadow          = false
+        p.collectionBehavior = [.canJoinAllSpaces, .fullScreenAuxiliary]
+        p.appearance         = NSAppearance(named: .darkAqua)
+        p.contentView        = hosting
+        p.setContentSize(size)
+
+        // Centered above the button's top edge
+        let x = buttonFrame.midX - content.width / 2 - pad
+        let y = buttonFrame.maxY + 6 - pad
+        p.setFrameOrigin(NSPoint(x: x, y: y))
+        p.alphaValue = 0
+        p.orderFrontRegardless()
+        NSAnimationContext.runAnimationGroup { ctx in
+            ctx.duration = 0.15
+            p.animator().alphaValue = 1
+        }
+        panel = p
+
+        mouseMonitor = NSEvent.addGlobalMonitorForEvents(matching: .leftMouseDown) { [weak self] event in
+            guard let self, let p = self.panel else { return }
+            if !p.frame.contains(NSEvent.mouseLocation) {
+                DispatchQueue.main.async { self.hide() }
+            }
+        }
+    }
+
+    func hide() {
+        if let m = mouseMonitor { NSEvent.removeMonitor(m); mouseMonitor = nil }
+        guard let p = panel else { return }
+        panel = nil
+        NSAnimationContext.runAnimationGroup({ ctx in
+            ctx.duration = 0.1
+            p.animator().alphaValue = 0
+        }, completionHandler: { p.orderOut(nil) })
     }
 }
 

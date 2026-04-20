@@ -200,15 +200,21 @@ struct RecordingView: View {
             if showWindowControls {
                 // Primary window (always shown)
                 if let primary = state.recordedWindows.first {
-                    WindowSegmentButton(window: primary,
-                                        onRemove: { state.removeWindowViaToolbar(primary) },
-                                        onSwitch: state.windowRecordingCount >= 2 ? { state.changeWindowViaToolbar() } : nil)
+                    WindowSegmentButton(
+                        window: primary,
+                        onRemove: { state.removeWindowViaToolbar(primary) },
+                        onSwitch: state.windowRecordingCount >= 2 ? { state.changeWindowViaToolbar() } : nil,
+                        onShowPopup: { f, r, s in state.showToolbarWindowPopup(at: f, onRemove: r, onSwitch: s) }
+                    )
                 }
                 // Additional windows
                 ForEach(state.recordedWindows.dropFirst()) { window in
-                    WindowSegmentButton(window: window,
-                                        onRemove: { state.removeWindowViaToolbar(window) },
-                                        onSwitch: { state.switchWindowViaToolbar(window) })
+                    WindowSegmentButton(
+                        window: window,
+                        onRemove: { state.removeWindowViaToolbar(window) },
+                        onSwitch: { state.switchWindowViaToolbar(window) },
+                        onShowPopup: { f, r, s in state.showToolbarWindowPopup(at: f, onRemove: r, onSwitch: s) }
+                    )
                 }
                 // Add button — only when below max (2 windows)
                 if state.windowRecordingCount < 2 {
@@ -251,16 +257,20 @@ struct RecordingView: View {
 }
 
 /// Window button styled like SegmentButton (VStack icon+label, 64×48).
-/// Hover: subtle highlight. Click: popover with Remove only (1 window) or Switch + Remove (2 windows).
+/// Hover: subtle highlight. Click: DSDialogContainer popup with Remove (1 window) or Switch+Remove (2 windows).
 struct WindowSegmentButton: View {
     let window: DetectedWindow
     var onRemove: () -> Void = {}
     var onSwitch: (() -> Void)? = nil
+    var onShowPopup: (CGRect, @escaping () -> Void, (() -> Void)?) -> Void = { _, _, _ in }
+    @StateObject private var frameReader = ButtonFrameReader()
     @State private var hovering = false
-    @State private var showPopup = false
 
     var body: some View {
-        Button(action: { showPopup.toggle() }) {
+        Button {
+            guard let frame = frameReader.screenFrame else { return }
+            onShowPopup(frame, onRemove, onSwitch)
+        } label: {
             VStack(spacing: 4) {
                 if let icon = window.appIcon {
                     Image(nsImage: icon)
@@ -283,12 +293,9 @@ struct WindowSegmentButton: View {
             .cornerRadius(4)
         }
         .buttonStyle(.plain)
+        .background(ButtonFrameCaptureView(reader: frameReader))
         .onHover { hovering = $0 }
         .help(window.appName)
-        .popover(isPresented: $showPopup, arrowEdge: .bottom) {
-            WindowToolbarActionView(isPresented: $showPopup, onRemove: onRemove, onSwitch: onSwitch)
-                .environment(\.colorScheme, .dark)
-        }
     }
 }
 

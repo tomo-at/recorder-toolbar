@@ -55,6 +55,7 @@ class ToolbarState: ObservableObject {
     let uploadCompleteBanner   = UploadCompleteBannerController()
     let windowMultiDialog      = WindowMultiDialogController()
     let windowHoverDialog      = WindowHoverDialogController()
+    let toolbarWindowPopup     = ToolbarWindowPopupController()
 
     @Published var isWindowRecording:    Bool             = false
     @Published var windowRecordingCount: Int              = 0
@@ -647,6 +648,13 @@ class ToolbarState: ObservableObject {
         overlay.replaceSpecificRecordedWindow(target, with: newWindow)
         recordedWindows = overlay.recordedWindowsList
         resizePanel(for: appState)
+    }
+
+    func showToolbarWindowPopup(at buttonFrame: CGRect,
+                                onRemove: @escaping () -> Void,
+                                onSwitch: (() -> Void)?) {
+        guard let panel else { return }
+        toolbarWindowPopup.show(at: buttonFrame, above: panel, onRemove: onRemove, onSwitch: onSwitch)
     }
 
     func switchWindowViaToolbar(_ window: DetectedWindow) {

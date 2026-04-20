@@ -131,15 +131,21 @@ struct HorizontalRecordingView: View {
             if showWindowControls {
                 // Primary window (always shown)
                 if let primary = state.recordedWindows.first {
-                    HWindowButton(window: primary,
-                                  onRemove: { state.removeWindowViaToolbar(primary) },
-                                  onSwitch: state.windowRecordingCount >= 2 ? { state.changeWindowViaToolbar() } : nil)
+                    HWindowButton(
+                        window: primary,
+                        onRemove: { state.removeWindowViaToolbar(primary) },
+                        onSwitch: state.windowRecordingCount >= 2 ? { state.changeWindowViaToolbar() } : nil,
+                        onShowPopup: { f, r, s in state.showToolbarWindowPopup(at: f, onRemove: r, onSwitch: s) }
+                    )
                 }
                 // Additional windows
                 ForEach(state.recordedWindows.dropFirst()) { window in
-                    HWindowButton(window: window,
-                                  onRemove: { state.removeWindowViaToolbar(window) },
-                                  onSwitch: { state.switchWindowViaToolbar(window) })
+                    HWindowButton(
+                        window: window,
+                        onRemove: { state.removeWindowViaToolbar(window) },
+                        onSwitch: { state.switchWindowViaToolbar(window) },
+                        onShowPopup: { f, r, s in state.showToolbarWindowPopup(at: f, onRemove: r, onSwitch: s) }
+                    )
                 }
                 // Add button — only when below max (2 windows)
                 if state.windowRecordingCount < 2 {
@@ -476,16 +482,20 @@ struct HActionButton: View {
 }
 
 /// Window button for toolbar controls multi-recording.
-/// Hover: subtle highlight. Click: popover with Remove only (1 window) or Switch + Remove (2 windows).
+/// Hover: subtle highlight. Click: DSDialogContainer popup with Remove (1 window) or Switch+Remove (2 windows).
 struct HWindowButton: View {
     let window: DetectedWindow
     var onRemove: () -> Void = {}
     var onSwitch: (() -> Void)? = nil
+    var onShowPopup: (CGRect, @escaping () -> Void, (() -> Void)?) -> Void = { _, _, _ in }
+    @StateObject private var frameReader = ButtonFrameReader()
     @State private var hovering = false
-    @State private var showPopup = false
 
     var body: some View {
-        Button(action: { showPopup.toggle() }) {
+        Button {
+            guard let frame = frameReader.screenFrame else { return }
+            onShowPopup(frame, onRemove, onSwitch)
+        } label: {
             HStack(spacing: 4) {
                 if let icon = window.appIcon {
                     Image(nsImage: icon)
@@ -511,12 +521,9 @@ struct HWindowButton: View {
             .cornerRadius(6)
         }
         .buttonStyle(.plain)
+        .background(ButtonFrameCaptureView(reader: frameReader))
         .onHover { hovering = $0 }
         .help(window.appName)
-        .popover(isPresented: $showPopup, arrowEdge: .bottom) {
-            WindowToolbarActionView(isPresented: $showPopup, onRemove: onRemove, onSwitch: onSwitch)
-                .environment(\.colorScheme, .dark)
-        }
     }
 }
 
