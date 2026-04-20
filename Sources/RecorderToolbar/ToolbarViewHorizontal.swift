@@ -508,12 +508,13 @@ struct HWindowButton: View {
                     } else if removable && hovering {
                         Text("Remove").foregroundColor(Color.accentDestructive)
                     } else {
-                        Text(String(window.appName.prefix(9))).foregroundColor(.white)
+                        Text(window.appName).foregroundColor(.white)
                     }
                 }
                 .font(.system(size: 13))
                 .lineLimit(1)
                 .truncationMode(.tail)
+                .frame(maxWidth: 80)
                 .animation(nil, value: hovering)
             }
             .fixedSize(horizontal: true, vertical: false)

@@ -283,11 +283,12 @@ struct WindowSegmentButton: View {
                     } else if removable && hovering {
                         Text("Remove").foregroundColor(Color.accentDestructive)
                     } else {
-                        Text(String(window.appName.prefix(7))).foregroundColor(Color.contentTertiary)
+                        Text(window.appName).foregroundColor(Color.contentTertiary)
                     }
                 }
                 .font(.system(size: 11))
                 .lineLimit(1)
+                .truncationMode(.tail)
                 .animation(nil, value: hovering)
             }
             .frame(width: 64, height: 48)
