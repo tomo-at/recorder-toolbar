@@ -1,0 +1,373 @@
+// !$*UTF8*$!
+{
+	archiveVersion = 1;
+	classes = {
+	};
+	objectVersion = 56;
+	objects = {
+
+/* Begin PBXBuildFile section */
+		AA00000000000000000002A0 /* AppDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA00000000000000000001A0 /* AppDelegate.swift */; };
+		AA00000000000000000002A1 /* CameraSegment.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA00000000000000000001A1 /* CameraSegment.swift */; };
+		AA00000000000000000002A2 /* CountdownOverlay.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA00000000000000000001A2 /* CountdownOverlay.swift */; };
+		AA00000000000000000002A3 /* DisplayOverlay.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA00000000000000000001A3 /* DisplayOverlay.swift */; };
+		AA00000000000000000002A4 /* Helpers.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA00000000000000000001A4 /* Helpers.swift */; };
+		AA00000000000000000002A5 /* PreviewOverlay.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA00000000000000000001A5 /* PreviewOverlay.swift */; };
+		AA00000000000000000002A6 /* PrototypeSettingsWindow.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA00000000000000000001A6 /* PrototypeSettingsWindow.swift */; };
+		AA00000000000000000002A7 /* SettingsPanel.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA00000000000000000001A7 /* SettingsPanel.swift */; };
+		AA00000000000000000002A8 /* ToolbarComponents.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA00000000000000000001A8 /* ToolbarComponents.swift */; };
+		AA00000000000000000002A9 /* ToolbarState.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA00000000000000000001A9 /* ToolbarState.swift */; };
+		AA00000000000000000002AA /* ToolbarView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA00000000000000000001AA /* ToolbarView.swift */; };
+		AA00000000000000000002AB /* ToolbarViewHorizontal.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA00000000000000000001AB /* ToolbarViewHorizontal.swift */; };
+		AA00000000000000000002AC /* ToolbarViewLegacy.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA00000000000000000001AC /* ToolbarViewLegacy.swift */; };
+		AA00000000000000000002AD /* ToolbarViewV4.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA00000000000000000001AD /* ToolbarViewV4.swift */; };
+		AA00000000000000000002AE /* ToolbarViewV5.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA00000000000000000001AE /* ToolbarViewV5.swift */; };
+		AA00000000000000000002AF /* WindowOverlay.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA00000000000000000001AF /* WindowOverlay.swift */; };
+		AA00000000000000000002B0 /* main.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA00000000000000000001B0 /* main.swift */; };
+		AA00000000000000000002B1 /* icon-menu.png in Resources */ = {isa = PBXBuildFile; fileRef = AA00000000000000000001B1 /* icon-menu.png */; };
+/* End PBXBuildFile section */
+
+/* Begin PBXFileReference section */
+		AA00000000000000000000A4 /* RecorderToolbar.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = RecorderToolbar.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		AA00000000000000000001A0 /* AppDelegate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppDelegate.swift; sourceTree = "<group>"; };
+		AA00000000000000000001A1 /* CameraSegment.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CameraSegment.swift; sourceTree = "<group>"; };
+		AA00000000000000000001A2 /* CountdownOverlay.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CountdownOverlay.swift; sourceTree = "<group>"; };
+		AA00000000000000000001A3 /* DisplayOverlay.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DisplayOverlay.swift; sourceTree = "<group>"; };
+		AA00000000000000000001A4 /* Helpers.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Helpers.swift; sourceTree = "<group>"; };
+		AA00000000000000000001A5 /* PreviewOverlay.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PreviewOverlay.swift; sourceTree = "<group>"; };
+		AA00000000000000000001A6 /* PrototypeSettingsWindow.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PrototypeSettingsWindow.swift; sourceTree = "<group>"; };
+		AA00000000000000000001A7 /* SettingsPanel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsPanel.swift; sourceTree = "<group>"; };
+		AA00000000000000000001A8 /* ToolbarComponents.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ToolbarComponents.swift; sourceTree = "<group>"; };
+		AA00000000000000000001A9 /* ToolbarState.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ToolbarState.swift; sourceTree = "<group>"; };
+		AA00000000000000000001AA /* ToolbarView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ToolbarView.swift; sourceTree = "<group>"; };
+		AA00000000000000000001AB /* ToolbarViewHorizontal.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ToolbarViewHorizontal.swift; sourceTree = "<group>"; };
+		AA00000000000000000001AC /* ToolbarViewLegacy.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ToolbarViewLegacy.swift; sourceTree = "<group>"; };
+		AA00000000000000000001AD /* ToolbarViewV4.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ToolbarViewV4.swift; sourceTree = "<group>"; };
+		AA00000000000000000001AE /* ToolbarViewV5.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ToolbarViewV5.swift; sourceTree = "<group>"; };
+		AA00000000000000000001AF /* WindowOverlay.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WindowOverlay.swift; sourceTree = "<group>"; };
+		AA00000000000000000001B0 /* main.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = main.swift; sourceTree = "<group>"; };
+		AA00000000000000000001B1 /* icon-menu.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = "assets/icon-menu.png"; sourceTree = "<group>"; };
+		AA00000000000000000001B2 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
+/* End PBXFileReference section */
+
+/* Begin PBXFrameworksBuildPhase section */
+		AA00000000000000000000F1 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXFrameworksBuildPhase section */
+
+/* Begin PBXGroup section */
+		AA00000000000000000000A1 /* RecorderToolbar */ = {
+			isa = PBXGroup;
+			children = (
+				AA00000000000000000000A2 /* Sources */,
+				AA00000000000000000000A3 /* Products */,
+			);
+			sourceTree = "<group>";
+		};
+		AA00000000000000000000A2 /* Sources */ = {
+			isa = PBXGroup;
+			children = (
+				AA00000000000000000001A0 /* AppDelegate.swift */,
+				AA00000000000000000001A1 /* CameraSegment.swift */,
+				AA00000000000000000001A2 /* CountdownOverlay.swift */,
+				AA00000000000000000001A3 /* DisplayOverlay.swift */,
+				AA00000000000000000001A4 /* Helpers.swift */,
+				AA00000000000000000001A5 /* PreviewOverlay.swift */,
+				AA00000000000000000001A6 /* PrototypeSettingsWindow.swift */,
+				AA00000000000000000001A7 /* SettingsPanel.swift */,
+				AA00000000000000000001A8 /* ToolbarComponents.swift */,
+				AA00000000000000000001A9 /* ToolbarState.swift */,
+				AA00000000000000000001AA /* ToolbarView.swift */,
+				AA00000000000000000001AB /* ToolbarViewHorizontal.swift */,
+				AA00000000000000000001AC /* ToolbarViewLegacy.swift */,
+				AA00000000000000000001AD /* ToolbarViewV4.swift */,
+				AA00000000000000000001AE /* ToolbarViewV5.swift */,
+				AA00000000000000000001AF /* WindowOverlay.swift */,
+				AA00000000000000000001B0 /* main.swift */,
+				AA00000000000000000001B1 /* icon-menu.png */,
+				AA00000000000000000001B2 /* Info.plist */,
+			);
+			name = Sources;
+			path = Sources/RecorderToolbar;
+			sourceTree = "<group>";
+		};
+		AA00000000000000000000A3 /* Products */ = {
+			isa = PBXGroup;
+			children = (
+				AA00000000000000000000A4 /* RecorderToolbar.app */,
+			);
+			name = Products;
+			sourceTree = "<group>";
+		};
+/* End PBXGroup section */
+
+/* Begin PBXNativeTarget section */
+		AA00000000000000000000B0 /* RecorderToolbar */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = AA00000000000000000000D0 /* Build configuration list for PBXNativeTarget "RecorderToolbar" */;
+			buildPhases = (
+				AA00000000000000000000F0 /* Sources */,
+				AA00000000000000000000F1 /* Frameworks */,
+				AA00000000000000000000F2 /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			name = RecorderToolbar;
+			productName = RecorderToolbar;
+			productReference = AA00000000000000000000A4 /* RecorderToolbar.app */;
+			productType = "com.apple.product-type.application";
+		};
+/* End PBXNativeTarget section */
+
+/* Begin PBXProject section */
+		AA00000000000000000000A0 /* Project object */ = {
+			isa = PBXProject;
+			attributes = {
+				BuildIndependentTargetsInParallel = 1;
+				LastSwiftUpdateCheck = 1600;
+				LastUpgradeCheck = 1600;
+				TargetAttributes = {
+					AA00000000000000000000B0 = {
+						CreatedOnToolsVersion = 16.0;
+					};
+				};
+			};
+			buildConfigurationList = AA00000000000000000000C0 /* Build configuration list for PBXProject "RecorderToolbar" */;
+			compatibilityVersion = "Xcode 14.0";
+			developmentRegion = en;
+			hasScannedForEncodings = 0;
+			knownRegions = (
+				en,
+				Base,
+			);
+			mainGroup = AA00000000000000000000A1;
+			productRefGroup = AA00000000000000000000A3 /* Products */;
+			projectDirPath = "";
+			projectRoot = "";
+			targets = (
+				AA00000000000000000000B0 /* RecorderToolbar */,
+			);
+		};
+/* End PBXProject section */
+
+/* Begin PBXResourcesBuildPhase section */
+		AA00000000000000000000F2 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				AA00000000000000000002B1 /* icon-menu.png in Resources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXResourcesBuildPhase section */
+
+/* Begin PBXSourcesBuildPhase section */
+		AA00000000000000000000F0 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				AA00000000000000000002A0 /* AppDelegate.swift in Sources */,
+				AA00000000000000000002A1 /* CameraSegment.swift in Sources */,
+				AA00000000000000000002A2 /* CountdownOverlay.swift in Sources */,
+				AA00000000000000000002A3 /* DisplayOverlay.swift in Sources */,
+				AA00000000000000000002A4 /* Helpers.swift in Sources */,
+				AA00000000000000000002A5 /* PreviewOverlay.swift in Sources */,
+				AA00000000000000000002A6 /* PrototypeSettingsWindow.swift in Sources */,
+				AA00000000000000000002A7 /* SettingsPanel.swift in Sources */,
+				AA00000000000000000002A8 /* ToolbarComponents.swift in Sources */,
+				AA00000000000000000002A9 /* ToolbarState.swift in Sources */,
+				AA00000000000000000002AA /* ToolbarView.swift in Sources */,
+				AA00000000000000000002AB /* ToolbarViewHorizontal.swift in Sources */,
+				AA00000000000000000002AC /* ToolbarViewLegacy.swift in Sources */,
+				AA00000000000000000002AD /* ToolbarViewV4.swift in Sources */,
+				AA00000000000000000002AE /* ToolbarViewV5.swift in Sources */,
+				AA00000000000000000002AF /* WindowOverlay.swift in Sources */,
+				AA00000000000000000002B0 /* main.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXSourcesBuildPhase section */
+
+/* Begin XCBuildConfiguration section */
+		AA00000000000000000000E0 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++20";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_ENABLE_OBJC_WEAK = YES;
+				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_COMMA = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_CYCLE = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				COPY_PHASE_STRIP = NO;
+				DEBUG_INFORMATION_FORMAT = dwarf;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				ENABLE_TESTABILITY = YES;
+				ENABLE_USER_SCRIPT_SANDBOXING = NO;
+				GCC_C_LANGUAGE_STANDARD = gnu17;
+				GCC_DYNAMIC_NO_PIC = NO;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_OPTIMIZATION_LEVEL = 0;
+				GCC_PREPROCESSOR_DEFINITIONS = (
+					"DEBUG=1",
+					"$(inherited)",
+				);
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				MACOSX_DEPLOYMENT_TARGET = 14.0;
+				MTL_ENABLE_DEBUG_INFO = INCLUDE_SOURCE;
+				MTL_FAST_MATH = YES;
+				ONLY_ACTIVE_ARCH = YES;
+				SDKROOT = macosx;
+				SWIFT_ACTIVE_COMPILATION_CONDITIONS = "DEBUG $(inherited)";
+				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
+			};
+			name = Debug;
+		};
+		AA00000000000000000000E1 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++20";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_ENABLE_OBJC_WEAK = YES;
+				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_COMMA = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_CYCLE = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				COPY_PHASE_STRIP = NO;
+				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
+				ENABLE_NS_ASSERTIONS = NO;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				ENABLE_USER_SCRIPT_SANDBOXING = NO;
+				GCC_C_LANGUAGE_STANDARD = gnu17;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				MACOSX_DEPLOYMENT_TARGET = 14.0;
+				MTL_FAST_MATH = YES;
+				SDKROOT = macosx;
+				SWIFT_COMPILATION_MODE = wholemodule;
+			};
+			name = Release;
+		};
+		AA00000000000000000000E2 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_STYLE = Automatic;
+				COMBINE_HIDPI_IMAGES = YES;
+				DEVELOPMENT_TEAM = LXMY729K5D;
+				ENABLE_HARDENED_RUNTIME = YES;
+				GENERATE_INFOPLIST_FILE = NO;
+				INFOPLIST_FILE = Sources/RecorderToolbar/Info.plist;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/../Frameworks",
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = "com.all-turtles.RecorderToolbar.v3";
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_VERSION = 5.0;
+			};
+			name = Debug;
+		};
+		AA00000000000000000000E3 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_STYLE = Automatic;
+				COMBINE_HIDPI_IMAGES = YES;
+				DEVELOPMENT_TEAM = LXMY729K5D;
+				ENABLE_HARDENED_RUNTIME = YES;
+				GENERATE_INFOPLIST_FILE = NO;
+				INFOPLIST_FILE = Sources/RecorderToolbar/Info.plist;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/../Frameworks",
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = "com.all-turtles.RecorderToolbar.v3";
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_VERSION = 5.0;
+			};
+			name = Release;
+		};
+/* End XCBuildConfiguration section */
+
+/* Begin XCConfigurationList section */
+		AA00000000000000000000C0 /* Build configuration list for PBXProject "RecorderToolbar" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				AA00000000000000000000E0 /* Debug */,
+				AA00000000000000000000E1 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		AA00000000000000000000D0 /* Build configuration list for PBXNativeTarget "RecorderToolbar" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				AA00000000000000000000E2 /* Debug */,
+				AA00000000000000000000E3 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+/* End XCConfigurationList section */
+
+	};
+	rootObject = AA00000000000000000000A0 /* Project object */;
+}

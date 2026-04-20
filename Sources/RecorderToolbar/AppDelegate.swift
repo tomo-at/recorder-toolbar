@@ -88,12 +88,8 @@ class AppDelegate: NSObject, NSApplicationDelegate, UNUserNotificationCenterDele
         statusItem?.menu = buildMenu()
     }
 
-    /// .app から起動された場合は Bundle.main/Resources/、SwiftPM 直接実行時は
-    /// Bundle.module を順にフォールバック検索する。
     private func loadMenuBarIcon() -> NSImage? {
         if let url = Bundle.main.url(forResource: "icon-menu", withExtension: "png"),
-           let img = NSImage(contentsOf: url) { return img }
-        if let url = Bundle.module.url(forResource: "icon-menu", withExtension: "png"),
            let img = NSImage(contentsOf: url) { return img }
         return nil
     }
@@ -158,12 +154,13 @@ class AppDelegate: NSObject, NSApplicationDelegate, UNUserNotificationCenterDele
     private func observeUploadState() {
         state.$isUploading
             .dropFirst()                        // 初期値 false は無視
-            .receive(on: RunLoop.main)
+            .receive(on: DispatchQueue.main)    // RunLoop モード依存を避けるため DispatchQueue に変更
             .sink { [weak self] uploading in
                 guard let self else { return }
                 let s = self.state.settingsPanel.state
                 let usesMenuBar = s.protoVersion == .v2
                     || (s.protoVersion == .v5 && s.v5UploadStyle == .menuBarNotification)
+                NSLog("[Upload] isUploading=\(uploading) usesMenuBar=\(usesMenuBar) style=\(s.v5UploadStyle.rawValue)")
                 guard usesMenuBar else { return }
                 if uploading {
                     self.startUploadIndicator()
@@ -225,12 +222,7 @@ class AppDelegate: NSObject, NSApplicationDelegate, UNUserNotificationCenterDele
     // MARK: – Notifications
 
     private func requestNotificationPermission() {
-        // UNUserNotificationCenter requires a proper .app bundle.
-        // Skip gracefully when running as a bare binary (e.g. Xcode DerivedData).
-        guard let bundleID = Bundle.main.bundleIdentifier else {
-            NSLog("[Notification] No bundleIdentifier — running outside .app bundle. Notifications disabled.")
-            return
-        }
+        let bundleID = Bundle.main.bundleIdentifier ?? "(nil)"
         // アプリ前面時もバナー表示させるため delegate を設定
         let center = UNUserNotificationCenter.current()
         center.delegate = self
@@ -261,7 +253,8 @@ class AppDelegate: NSObject, NSApplicationDelegate, UNUserNotificationCenterDele
     }
 
     private func sendUploadCompleteNotification() {
-        guard Bundle.main.bundleIdentifier != nil else { return }
+        let bundleID = Bundle.main.bundleIdentifier ?? "(nil)"
+        NSLog("[Notification] Sending notification for bundleID: \(bundleID)")
         let content = UNMutableNotificationContent()
         content.title = "Upload Complete"
         content.body  = "Your recording is ready to share."
@@ -274,6 +267,8 @@ class AppDelegate: NSObject, NSApplicationDelegate, UNUserNotificationCenterDele
         UNUserNotificationCenter.current().add(request) { error in
             if let error = error {
                 NSLog("[Notification] Add error: \(error.localizedDescription)")
+            } else {
+                NSLog("[Notification] Scheduled successfully")
             }
         }
     }
