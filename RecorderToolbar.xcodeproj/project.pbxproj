@@ -24,7 +24,7 @@
 		AA00000000000000000002AE /* ToolbarViewV5.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA00000000000000000001AE /* ToolbarViewV5.swift */; };
 		AA00000000000000000002AF /* WindowOverlay.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA00000000000000000001AF /* WindowOverlay.swift */; };
 		AA00000000000000000002B0 /* main.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA00000000000000000001B0 /* main.swift */; };
-		AA00000000000000000002B1 /* icon-menu.png in Resources */ = {isa = PBXBuildFile; fileRef = AA00000000000000000001B1 /* icon-menu.png */; };
+		AA00000000000000000002B1 /* assets/icon-menu.png in Resources */ = {isa = PBXBuildFile; fileRef = AA00000000000000000001B1 /* assets/icon-menu.png */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -46,7 +46,7 @@
 		AA00000000000000000001AE /* ToolbarViewV5.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ToolbarViewV5.swift; sourceTree = "<group>"; };
 		AA00000000000000000001AF /* WindowOverlay.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WindowOverlay.swift; sourceTree = "<group>"; };
 		AA00000000000000000001B0 /* main.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = main.swift; sourceTree = "<group>"; };
-		AA00000000000000000001B1 /* icon-menu.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = "assets/icon-menu.png"; sourceTree = "<group>"; };
+		AA00000000000000000001B1 /* assets/icon-menu.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = "assets/icon-menu.png"; sourceTree = "<group>"; };
 		AA00000000000000000001B2 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
@@ -61,7 +61,7 @@
 /* End PBXFrameworksBuildPhase section */
 
 /* Begin PBXGroup section */
-		AA00000000000000000000A1 /* RecorderToolbar */ = {
+		AA00000000000000000000A1 = {
 			isa = PBXGroup;
 			children = (
 				AA00000000000000000000A2 /* Sources */,
@@ -89,7 +89,7 @@
 				AA00000000000000000001AE /* ToolbarViewV5.swift */,
 				AA00000000000000000001AF /* WindowOverlay.swift */,
 				AA00000000000000000001B0 /* main.swift */,
-				AA00000000000000000001B1 /* icon-menu.png */,
+				AA00000000000000000001B1 /* assets/icon-menu.png */,
 				AA00000000000000000001B2 /* Info.plist */,
 			);
 			name = Sources;
@@ -162,7 +162,7 @@
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				AA00000000000000000002B1 /* icon-menu.png in Resources */,
+				AA00000000000000000002B1 /* assets/icon-menu.png in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -310,7 +310,7 @@
 			buildSettings = {
 				CODE_SIGN_STYLE = Automatic;
 				COMBINE_HIDPI_IMAGES = YES;
-				DEVELOPMENT_TEAM = LXMY729K5D;
+				DEVELOPMENT_TEAM = Z243284Z97;
 				ENABLE_HARDENED_RUNTIME = YES;
 				GENERATE_INFOPLIST_FILE = NO;
 				INFOPLIST_FILE = Sources/RecorderToolbar/Info.plist;
@@ -330,7 +330,7 @@
 			buildSettings = {
 				CODE_SIGN_STYLE = Automatic;
 				COMBINE_HIDPI_IMAGES = YES;
-				DEVELOPMENT_TEAM = LXMY729K5D;
+				DEVELOPMENT_TEAM = Z243284Z97;
 				ENABLE_HARDENED_RUNTIME = YES;
 				GENERATE_INFOPLIST_FILE = NO;
 				INFOPLIST_FILE = Sources/RecorderToolbar/Info.plist;
@@ -367,7 +367,6 @@
 			defaultConfigurationName = Release;
 		};
 /* End XCConfigurationList section */
-
 	};
 	rootObject = AA00000000000000000000A0 /* Project object */;
 }

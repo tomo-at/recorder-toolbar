@@ -415,6 +415,14 @@ struct HSettingsButton: View {
                     .font(.system(size: 16))
                     .foregroundColor(.white)
                     .frame(width: 24, height: 24)
+                    .overlay(alignment: .topTrailing) {
+                        if settings.settingsBadge {
+                            Circle()
+                                .fill(Color.modelessTeal)
+                                .frame(width: 6, height: 6)
+                                .offset(x: 3, y: -1)
+                        }
+                    }
                 if showChevron {
                     Image(systemName: "chevron.down")
                         .font(.system(size: 10, weight: .medium))

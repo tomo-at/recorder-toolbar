@@ -164,7 +164,7 @@ final class SettingsPanelController {
 
     func openPrototypeSettings() {
         if prototypeSettingsWC == nil {
-            prototypeSettingsWC = PrototypeSettingsWindowController(state: state)
+            prototypeSettingsWC = PrototypeSettingsWindowController(state: state, toolbarState: toolbarState)
         }
         prototypeSettingsWC?.show()
     }

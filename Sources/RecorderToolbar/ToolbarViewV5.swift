@@ -205,7 +205,7 @@ struct UploadModeView: View {
                     .frame(maxWidth: .infinity, alignment: .leading)
 
                 Button {
-                    // prototype: no-op
+                    if state.isPreviewMode { state.dismissUploadComplete() }
                 } label: {
                     Label("View video", systemImage: "play.rectangle.fill")
                         .font(.system(size: 12, weight: .medium))
