@@ -528,7 +528,7 @@ final class OverlayController {
         )
 
         guard let list = CGWindowListCopyWindowInfo(
-            [.excludeDesktopElements], kCGNullWindowID
+            [.excludeDesktopElements, .optionOnScreenOnly], kCGNullWindowID
         ) as? [[CFString: Any]] else { return [] }
 
         var result: [DetectedWindow] = []
