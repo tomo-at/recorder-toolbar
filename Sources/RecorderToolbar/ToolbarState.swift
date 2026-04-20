@@ -732,11 +732,18 @@ class ToolbarState: ObservableObject {
         previewOriginalAddWindowPattern = settingsPanel.state.addWindowPattern
         settingsPanel.state.addWindowPattern = pattern
         isPreviewMode = true
-        actuallyStartRecording()
-        // Simulate single-window recording so toolbar shows add-window controls
-        isWindowRecording    = true
-        windowRecordingCount = 1
-        resizePanel(for: .recording)
+        if let panel, let window = overlay.frontmostWindow() {
+            overlay.show(keepingAbove: panel)
+            overlay.freezeToWindow(window)
+            appState = .windowSelect
+            startCountdown()
+        } else {
+            // Fallback: no window found, simulate recording state manually
+            actuallyStartRecording()
+            isWindowRecording    = true
+            windowRecordingCount = 1
+            resizePanel(for: .recording)
+        }
     }
 
     private func exitPreviewMode() {
