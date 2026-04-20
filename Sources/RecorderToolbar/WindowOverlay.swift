@@ -365,6 +365,14 @@ final class OverlayController {
             }
         }
 
+        // Sync live bounds into recorded windows so borders follow moved windows.
+        for i in state.additionalRecordedWindows.indices {
+            let wid = state.additionalRecordedWindows[i].id
+            if let lb = boundsMap[wid], state.additionalRecordedWindows[i].bounds != lb {
+                state.additionalRecordedWindows[i].bounds = lb
+            }
+        }
+
         if moved {
             lastMousePt = pt
             // Clear manual cycle when the cursor leaves the selected window
