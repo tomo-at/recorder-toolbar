@@ -407,10 +407,26 @@ final class OverlayController {
             let newId = matched?.id
             if newId != hoveredRecordedWindowId {
                 if let m = matched {
-                    leaveRecordedWindowTask?.cancel()
-                    leaveRecordedWindowTask = nil
-                    hoveredRecordedWindowId = newId
-                    onHoverRecordedWindow?(m)
+                    if hoveredRecordedWindowId == nil {
+                        // Entering first recorded window: show immediately.
+                        leaveRecordedWindowTask?.cancel()
+                        leaveRecordedWindowTask = nil
+                        hoveredRecordedWindowId = newId
+                        onHoverRecordedWindow?(m)
+                    } else {
+                        // Switching between recorded windows: delay 500 ms so the cursor
+                        // can travel to the Remove dialog above the previous window without
+                        // the target snapping to a different window mid-flight.
+                        if leaveRecordedWindowTask == nil {
+                            leaveRecordedWindowTask = Task { @MainActor [weak self] in
+                                try? await Task.sleep(nanoseconds: 500_000_000)
+                                guard !Task.isCancelled else { return }
+                                self?.leaveRecordedWindowTask = nil
+                                self?.hoveredRecordedWindowId = m.id
+                                self?.onHoverRecordedWindow?(m)
+                            }
+                        }
+                    }
                 } else {
                     // Only start leave timer if not already running (prevents 100ms timer
                     // from cancelling and resetting the task before it can fire).
