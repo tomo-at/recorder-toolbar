@@ -6,11 +6,14 @@ import SwiftUI
 @MainActor
 final class PrototypeSettingsWindowController: NSWindowController {
     private let state: SettingsState
+    private weak var toolbarState: ToolbarState?
+    private var contentViewConfigured = false
 
-    init(state: SettingsState) {
-        self.state = state
+    init(state: SettingsState, toolbarState: ToolbarState?) {
+        self.state        = state
+        self.toolbarState = toolbarState
         let window = NSWindow(
-            contentRect: NSRect(x: 0, y: 0, width: 360, height: 600),
+            contentRect: NSRect(x: 0, y: 0, width: 360, height: 680),
             styleMask: [.titled, .closable],
             backing: .buffered,
             defer: false
@@ -25,13 +28,73 @@ final class PrototypeSettingsWindowController: NSWindowController {
 
     func show() {
         guard let window else { return }
-        window.contentView = NSHostingView(
-            rootView: PrototypeSettingsView(state: state, onClose: { [weak self] in self?.close() })
-        )
-        // .accessory アクティベーションでは既定でフォーカスを取れないので明示的にアクティブ化
+        // Set contentView only once so @State draft values survive close/reopen cycles
+        if !contentViewConfigured {
+            window.contentView = NSHostingView(
+                rootView: PrototypeSettingsView(
+                    state: state,
+                    toolbarState: toolbarState,
+                    onClose: { [weak self] in self?.close() }
+                )
+            )
+            contentViewConfigured = true
+        }
         NSApp.activate(ignoringOtherApps: true)
         showWindow(nil)
         window.makeKeyAndOrderFront(nil)
+    }
+}
+
+// MARK: – Custom radio row with preview button
+
+private struct RadioPreviewRow<T: Hashable>: View {
+    let option:    T
+    let label:     String
+    @Binding var selection: T
+    var warningHelp: String? = nil
+    let onPreview: () -> Void
+
+    var body: some View {
+        HStack(spacing: 0) {
+            Button { selection = option } label: {
+                HStack(spacing: 7) {
+                    ZStack {
+                        Circle()
+                            .strokeBorder(Color.secondary.opacity(0.55), lineWidth: 1.5)
+                            .frame(width: 14, height: 14)
+                        if selection == option {
+                            Circle()
+                                .fill(Color.accentColor)
+                                .frame(width: 7, height: 7)
+                        }
+                    }
+                    Text(label)
+                        .font(.system(size: 13))
+                        .foregroundColor(.primary)
+                    Spacer()
+                }
+            }
+            .buttonStyle(.plain)
+
+            if let help = warningHelp {
+                Image(systemName: "exclamationmark.triangle.fill")
+                    .font(.system(size: 11))
+                    .foregroundColor(.yellow)
+                    .frame(width: 24, height: 24)
+                    .help(help)
+            }
+
+            Button(action: onPreview) {
+                Image(systemName: "play.fill")
+                    .font(.system(size: 9, weight: .medium))
+                    .foregroundColor(.secondary)
+                    .frame(width: 24, height: 24)
+                    .contentShape(Rectangle())
+            }
+            .buttonStyle(.plain)
+            .help("Preview this option")
+        }
+        .frame(minHeight: 22)
     }
 }
 
@@ -39,6 +102,7 @@ final class PrototypeSettingsWindowController: NSWindowController {
 
 struct PrototypeSettingsView: View {
     @ObservedObject var state: SettingsState
+    weak var toolbarState: ToolbarState?
     let onClose: () -> Void
 
     @State private var draftDefault:          SettingsState.DefaultStyle
@@ -46,9 +110,10 @@ struct PrototypeSettingsView: View {
     @State private var draftUpload:           SettingsState.UploadStyle
     @State private var draftAddWindowPattern: SettingsState.AddWindowPattern
 
-    init(state: SettingsState, onClose: @escaping () -> Void) {
-        self.state   = state
-        self.onClose = onClose
+    init(state: SettingsState, toolbarState: ToolbarState?, onClose: @escaping () -> Void) {
+        self.state        = state
+        self.toolbarState = toolbarState
+        self.onClose      = onClose
         _draftDefault          = State(initialValue: state.v5DefaultStyle)
         _draftRecording        = State(initialValue: state.v5RecordingStyle)
         _draftUpload           = State(initialValue: state.v5UploadStyle)
@@ -59,52 +124,76 @@ struct PrototypeSettingsView: View {
         VStack(alignment: .leading, spacing: 18) {
             // Default style
             section(title: "Default style") {
-                Picker("", selection: $draftDefault) {
+                VStack(alignment: .leading, spacing: 4) {
                     ForEach(SettingsState.DefaultStyle.allCases, id: \.self) { opt in
-                        Text(opt.label).tag(opt)
+                        RadioPreviewRow(
+                            option: opt,
+                            label: opt.label,
+                            selection: $draftDefault,
+                            onPreview: {
+                                onClose()
+                                toolbarState?.previewDefaultStyle(opt)
+                            }
+                        )
                     }
                 }
-                .pickerStyle(.radioGroup)
-                .labelsHidden()
             }
 
             Divider()
 
             // Recording
             section(title: "Recording") {
-                Picker("", selection: $draftRecording) {
+                VStack(alignment: .leading, spacing: 4) {
                     ForEach(SettingsState.RecordingStyle.allCases, id: \.self) { opt in
-                        Text(opt.label).tag(opt)
+                        RadioPreviewRow(
+                            option: opt,
+                            label: opt.label,
+                            selection: $draftRecording,
+                            onPreview: {
+                                onClose()
+                                toolbarState?.previewRecordingStyle(opt)
+                            }
+                        )
                     }
                 }
-                .pickerStyle(.radioGroup)
-                .labelsHidden()
             }
 
             Divider()
 
             // Uploading
             section(title: "Uploading") {
-                Picker("", selection: $draftUpload) {
+                VStack(alignment: .leading, spacing: 4) {
                     ForEach(SettingsState.UploadStyle.allCases, id: \.self) { opt in
-                        Text(opt.label).tag(opt)
+                        RadioPreviewRow(
+                            option: opt,
+                            label: opt.label,
+                            selection: $draftUpload,
+                            onPreview: {
+                                onClose()
+                                toolbarState?.previewUploadStyle(opt)
+                            }
+                        )
                     }
                 }
-                .pickerStyle(.radioGroup)
-                .labelsHidden()
             }
 
             Divider()
 
             // Add window
             section(title: "Add window") {
-                Picker("", selection: $draftAddWindowPattern) {
+                VStack(alignment: .leading, spacing: 4) {
                     ForEach(SettingsState.AddWindowPattern.allCases, id: \.self) { opt in
-                        Text(opt.label).tag(opt)
+                        RadioPreviewRow(
+                            option: opt,
+                            label: opt.label,
+                            selection: $draftAddWindowPattern,
+                            onPreview: {
+                                onClose()
+                                toolbarState?.previewAddWindowPattern(opt)
+                            }
+                        )
                     }
                 }
-                .pickerStyle(.radioGroup)
-                .labelsHidden()
             }
 
             Spacer(minLength: 0)
@@ -124,7 +213,7 @@ struct PrototypeSettingsView: View {
             }
         }
         .padding(20)
-        .frame(width: 360, height: 600)
+        .frame(width: 360, height: 680)
     }
 
     @ViewBuilder
