@@ -135,9 +135,14 @@ final class OverlayController {
         startTracking()
     }
 
-    /// Returns the frontmost non-system on-screen window, used for auto-start on launch.
+    /// Returns the frontmost window belonging to a Dock-visible (regular) app.
     func frontmostWindow() -> DetectedWindow? {
-        enumerateWindows().first
+        let regularPIDs = Set(
+            NSWorkspace.shared.runningApplications
+                .filter { $0.activationPolicy == .regular }
+                .map { $0.processIdentifier }
+        )
+        return enumerateWindows().first { regularPIDs.contains($0.ownerPID) }
     }
 
     /// Directly freeze to a given window without requiring a hover event.
