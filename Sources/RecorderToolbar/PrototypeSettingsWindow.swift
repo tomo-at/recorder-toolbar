@@ -92,7 +92,7 @@ private struct RadioPreviewRow<T: Hashable>: View {
                     .contentShape(Rectangle())
             }
             .buttonStyle(.plain)
-            .help("Preview this option")
+            .help("Quick build")
         }
         .frame(minHeight: 22)
     }
