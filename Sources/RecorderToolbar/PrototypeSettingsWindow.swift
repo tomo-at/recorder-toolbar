@@ -1,6 +1,62 @@
 import AppKit
 import SwiftUI
 
+// MARK: – Instant tooltip (zero-delay, NSPanel-backed)
+
+/// NSView that shows a floating tooltip panel immediately on mouseEntered.
+private final class InstantTooltipNSView: NSView {
+    var label: String = ""
+    private var tooltipPanel: NSPanel?
+
+    override func updateTrackingAreas() {
+        super.updateTrackingAreas()
+        trackingAreas.forEach { removeTrackingArea($0) }
+        addTrackingArea(NSTrackingArea(rect: bounds,
+                                       options: [.mouseEnteredAndExited, .activeAlways],
+                                       owner: self, userInfo: nil))
+    }
+
+    override func mouseEntered(with event: NSEvent) { showPanel() }
+    override func mouseExited(with event: NSEvent)  { hidePanel() }
+
+    private func showPanel() {
+        hidePanel()
+        let tf = NSTextField(labelWithString: label)
+        tf.font = .systemFont(ofSize: 11)
+        tf.textColor = .labelColor
+        tf.sizeToFit()
+
+        let hPad: CGFloat = 7, vPad: CGFloat = 3
+        let size = CGSize(width: tf.frame.width + hPad * 2,
+                          height: tf.frame.height + vPad * 2)
+        guard let screenRect = window?.convertToScreen(convert(bounds, to: nil)) else { return }
+
+        let p = NSPanel(contentRect: .init(origin: .zero, size: size),
+                        styleMask: [.borderless, .nonactivatingPanel],
+                        backing: .buffered, defer: false)
+        p.level = NSWindow.Level(rawValue: 200) // kCGHelpWindowLevel
+        p.backgroundColor = .windowBackgroundColor
+        p.isOpaque = true
+        p.hasShadow = true
+        tf.frame = NSRect(x: hPad, y: vPad, width: tf.frame.width, height: tf.frame.height)
+        p.contentView?.addSubview(tf)
+        p.setFrameOrigin(NSPoint(x: screenRect.midX - size.width / 2,
+                                 y: screenRect.maxY + 4))
+        p.orderFrontRegardless()
+        tooltipPanel = p
+    }
+
+    private func hidePanel() { tooltipPanel?.orderOut(nil); tooltipPanel = nil }
+}
+
+private struct InstantTooltip: NSViewRepresentable {
+    let text: String
+    func makeNSView(context: Context) -> InstantTooltipNSView {
+        let v = InstantTooltipNSView(); v.label = text; return v
+    }
+    func updateNSView(_ v: InstantTooltipNSView, context: Context) { v.label = text }
+}
+
 // MARK: – Window controller
 
 @MainActor
@@ -92,7 +148,7 @@ private struct RadioPreviewRow<T: Hashable>: View {
                     .contentShape(Rectangle())
             }
             .buttonStyle(.plain)
-            .help("Quick build")
+            .background(InstantTooltip(text: "Quick build"))
         }
         .frame(minHeight: 22)
     }
