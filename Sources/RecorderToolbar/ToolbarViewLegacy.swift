@@ -395,7 +395,7 @@ struct TypeSelectViewV2: View {
                     }
                 }
             }
-            .padding(.horizontal, 8)
+            .padding(.horizontal, 4)
         }
         .task { await state.loadDevices() }
     }

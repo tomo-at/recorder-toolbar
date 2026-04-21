@@ -775,7 +775,7 @@ struct RevealedAllCompactTypeSelectView: View {
 
                 HSettingsButton(state: state, settings: settings, showChevron: true, height: 48)
             }
-            .padding(.horizontal, 8)
+            .padding(.horizontal, 4)
         }
         .task { await state.loadDevices() }
     }
