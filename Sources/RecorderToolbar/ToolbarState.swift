@@ -221,6 +221,7 @@ class ToolbarState: ObservableObject {
         areaOverlay.onDragStart = { [weak self] in
             guard let self, self.usesSelectionConfirmPanel else { return }
             self.selectionConfirmPanel.dismiss()
+            self.areaOverlay.confirmPanelFrame = nil
         }
         // Drag end: re-show confirm panel at the updated position.
         areaOverlay.onDragEnd = { [weak self] in
@@ -913,6 +914,8 @@ class ToolbarState: ObservableObject {
     private func showAreaConfirmPanel() {
         guard let panel else { return }
         let origin = confirmPanelOriginForArea(rect: areaOverlay.currentRect, above: panel)
+        let confirmSize = CGSize(width: 284, height: 204)
+        areaOverlay.confirmPanelFrame = CGRect(origin: origin, size: confirmSize)
         selectionConfirmPanel.show(origin: origin, above: panel, state: self,
             onCancel: { [weak self] in self?.exitSelecting() },
             onRecord: { [weak self] in

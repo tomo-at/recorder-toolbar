@@ -166,6 +166,10 @@ final class AreaOverlayController {
     /// AppKit rect of the frozen selection (set in freeze()).
     private(set) var frozenRect: CGRect? = nil
 
+    /// AppKit frame of the confirm panel while it is visible.
+    /// Cursor changes and drag starts are suppressed inside this rect.
+    var confirmPanelFrame: CGRect? = nil
+
     /// AppKit rect of the live selection (updated continuously while dragging).
     var currentRect: CGRect? {
         guard let state = selectionState, let screen = activeScreen else { return nil }
@@ -231,11 +235,12 @@ final class AreaOverlayController {
     }
 
     private func reset() {
-        overlayWin    = nil
-        activeScreen  = nil
-        selectionState = nil
-        frozenRect    = nil
-        activeDrag    = nil
+        overlayWin        = nil
+        activeScreen      = nil
+        selectionState    = nil
+        frozenRect        = nil
+        activeDrag        = nil
+        confirmPanelFrame = nil
     }
 
     // MARK: – Monitors
@@ -317,6 +322,10 @@ final class AreaOverlayController {
     // MARK: – Cursor
 
     private func updateCursor(at apkPt: NSPoint) {
+        // Show arrow cursor over the confirm panel so buttons appear interactive.
+        if let frame = confirmPanelFrame, frame.contains(apkPt) {
+            NSCursor.arrow.set(); return
+        }
         guard let screen = activeScreen, let state = selectionState else {
             NSCursor.crosshair.set(); return
         }
@@ -343,6 +352,8 @@ final class AreaOverlayController {
     private func handleMouseDown(at apkPt: NSPoint) {
         guard let screen = activeScreen, let state = selectionState,
               screen.frame.contains(apkPt) else { return }
+        // Ignore clicks inside the confirm panel so its buttons remain clickable.
+        if let frame = confirmPanelFrame, frame.contains(apkPt) { return }
         let localPt = toLocal(apkPt, screen: screen)
         let handle = hitHandle(at: localPt, in: state.selRect)
         activeDrag = ActiveDrag(handle: handle, startPt: localPt, startRect: state.selRect)
