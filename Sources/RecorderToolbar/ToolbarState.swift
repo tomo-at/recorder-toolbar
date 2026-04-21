@@ -97,6 +97,18 @@ class ToolbarState: ObservableObject {
         return s.protoVersion == .v5 && s.v5RecordingStyle == .selectToStart
     }
 
+    /// Area selection is not supported with selectToStart (UI shows disabled button).
+    var isAreaDisabled: Bool {
+        let s = settingsPanel.state
+        return s.protoVersion == .v5 && s.v5RecordingStyle == .selectToStart
+    }
+
+    /// V5(.toolbar) recording style shows the pre-recording toolbar when Area is selected.
+    private var usesToolbarRecordingStyle: Bool {
+        let s = settingsPanel.state
+        return s.protoVersion == .v5 && s.v5RecordingStyle == .toolbar
+    }
+
     /// Styles with camera AND mic both visible in the toolbar use the full-screen window picker
     /// (toolbar hidden, bottom-bar hint shown across the entire display).
     private var shouldUseFullScreenWindowPicker: Bool {
@@ -191,7 +203,7 @@ class ToolbarState: ObservableObject {
             }
         }
 
-        // Area dragged: freeze overlay, proceed like window selection.
+        // Area confirmed (Enter key): freeze overlay, proceed like window/display selection.
         areaOverlay.onSelect = { [weak self] in
             guard let self else { return }
             self.areaOverlay.freeze()
@@ -202,12 +214,11 @@ class ToolbarState: ObservableObject {
             }
             self.appState = .windowSelect
             guard self.usesSelectionConfirmPanel else { return }
-            if let panel = self.panel {
-                let origin = NSPoint(x: panel.frame.minX, y: panel.frame.maxY + 8)
-                self.selectionConfirmPanel.show(origin: origin, above: panel, state: self,
-                    onCancel: { [weak self] in self?.appState = .typeSelect },
-                    onRecord:  { [weak self] in self?.startCountdown() })
-            }
+            guard let panel = self.panel else { return }
+            let origin = self.confirmPanelOriginForArea(above: panel)
+            self.selectionConfirmPanel.show(origin: origin, above: panel, state: self,
+                onCancel: { [weak self] in self?.appState = .typeSelect },
+                onRecord:  { [weak self] in self?.startCountdown() })
         }
         areaOverlay.onCancel = { [weak self] in self?.exitSelecting() }
 
@@ -323,6 +334,10 @@ class ToolbarState: ObservableObject {
             }
         case .area:
             areaOverlay.show(keepingAbove: panel)
+            // Toolbar recording style: show pre-recording toolbar immediately on Area click.
+            if usesToolbarRecordingStyle {
+                appState = .windowSelect
+            }
         }
     }
 
@@ -334,6 +349,10 @@ class ToolbarState: ObservableObject {
         areaOverlay.hide()
         windowSelectionBottomBar.hide()
         panel?.orderFrontRegardless()
+        // Reset to typeSelect (e.g. when area+toolbar mode was entered but user cancels).
+        if appState == .windowSelect || appState == .displaySelect {
+            appState = .typeSelect
+        }
     }
 
     // MARK: – State change handler
@@ -871,6 +890,32 @@ class ToolbarState: ObservableObject {
             appState = .typeSelect
         }
         settingsPanel.openPrototypeSettings()
+    }
+
+    // MARK: – Area confirm panel placement
+
+    /// Returns the bottom-left origin (AppKit screen coords) for the SelectionConfirmPanel
+    /// when the selection was made via area overlay.
+    /// Places the panel inside the selection at bottom-left; if the area is too small,
+    /// places it just below the selection instead.
+    private func confirmPanelOriginForArea(above panel: NSPanel) -> NSPoint {
+        let confirmSize = CGSize(width: 284, height: 204)
+        let margin: CGFloat = 8
+
+        if let frozen = areaOverlay.frozenRect,
+           frozen.width  >= confirmSize.width  + margin * 2,
+           frozen.height >= confirmSize.height + margin * 2 {
+            // Inside the selection at bottom-left
+            return NSPoint(x: frozen.minX + margin, y: frozen.minY + margin)
+        }
+
+        // Outside: fall back to just below the frozen rect, or above the toolbar
+        if let frozen = areaOverlay.frozenRect {
+            return NSPoint(x: frozen.minX, y: frozen.minY - confirmSize.height - margin)
+        }
+
+        // Last resort: above the toolbar (original placement)
+        return NSPoint(x: panel.frame.minX, y: panel.frame.maxY + margin)
     }
 
     // MARK: – View helpers (shared across TypeSelect variants)

@@ -40,7 +40,8 @@ struct TypeSelectView: View {
                 }
 
                 SegmentButton(icon: "rectangle.dashed", label: "Area",
-                              isActive: state.selectionMode == .area) {
+                              isActive: state.selectionMode == .area,
+                              isDisabled: state.isAreaDisabled) {
                     state.toggleSelecting(.area)
                 }
                 .onHover { h in
@@ -340,7 +341,8 @@ struct TypeSelectViewV2: View {
                     }
 
                     SegmentButton(icon: "rectangle.dashed", label: "Area",
-                                  isActive: state.selectionMode == .area) {
+                                  isActive: state.selectionMode == .area,
+                                  isDisabled: state.isAreaDisabled) {
                         state.toggleSelecting(.area)
                     }
                     .onHover { h in
@@ -396,10 +398,11 @@ struct TypeSelectViewV2: View {
 // ── V3: Segmented Control type selector ────────────────────
 
 struct SegmentedControlItem: View {
-    let icon:     String
-    let label:    String
-    var isActive: Bool = false
-    let action:   () -> Void
+    let icon:       String
+    let label:      String
+    var isActive:   Bool = false
+    var isDisabled: Bool = false
+    let action:     () -> Void
     @State private var hovering = false
 
     var body: some View {
@@ -418,11 +421,13 @@ struct SegmentedControlItem: View {
             .background(
                 RoundedRectangle(cornerRadius: 8)
                     .fill(isActive  ? Color.white.opacity(0.16)
-                          : hovering ? Color.highlightPrimary
+                          : hovering && !isDisabled ? Color.highlightPrimary
                           : Color.clear)
             )
         }
         .buttonStyle(.plain)
+        .disabled(isDisabled)
+        .opacity(isDisabled ? 0.35 : 1.0)
         .onHover { hovering = $0 }
     }
 }
@@ -455,7 +460,8 @@ struct TypeSelectViewV3: View {
                     }
 
                     SegmentedControlItem(icon: "rectangle.dashed", label: "Area",
-                                         isActive: state.selectionMode == .area) {
+                                         isActive: state.selectionMode == .area,
+                                         isDisabled: state.isAreaDisabled) {
                         state.toggleSelecting(.area)
                     }
                     .onHover { h in
