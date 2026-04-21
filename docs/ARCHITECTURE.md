@@ -34,7 +34,8 @@ CLAUDE.md から分離した参照テーブル。判断に必要なルールは 
 | `CameraSegment.swift` | CameraSegment / MicSegment / CamOnlySegment / CameraThumb / CameraPreviewView / DeviceMenuView / MicLevelBars |
 | `SettingsPanel.swift` | SettingsPanelController・SettingsState（V5 軸 enum + UserDefaults）・Settings SwiftUI ビュー |
 | `PrototypeSettingsWindow.swift` | V5 独立設定ウィンドウ（DefaultStyle × RecordingStyle × UploadStyle × AddWindow） |
-| `Helpers.swift` | Airtime DS 色トークン・NSPanel/NSWindow ファクトリ・フェードアニメーション・各種パネルコントローラー（ShortcutTooltip / ToolbarWindowPopup / WindowMultiDialog / WindowHoverDialog / UploadCompleteBanner / CamOnlyPanel / SelectionConfirmPanel） |
+| `Helpers.swift` | Airtime DS 色トークン・KeyablePanel・NSPanel/NSWindow/NSScreen ファクトリ・フェードアニメーション・AVCaptureDevice 拡張 |
+| `PanelControllers.swift` | DS ダイアログ部品（BackdropBlur / DSGhostButtonStyle / DSPrimaryButtonStyle / DSDialogContainer）・各種パネルコントローラーとそのビュー（ShortcutTooltip / ToolbarWindowPopup / WindowMultiDialog / WindowHoverDialog / UploadCompleteBanner / CamOnlyPanel / SelectionConfirmPanel） |
 
 ---
 
