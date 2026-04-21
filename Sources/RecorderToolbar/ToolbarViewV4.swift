@@ -251,16 +251,10 @@ struct SelectionConfirmView: View {
     var body: some View {
         ZStack(alignment: .top) {
             VStack(spacing: 0) {
-                // Camera preview
+                // Camera preview — fills full width, clipped by outer cornerRadius:16
                 CameraThumb(deviceId: state.activeCamId)
                     .frame(maxWidth: .infinity)
                     .frame(height: 160)
-                    .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
-                    .overlay(
-                        RoundedRectangle(cornerRadius: 12, style: .continuous)
-                            .stroke(Color.highlightPrimary, lineWidth: 1)
-                    )
-                    .padding(6)
 
                 // Controls row
                 HStack(spacing: 8) {
