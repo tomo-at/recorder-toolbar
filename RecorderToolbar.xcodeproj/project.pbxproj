@@ -27,6 +27,14 @@
 		AA00000000000000000002B2 /* WindowSelectionBottomBar.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA00000000000000000001B3 /* WindowSelectionBottomBar.swift */; };
 		AA00000000000000000002B3 /* AreaOverlay.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA00000000000000000001B4 /* AreaOverlay.swift */; };
 		AA00000000000000000002B1 /* assets/icon-menu.png in Resources */ = {isa = PBXBuildFile; fileRef = AA00000000000000000001B1 /* assets/icon-menu.png */; };
+		AA00000000000000000002B4 /* ToolbarState+AreaConfirm.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA00000000000000000001B5 /* ToolbarState+AreaConfirm.swift */; };
+		AA00000000000000000002B5 /* ToolbarState+CameraPreview.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA00000000000000000001B6 /* ToolbarState+CameraPreview.swift */; };
+		AA00000000000000000002B6 /* ToolbarState+PanelLayout.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA00000000000000000001B7 /* ToolbarState+PanelLayout.swift */; };
+		AA00000000000000000002B7 /* ToolbarState+PreviewMode.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA00000000000000000001B8 /* ToolbarState+PreviewMode.swift */; };
+		AA00000000000000000002B8 /* ToolbarState+Recording.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA00000000000000000001B9 /* ToolbarState+Recording.swift */; };
+		AA00000000000000000002B9 /* ToolbarState+Selection.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA00000000000000000001BA /* ToolbarState+Selection.swift */; };
+		AA00000000000000000002BA /* ToolbarState+ViewHelpers.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA00000000000000000001BB /* ToolbarState+ViewHelpers.swift */; };
+		AA00000000000000000002BB /* ToolbarState+WindowRecording.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA00000000000000000001BC /* ToolbarState+WindowRecording.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -49,6 +57,14 @@
 		AA00000000000000000001AF /* WindowOverlay.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WindowOverlay.swift; sourceTree = "<group>"; };
 		AA00000000000000000001B3 /* WindowSelectionBottomBar.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WindowSelectionBottomBar.swift; sourceTree = "<group>"; };
 		AA00000000000000000001B4 /* AreaOverlay.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AreaOverlay.swift; sourceTree = "<group>"; };
+		AA00000000000000000001B5 /* ToolbarState+AreaConfirm.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "ToolbarState+AreaConfirm.swift"; sourceTree = "<group>"; };
+		AA00000000000000000001B6 /* ToolbarState+CameraPreview.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "ToolbarState+CameraPreview.swift"; sourceTree = "<group>"; };
+		AA00000000000000000001B7 /* ToolbarState+PanelLayout.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "ToolbarState+PanelLayout.swift"; sourceTree = "<group>"; };
+		AA00000000000000000001B8 /* ToolbarState+PreviewMode.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "ToolbarState+PreviewMode.swift"; sourceTree = "<group>"; };
+		AA00000000000000000001B9 /* ToolbarState+Recording.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "ToolbarState+Recording.swift"; sourceTree = "<group>"; };
+		AA00000000000000000001BA /* ToolbarState+Selection.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "ToolbarState+Selection.swift"; sourceTree = "<group>"; };
+		AA00000000000000000001BB /* ToolbarState+ViewHelpers.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "ToolbarState+ViewHelpers.swift"; sourceTree = "<group>"; };
+		AA00000000000000000001BC /* ToolbarState+WindowRecording.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "ToolbarState+WindowRecording.swift"; sourceTree = "<group>"; };
 		AA00000000000000000001B0 /* main.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = main.swift; sourceTree = "<group>"; };
 		AA00000000000000000001B1 /* assets/icon-menu.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = "assets/icon-menu.png"; sourceTree = "<group>"; };
 		AA00000000000000000001B2 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
@@ -94,6 +110,14 @@
 				AA00000000000000000001AF /* WindowOverlay.swift */,
 				AA00000000000000000001B3 /* WindowSelectionBottomBar.swift */,
 				AA00000000000000000001B4 /* AreaOverlay.swift */,
+				AA00000000000000000001B5 /* ToolbarState+AreaConfirm.swift */,
+				AA00000000000000000001B6 /* ToolbarState+CameraPreview.swift */,
+				AA00000000000000000001B7 /* ToolbarState+PanelLayout.swift */,
+				AA00000000000000000001B8 /* ToolbarState+PreviewMode.swift */,
+				AA00000000000000000001B9 /* ToolbarState+Recording.swift */,
+				AA00000000000000000001BA /* ToolbarState+Selection.swift */,
+				AA00000000000000000001BB /* ToolbarState+ViewHelpers.swift */,
+				AA00000000000000000001BC /* ToolbarState+WindowRecording.swift */,
 				AA00000000000000000001B0 /* main.swift */,
 				AA00000000000000000001B1 /* assets/icon-menu.png */,
 				AA00000000000000000001B2 /* Info.plist */,
@@ -197,6 +221,14 @@
 				AA00000000000000000002AF /* WindowOverlay.swift in Sources */,
 				AA00000000000000000002B2 /* WindowSelectionBottomBar.swift in Sources */,
 				AA00000000000000000002B3 /* AreaOverlay.swift in Sources */,
+				AA00000000000000000002B4 /* ToolbarState+AreaConfirm.swift in Sources */,
+				AA00000000000000000002B5 /* ToolbarState+CameraPreview.swift in Sources */,
+				AA00000000000000000002B6 /* ToolbarState+PanelLayout.swift in Sources */,
+				AA00000000000000000002B7 /* ToolbarState+PreviewMode.swift in Sources */,
+				AA00000000000000000002B8 /* ToolbarState+Recording.swift in Sources */,
+				AA00000000000000000002B9 /* ToolbarState+Selection.swift in Sources */,
+				AA00000000000000000002BA /* ToolbarState+ViewHelpers.swift in Sources */,
+				AA00000000000000000002BB /* ToolbarState+WindowRecording.swift in Sources */,
 				AA00000000000000000002B0 /* main.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
