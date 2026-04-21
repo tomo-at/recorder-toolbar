@@ -463,27 +463,42 @@ private struct WindowDragNSView: NSViewRepresentable {
 }
 
 private struct ResizeGripNSView: NSViewRepresentable {
-    func makeNSView(context: Context) -> _RGView { _RGView() }
+    /// Height of any fixed-height area below the camera (e.g. controls bar).
+    /// The camera portion is resized at 16:9; this value is added on top unchanged.
+    var fixedBottomHeight: CGFloat = 0
+
+    func makeNSView(context: Context) -> _RGView { _RGView(fixedBottomHeight: fixedBottomHeight) }
     func updateNSView(_ v: _RGView, context: Context) {}
 
     class _RGView: NSView {
+        private let fixedBottomHeight: CGFloat
         private var startMouse: CGPoint = .zero
         private var startFrame: CGRect = .zero
+        private var aspectRatio: CGFloat = 16.0 / 9.0   // width / cameraHeight
+
+        init(fixedBottomHeight: CGFloat) {
+            self.fixedBottomHeight = fixedBottomHeight
+            super.init(frame: .zero)
+        }
+        required init?(coder: NSCoder) { fatalError() }
 
         override func mouseDown(with e: NSEvent) {
             guard let w = window else { return }
             startMouse = NSEvent.mouseLocation
             startFrame = w.frame
+            let cameraH = startFrame.height - fixedBottomHeight
+            if cameraH > 0 { aspectRatio = startFrame.width / cameraH }
         }
         override func mouseDragged(with e: NSEvent) {
             guard let w = window else { return }
-            let cur = NSEvent.mouseLocation
-            let dx = cur.x - startMouse.x
-            let dy = cur.y - startMouse.y
+            let dx = NSEvent.mouseLocation.x - startMouse.x
+            let newWidth      = max(480, startFrame.width + dx)
+            let newCameraH    = (newWidth / aspectRatio).rounded()
+            let newHeight     = newCameraH + fixedBottomHeight
             var f = startFrame
-            f.size.width  = max(480, f.size.width + dx)
-            f.size.height = max(300, f.size.height - dy)
-            f.origin.y    = startFrame.maxY - f.size.height
+            f.size.width  = newWidth
+            f.size.height = newHeight
+            f.origin.y    = startFrame.maxY - newHeight
             w.setFrame(f, display: true)
         }
         override func resetCursorRects() { addCursorRect(bounds, cursor: .crosshair) }
@@ -495,9 +510,10 @@ private struct WindowDrag: View {
 }
 
 private struct ResizeGripButton: View {
+    var fixedBottomHeight: CGFloat = 0
     var body: some View {
         ZStack {
-            ResizeGripNSView()
+            ResizeGripNSView(fixedBottomHeight: fixedBottomHeight)
             Image(systemName: "arrow.up.left.and.arrow.down.right")
                 .font(.system(size: 11, weight: .semibold))
                 .foregroundColor(.white.opacity(0.5))
@@ -525,7 +541,8 @@ struct CamOnlyConfirmView: View {
                 CameraThumb(deviceId: state.activeCamId)
                     .frame(maxWidth: .infinity, maxHeight: .infinity)
                     .overlay(WindowDrag())
-                ResizeGripButton().padding(8)
+                // fixedBottomHeight = controls bar (44px) so camera stays 16:9
+                ResizeGripButton(fixedBottomHeight: 44).padding(8)
             }
 
             ZStack {
