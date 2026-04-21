@@ -1,17 +1,43 @@
 import AppKit
 import SwiftUI
 
-// MARK: – Area selection overlay
+// MARK: – Area selection overlay (macOS screen recording style)
 //
-// Shows a dim overlay with an even-odd "hole" at the dragged selection rect.
-// Mouse tracking uses global NSEvent monitors (same pattern as WindowOverlay).
+// Shows a default 55%-width 16:9 selection rect on open.
+// Drag handles (corners + edge midpoints) allow resize; drag interior to move;
+// drag outside to start a fresh selection.
+// Confirm with Enter key. Cancel with Esc (ToolbarState).
 
-// MARK: – Shared state
+// MARK: – Drag handle
+
+private enum AreaDragHandle {
+    case topLeft, topCenter, topRight
+    case midLeft, midRight
+    case bottomLeft, bottomCenter, bottomRight
+    case interior   // drag to move
+    case newRect    // drag from outside → fresh selection
+}
+
+private let kHandleSize:  CGFloat = 8
+private let kHandleHitR:  CGFloat = 10
+private let kMinRectSize: CGFloat = 30
+
+// MARK: – Shared state (controller → view)
 
 @MainActor
 final class AreaSelectionState: ObservableObject {
     /// Selection rect in screen-local SwiftUI coords (top-left origin, y↓).
-    @Published var selRect: CGRect? = nil
+    @Published var selRect: CGRect
+
+    init(screenSize: CGSize) {
+        let w = screenSize.width * 0.55
+        let h = w * (9.0 / 16.0)
+        selRect = CGRect(
+            x: (screenSize.width  - w) / 2,
+            y: (screenSize.height - h) / 2,
+            width: w, height: h
+        )
+    }
 }
 
 // MARK: – Per-screen overlay window
@@ -19,14 +45,15 @@ final class AreaSelectionState: ObservableObject {
 @MainActor
 final class AreaScreenOverlayWindow {
     private var win: NSWindow?
-    let screenState = AreaSelectionState()
+    let screenState: AreaSelectionState
     let screen: NSScreen
 
-    init(screen: NSScreen, level: NSWindow.Level) {
+    init(screen: NSScreen, level: NSWindow.Level, state: AreaSelectionState) {
         self.screen = screen
+        self.screenState = state
         let w = NSWindow.makeOverlay(frame: screen.frame, level: level)
         let hosting = NSHostingView(
-            rootView: AreaOverlayView(screenSize: screen.frame.size, state: screenState)
+            rootView: AreaOverlayView(screenSize: screen.frame.size, state: state)
         )
         hosting.frame = CGRect(origin: .zero, size: screen.frame.size)
         w.contentView = hosting
@@ -46,11 +73,12 @@ struct AreaOverlayView: View {
     @ObservedObject var state: AreaSelectionState
 
     var body: some View {
+        let r = state.selRect
         ZStack {
             Canvas { ctx, size in
                 var path = Path()
                 path.addRect(CGRect(origin: .zero, size: size))
-                if let r = state.selRect, r.width > 2, r.height > 2 {
+                if r.width > 2, r.height > 2 {
                     path.addRoundedRect(
                         in: r,
                         cornerRadii: .init(topLeading: 2, bottomLeading: 2,
@@ -61,16 +89,37 @@ struct AreaOverlayView: View {
                          style: FillStyle(eoFill: true))
             }
 
-            if let r = state.selRect, r.width > 4, r.height > 4 {
+            if r.width > kHandleSize * 2, r.height > kHandleSize * 2 {
                 RoundedRectangle(cornerRadius: 2)
                     .stroke(Color.selectionOrange,
                             style: StrokeStyle(lineWidth: 2, dash: [8, 5]))
                     .frame(width: r.width, height: r.height)
                     .position(x: r.midX, y: r.midY)
+
+                handle(at: CGPoint(x: r.minX, y: r.minY))
+                handle(at: CGPoint(x: r.midX, y: r.minY))
+                handle(at: CGPoint(x: r.maxX, y: r.minY))
+                handle(at: CGPoint(x: r.minX, y: r.midY))
+                handle(at: CGPoint(x: r.maxX, y: r.midY))
+                handle(at: CGPoint(x: r.minX, y: r.maxY))
+                handle(at: CGPoint(x: r.midX, y: r.maxY))
+                handle(at: CGPoint(x: r.maxX, y: r.maxY))
             }
         }
         .frame(width: screenSize.width, height: screenSize.height)
         .allowsHitTesting(false)
+    }
+
+    @ViewBuilder
+    private func handle(at pt: CGPoint) -> some View {
+        RoundedRectangle(cornerRadius: 2, style: .continuous)
+            .fill(Color.white)
+            .frame(width: kHandleSize, height: kHandleSize)
+            .overlay(
+                RoundedRectangle(cornerRadius: 2, style: .continuous)
+                    .stroke(Color.selectionOrange, lineWidth: 1)
+            )
+            .position(pt)
     }
 }
 
@@ -78,16 +127,25 @@ struct AreaOverlayView: View {
 
 @MainActor
 final class AreaOverlayController {
-    private var screenOverlays: [AreaScreenOverlayWindow] = []
-    private var moveMonitor:    Any?
-    private var downMonitor:    Any?
-    private var dragMonitor:    Any?
-    private var upMonitor:      Any?
+    private var overlayWin:     AreaScreenOverlayWindow? = nil
+    private var activeScreen:   NSScreen? = nil
+    private var selectionState: AreaSelectionState? = nil
 
-    private var dragStart:  NSPoint? = nil
-    private var dragScreen: NSScreen? = nil
+    private var moveMonitor:        Any?
+    private var downMonitor:        Any?
+    private var dragMonitor:        Any?
+    private var upMonitor:          Any?
+    private var enterGlobalMonitor: Any?
+    private var enterLocalMonitor:  Any?
 
-    /// AppKit rect of the completed selection. Set on a valid mouseUp.
+    private struct ActiveDrag {
+        let handle:    AreaDragHandle
+        let startPt:   CGPoint  // screen-local SwiftUI at drag-start
+        let startRect: CGRect   // selRect at drag-start
+    }
+    private var activeDrag: ActiveDrag? = nil
+
+    /// AppKit rect of the frozen selection (set in freeze()).
     private(set) var frozenRect: CGRect? = nil
 
     var onSelect: (() -> Void)? = nil
@@ -97,44 +155,63 @@ final class AreaOverlayController {
 
     func show(keepingAbove panel: NSPanel) {
         hideImmediate()
-        for screen in NSScreen.screens {
-            let o = AreaScreenOverlayWindow(screen: screen, level: panel.level)
-            o.show()
-            screenOverlays.append(o)
-        }
+        let screen = panel.screen ?? NSScreen.main ?? NSScreen.screens[0]
+        activeScreen = screen
+
+        let state = AreaSelectionState(screenSize: screen.frame.size)
+        selectionState = state
+
+        let overlay = AreaScreenOverlayWindow(screen: screen, level: panel.level, state: state)
+        overlay.show()
+        overlayWin = overlay
+
         startMonitors()
         panel.orderFrontRegardless()
+        updateCursor(at: NSEvent.mouseLocation)
     }
 
     func hide() {
         stopMonitors()
-        for o in screenOverlays { o.hide(animated: true) }
-        screenOverlays.removeAll()
-        frozenRect = nil
-        dragStart  = nil
+        overlayWin?.hide(animated: true)
+        reset()
         NSCursor.arrow.set()
     }
 
     func hideImmediate() {
         stopMonitors()
-        for o in screenOverlays { o.hide(animated: false) }
-        screenOverlays.removeAll()
-        frozenRect = nil
-        dragStart  = nil
+        overlayWin?.hide(animated: false)
+        reset()
         NSCursor.arrow.set()
     }
 
-    /// Stop monitors but keep overlay visible with the frozen selection.
+    /// Stop monitors but keep overlay visible with the current selection.
     func freeze() {
         stopMonitors()
+        if let state = selectionState, let screen = activeScreen {
+            let r = state.selRect
+            // Convert screen-local SwiftUI → AppKit for callers that need screen coords.
+            frozenRect = CGRect(
+                x: r.minX + screen.frame.minX,
+                y: screen.frame.maxY - r.maxY,
+                width: r.width, height: r.height
+            )
+        }
         NSCursor.arrow.set()
+    }
+
+    private func reset() {
+        overlayWin    = nil
+        activeScreen  = nil
+        selectionState = nil
+        frozenRect    = nil
+        activeDrag    = nil
     }
 
     // MARK: – Monitors
 
     private func startMonitors() {
-        moveMonitor = NSEvent.addGlobalMonitorForEvents(matching: .mouseMoved) { _ in
-            Task { @MainActor in NSCursor.crosshair.set() }
+        moveMonitor = NSEvent.addGlobalMonitorForEvents(matching: .mouseMoved) { [weak self] _ in
+            Task { @MainActor [weak self] in self?.updateCursor(at: NSEvent.mouseLocation) }
         }
         downMonitor = NSEvent.addGlobalMonitorForEvents(matching: .leftMouseDown) { [weak self] _ in
             Task { @MainActor [weak self] in self?.handleMouseDown(at: NSEvent.mouseLocation) }
@@ -145,61 +222,160 @@ final class AreaOverlayController {
         upMonitor = NSEvent.addGlobalMonitorForEvents(matching: .leftMouseUp) { [weak self] _ in
             Task { @MainActor [weak self] in self?.handleMouseUp(at: NSEvent.mouseLocation) }
         }
-        NSCursor.crosshair.set()
+        // Enter key (keyCode 36 = Return, 76 = numpad Enter) confirms the selection.
+        enterGlobalMonitor = NSEvent.addGlobalMonitorForEvents(matching: .keyDown) { [weak self] e in
+            guard e.keyCode == 36 || e.keyCode == 76 else { return }
+            Task { @MainActor [weak self] in self?.onSelect?() }
+        }
+        enterLocalMonitor = NSEvent.addLocalMonitorForEvents(matching: .keyDown) { [weak self] e in
+            guard e.keyCode == 36 || e.keyCode == 76 else { return e }
+            Task { @MainActor [weak self] in self?.onSelect?() }
+            return nil
+        }
     }
 
     private func stopMonitors() {
-        for token in [moveMonitor, downMonitor, dragMonitor, upMonitor].compactMap({ $0 }) {
+        for token in [moveMonitor, downMonitor, dragMonitor, upMonitor,
+                      enterGlobalMonitor, enterLocalMonitor].compactMap({ $0 }) {
             NSEvent.removeMonitor(token)
         }
         moveMonitor = nil; downMonitor = nil; dragMonitor = nil; upMonitor = nil
+        enterGlobalMonitor = nil; enterLocalMonitor = nil
     }
 
-    // MARK: – Drag tracking
-
-    private func screen(containing point: NSPoint) -> NSScreen? {
-        NSScreen.screens.first { $0.frame.contains(point) } ?? NSScreen.main
-    }
+    // MARK: – Coordinate helpers
 
     /// AppKit (bottom-left origin) → screen-local SwiftUI (top-left origin, y↓).
-    private func toLocal(_ point: NSPoint, screen: NSScreen) -> CGPoint {
-        CGPoint(x: point.x - screen.frame.minX,
-                y: screen.frame.maxY - point.y)
+    private func toLocal(_ pt: NSPoint, screen: NSScreen) -> CGPoint {
+        CGPoint(x: pt.x - screen.frame.minX, y: screen.frame.maxY - pt.y)
     }
 
-    private func handleMouseDown(at location: NSPoint) {
-        dragStart  = location
-        dragScreen = screen(containing: location)
-        NSCursor.crosshair.set()
+    // MARK: – Hit testing
+
+    private func hitHandle(at pt: CGPoint, in r: CGRect) -> AreaDragHandle {
+        let handles: [(AreaDragHandle, CGPoint)] = [
+            (.topLeft,      CGPoint(x: r.minX, y: r.minY)),
+            (.topCenter,    CGPoint(x: r.midX, y: r.minY)),
+            (.topRight,     CGPoint(x: r.maxX, y: r.minY)),
+            (.midLeft,      CGPoint(x: r.minX, y: r.midY)),
+            (.midRight,     CGPoint(x: r.maxX, y: r.midY)),
+            (.bottomLeft,   CGPoint(x: r.minX, y: r.maxY)),
+            (.bottomCenter, CGPoint(x: r.midX, y: r.maxY)),
+            (.bottomRight,  CGPoint(x: r.maxX, y: r.maxY)),
+        ]
+        for (handle, hp) in handles {
+            let dx = pt.x - hp.x, dy = pt.y - hp.y
+            if dx*dx + dy*dy <= kHandleHitR * kHandleHitR { return handle }
+        }
+        if r.contains(pt) { return .interior }
+        return .newRect
     }
 
-    private func handleMouseDrag(to location: NSPoint) {
-        guard let start = dragStart, let screen = dragScreen else { return }
-        NSCursor.crosshair.set()
-        let s = toLocal(start,    screen: screen)
-        let e = toLocal(location, screen: screen)
-        let rect = CGRect(x: min(s.x, e.x), y: min(s.y, e.y),
-                          width: abs(e.x - s.x), height: abs(e.y - s.y))
-        for o in screenOverlays {
-            o.screenState.selRect = o.screen === screen ? rect : nil
+    // MARK: – Cursor
+
+    private func updateCursor(at apkPt: NSPoint) {
+        guard let screen = activeScreen, let state = selectionState else {
+            NSCursor.crosshair.set(); return
+        }
+        guard screen.frame.contains(apkPt) else { NSCursor.arrow.set(); return }
+        setCursor(for: hitHandle(at: toLocal(apkPt, screen: screen), in: state.selRect),
+                  pressed: false)
+    }
+
+    private func setCursor(for handle: AreaDragHandle, pressed: Bool) {
+        switch handle {
+        case .interior:
+            (pressed ? NSCursor.closedHand : NSCursor.openHand).set()
+        case .midLeft, .midRight:
+            NSCursor.resizeLeftRight.set()
+        case .topCenter, .bottomCenter:
+            NSCursor.resizeUpDown.set()
+        default:
+            NSCursor.crosshair.set()
         }
     }
 
-    private func handleMouseUp(at location: NSPoint) {
-        guard let start = dragStart, let screen = dragScreen else { return }
-        dragStart = nil
+    // MARK: – Mouse handlers
 
-        let dx = abs(location.x - start.x)
-        let dy = abs(location.y - start.y)
+    private func handleMouseDown(at apkPt: NSPoint) {
+        guard let screen = activeScreen, let state = selectionState,
+              screen.frame.contains(apkPt) else { return }
+        let localPt = toLocal(apkPt, screen: screen)
+        let handle = hitHandle(at: localPt, in: state.selRect)
+        activeDrag = ActiveDrag(handle: handle, startPt: localPt, startRect: state.selRect)
+        setCursor(for: handle, pressed: true)
+    }
 
-        guard dx > 10, dy > 10 else {
-            for o in screenOverlays { o.screenState.selRect = nil }
-            onCancel?()
-            return
+    private func handleMouseDrag(to apkPt: NSPoint) {
+        guard let drag = activeDrag,
+              let screen = activeScreen,
+              let state  = selectionState else { return }
+        let localPt = toLocal(apkPt, screen: screen)
+        let bounds  = CGRect(origin: .zero, size: screen.frame.size)
+        state.selRect = applyDrag(drag: drag, to: localPt, bounds: bounds)
+        setCursor(for: drag.handle, pressed: true)
+    }
+
+    private func handleMouseUp(at apkPt: NSPoint) {
+        guard let drag = activeDrag, let state = selectionState else { return }
+        // Restore previous rect if a newRect drag resulted in a tiny selection.
+        if drag.handle == .newRect,
+           (state.selRect.width < kMinRectSize || state.selRect.height < kMinRectSize) {
+            state.selRect = drag.startRect
+        }
+        activeDrag = nil
+        updateCursor(at: apkPt)
+    }
+
+    // MARK: – Drag math
+
+    private func applyDrag(drag: ActiveDrag, to pt: CGPoint, bounds: CGRect) -> CGRect {
+        let dx = pt.x - drag.startPt.x
+        let dy = pt.y - drag.startPt.y
+        let s  = drag.startRect
+        var r: CGRect
+
+        switch drag.handle {
+        case .topLeft:
+            r = CGRect(x: s.minX + dx, y: s.minY + dy,
+                       width: s.width - dx, height: s.height - dy)
+        case .topCenter:
+            r = CGRect(x: s.minX, y: s.minY + dy,
+                       width: s.width, height: s.height - dy)
+        case .topRight:
+            r = CGRect(x: s.minX, y: s.minY + dy,
+                       width: s.width + dx, height: s.height - dy)
+        case .midLeft:
+            r = CGRect(x: s.minX + dx, y: s.minY,
+                       width: s.width - dx, height: s.height)
+        case .midRight:
+            r = CGRect(x: s.minX, y: s.minY,
+                       width: s.width + dx, height: s.height)
+        case .bottomLeft:
+            r = CGRect(x: s.minX + dx, y: s.minY,
+                       width: s.width - dx, height: s.height + dy)
+        case .bottomCenter:
+            r = CGRect(x: s.minX, y: s.minY,
+                       width: s.width, height: s.height + dy)
+        case .bottomRight:
+            r = CGRect(x: s.minX, y: s.minY,
+                       width: s.width + dx, height: s.height + dy)
+        case .interior:
+            r = CGRect(x: s.minX + dx, y: s.minY + dy,
+                       width: s.width, height: s.height)
+        case .newRect:
+            r = CGRect(x: min(drag.startPt.x, pt.x), y: min(drag.startPt.y, pt.y),
+                       width: abs(pt.x - drag.startPt.x), height: abs(pt.y - drag.startPt.y))
         }
 
-        frozenRect = CGRect(x: min(start.x, location.x), y: min(start.y, location.y),
-                            width: dx, height: dy)
-        onSelect?()
+        // Normalize negative dims (e.g. dragging a corner past the opposite side).
+        r = r.standardized
+        // Enforce minimum size.
+        if r.width  < kMinRectSize { r.size.width  = kMinRectSize }
+        if r.height < kMinRectSize { r.size.height = kMinRectSize }
+        // Clamp to screen.
+        r.origin.x = max(bounds.minX, min(r.origin.x, bounds.maxX - r.width))
+        r.origin.y = max(bounds.minY, min(r.origin.y, bounds.maxY - r.height))
+        return r
     }
 }
