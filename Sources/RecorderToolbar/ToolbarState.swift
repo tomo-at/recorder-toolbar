@@ -19,6 +19,7 @@ enum SelectionMode {
     case window
     case display
     case area
+    case camOnly
 }
 
 @MainActor
@@ -53,6 +54,7 @@ class ToolbarState: ObservableObject {
     let settingsPanel    = SettingsPanelController()
     let shortcutTooltip        = ShortcutTooltipController()
     let selectionConfirmPanel  = SelectionConfirmPanelController()
+    let camOnlyPanel           = CamOnlyPanelController()
     let uploadCompleteBanner   = UploadCompleteBannerController()
     let windowMultiDialog      = WindowMultiDialogController()
     let windowSelectionBottomBar = WindowSelectionBottomBarController()
@@ -292,14 +294,16 @@ class ToolbarState: ObservableObject {
     }
 
     private func enterSelecting(_ mode: SelectionMode) {
-        // Dismiss any confirm panel from a previous mode before entering a new one.
+        // Dismiss any confirm/preview panels from a previous mode before entering a new one.
         selectionConfirmPanel.dismiss()
+        camOnlyPanel.dismiss()
 
         // Hide overlays for the other modes when switching.
         switch mode {
         case .window:  displayOverlay.hide(); areaOverlay.hideImmediate()
         case .display: overlay.hide();        areaOverlay.hideImmediate()
         case .area:    overlay.hide();        displayOverlay.hide()
+        case .camOnly: overlay.hide();        displayOverlay.hide(); areaOverlay.hideImmediate()
         }
 
         selectionMode = mode
@@ -332,6 +336,28 @@ class ToolbarState: ObservableObject {
             if usesSelectionConfirmPanel {
                 showAreaConfirmPanel()
             }
+        case .camOnly:
+            if usesToolbarRecordingStyle {
+                // Toolbar style: show preview-only panel; toolbar handles controls.
+                let sz = CGSize(width: 284, height: 200)
+                let origin = NSPoint(x: panel.frame.midX - sz.width / 2,
+                                     y: panel.frame.maxY + 8)
+                camOnlyPanel.showPreview(origin: origin, above: panel,
+                                         deviceId: activeCamId)
+                appState = .windowSelect
+            } else {
+                // selectedRegion (and all other styles): show confirm panel with controls.
+                let sz = CGSize(width: 284, height: 244)
+                let origin = NSPoint(x: panel.frame.midX - sz.width / 2,
+                                     y: panel.frame.maxY + 8)
+                camOnlyPanel.showConfirm(origin: origin, above: panel, state: self,
+                    onCancel: { [weak self] in self?.exitSelecting() },
+                    onRecord: { [weak self] in
+                        guard let self else { return }
+                        self.selectionMode = nil
+                        self.startCountdown()
+                    })
+            }
         }
     }
 
@@ -343,8 +369,9 @@ class ToolbarState: ObservableObject {
         areaOverlay.hide()
         windowSelectionBottomBar.hide()
         selectionConfirmPanel.dismiss()
+        camOnlyPanel.dismiss()
         panel?.orderFrontRegardless()
-        // Reset to typeSelect (e.g. when area+toolbar mode was entered but user cancels).
+        // Reset to typeSelect (e.g. when area/camOnly+toolbar mode was entered but user cancels).
         if appState == .windowSelect || appState == .displaySelect {
             appState = .typeSelect
         }
@@ -376,17 +403,20 @@ class ToolbarState: ObservableObject {
             overlay.hide()
             displayOverlay.hide()
             areaOverlay.hideImmediate()
+            camOnlyPanel.dismiss()
         case .windowSelect, .displaySelect:
             // Restore toolbar hidden during full-screen window picker.
             windowSelectionBottomBar.hide()
             panel?.orderFrontRegardless()
             // Keep areaOverlay visible when frozen (area selection was confirmed).
+            // Keep camOnlyPanel visible for toolbar-style cam-only preview.
         case .countdown:
             windowSelectionBottomBar.hide()
             areaOverlay.hideImmediate()
+            camOnlyPanel.dismiss()
             panel?.orderFrontRegardless()
         case .recording:
-            break  // overlays are managed by selectionMode / freeze()
+            break
         }
         resizePanel(for: state)
     }
@@ -518,6 +548,7 @@ class ToolbarState: ObservableObject {
     // MARK: – Countdown & Recording
 
     func startCountdown() {
+        selectionMode = nil
         if appState == .windowSelect  { overlay.freeze() }
         if appState == .displaySelect { displayOverlay.freeze() }
         settingsPanel.dismiss()

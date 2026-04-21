@@ -21,6 +21,7 @@ struct TypeSelectViewV4: View {
         case .display: return "Click a display to start recording"
         case .window:  return "Click a window to start recording"
         case .area:    return "Drag to select a recording area"
+        case .camOnly: return "Ready to record camera"
         case nil:      return "Choose a recording type"
         }
     }
@@ -62,7 +63,10 @@ struct TypeSelectViewV4: View {
                     else  { state.shortcutTooltip.hide() }
                 }
 
-                SegmentedControlItem(icon: "person.crop.rectangle.fill", label: "Cam only") {}
+                SegmentedControlItem(icon: "person.crop.rectangle.fill", label: "Cam only",
+                                     isActive: state.selectionMode == .camOnly) {
+                    state.toggleSelecting(.camOnly)
+                }
                     .onHover { h in
                         guard let panel = state.panel else { return }
                         if h, let id = state.activeCamId {
@@ -439,5 +443,106 @@ private struct ConfirmMicButton: View {
             }
         }
         .onDisappear { meterTimer?.invalidate(); meterTimer = nil }
+    }
+}
+
+// MARK: – Cam-only: large preview + controls (selectedRegion and default styles)
+
+struct CamOnlyConfirmView: View {
+    @ObservedObject var state: ToolbarState
+    let onCancel: () -> Void
+    let onRecord: () -> Void
+
+    private var usesIconMicStyle: Bool {
+        let s = state.settingsPanel.state.v5DefaultStyle
+        return s == .revealedAllCompact || s == .horizontal
+    }
+
+    var body: some View {
+        VStack(spacing: 0) {
+            CameraThumb(deviceId: state.activeCamId)
+                .frame(maxWidth: .infinity)
+                .frame(height: 200)
+
+            HStack(spacing: 6) {
+                Button(action: onCancel) {
+                    Text("Cancel")
+                        .font(.system(size: 12, weight: .medium))
+                        .foregroundColor(.white)
+                        .frame(height: 28)
+                        .padding(.horizontal, 10)
+                        .background(Color.white.opacity(0.06))
+                        .clipShape(RoundedRectangle(cornerRadius: 6, style: .continuous))
+                }
+                .buttonStyle(.plain)
+
+                Spacer()
+
+                ConfirmCameraButton(
+                    devices: state.cameraDevices,
+                    activeId: $state.activeCamId
+                )
+                ConfirmMicButton(
+                    devices: state.micDevices,
+                    activeId: $state.activeMicId,
+                    usesIconStyle: usesIconMicStyle
+                )
+
+                Button {
+                    guard let panel = state.panel else { return }
+                    state.settingsPanel.toggle(toolbar: panel,
+                                               buttonCenterX: panel.frame.midX)
+                } label: {
+                    Image(systemName: "gearshape.fill")
+                        .font(.system(size: 14))
+                        .foregroundColor(.white)
+                        .frame(width: 28, height: 28)
+                        .background(Color.white.opacity(0.06))
+                        .clipShape(RoundedRectangle(cornerRadius: 6, style: .continuous))
+                }
+                .buttonStyle(.plain)
+
+                Button(action: onRecord) {
+                    HStack(spacing: 4) {
+                        Image(systemName: "record.circle.fill")
+                            .font(.system(size: 13))
+                        Text("Record")
+                            .font(.system(size: 12, weight: .medium))
+                    }
+                    .foregroundColor(.white)
+                    .frame(height: 28)
+                    .padding(.horizontal, 10)
+                    .background(Color.accentDestructive)
+                    .clipShape(RoundedRectangle(cornerRadius: 6, style: .continuous))
+                }
+                .buttonStyle(.plain)
+            }
+            .padding(8)
+            .overlay(alignment: .top) {
+                Rectangle().fill(Color.highlightPrimary).frame(height: 1)
+            }
+        }
+        .background(Color.bgPrimary)
+        .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
+        .overlay(
+            RoundedRectangle(cornerRadius: 16, style: .continuous)
+                .strokeBorder(Color.white.opacity(0.15), lineWidth: 1)
+        )
+    }
+}
+
+// MARK: – Cam-only: preview only (toolbar style — controls stay in toolbar)
+
+struct CamOnlyPreviewView: View {
+    let deviceId: String?
+
+    var body: some View {
+        CameraThumb(deviceId: deviceId)
+            .frame(width: 284, height: 200)
+            .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
+            .overlay(
+                RoundedRectangle(cornerRadius: 16, style: .continuous)
+                    .strokeBorder(Color.white.opacity(0.15), lineWidth: 1)
+            )
     }
 }

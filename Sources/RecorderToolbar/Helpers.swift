@@ -652,6 +652,63 @@ final class UploadCompleteBannerController {
 // MARK: – Selection confirm panel (V4: preview + Cancel/Record at window bottom-left)
 
 @MainActor
+// MARK: – Cam-only panel
+
+final class CamOnlyPanelController {
+    private var panel: NSPanel?
+
+    /// Show a large camera preview with Cancel/Cam/Mic/Settings/Record controls.
+    func showConfirm(origin: NSPoint, above toolbar: NSPanel, state: ToolbarState,
+                     onCancel: @escaping () -> Void,
+                     onRecord: @escaping () -> Void) {
+        dismissImmediate()
+        let p = NSPanel.makeFloating(level: toolbar.level)
+        let hosting = NSHostingView(rootView: CamOnlyConfirmView(
+            state: state, onCancel: onCancel, onRecord: onRecord
+        ))
+        hosting.translatesAutoresizingMaskIntoConstraints = false
+        hosting.wantsLayer = true
+        hosting.layer?.backgroundColor = .clear
+        p.contentView = hosting
+        p.setContentSize(CGSize(width: 284, height: 244))
+        p.setFrameOrigin(origin)
+        p.fadeIn()
+        p.invalidateShadow()
+        panel = p
+        toolbar.orderFrontRegardless()
+    }
+
+    /// Show a large camera preview with no controls (toolbar handles recording).
+    func showPreview(origin: NSPoint, above toolbar: NSPanel, deviceId: String?) {
+        dismissImmediate()
+        let p = NSPanel.makeFloating(level: toolbar.level)
+        let hosting = NSHostingView(rootView: CamOnlyPreviewView(deviceId: deviceId))
+        hosting.translatesAutoresizingMaskIntoConstraints = false
+        hosting.wantsLayer = true
+        hosting.layer?.backgroundColor = .clear
+        p.contentView = hosting
+        p.setContentSize(CGSize(width: 284, height: 200))
+        p.setFrameOrigin(origin)
+        p.fadeIn()
+        p.invalidateShadow()
+        panel = p
+        toolbar.orderFrontRegardless()
+    }
+
+    private func dismissImmediate() {
+        panel?.orderOut(nil)
+        panel = nil
+    }
+
+    func dismiss() {
+        guard let p = panel else { return }
+        panel = nil
+        p.fadeOut(resetAlpha: true)
+    }
+}
+
+// MARK: – Selection confirm panel
+
 final class SelectionConfirmPanelController {
     private var panel: NSPanel?
 

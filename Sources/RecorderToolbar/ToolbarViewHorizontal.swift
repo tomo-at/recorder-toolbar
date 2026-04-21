@@ -250,7 +250,9 @@ struct CaptureTypeMenuView: View {
             captureRow(icon: "rectangle.dashed", label: "Area", isActive: false) {
                 dismiss()
             }
-            captureRow(icon: "person.crop.rectangle.fill", label: "Cam only", isActive: false) {
+            captureRow(icon: "person.crop.rectangle.fill", label: "Cam only",
+                       isActive: state.selectionMode == .camOnly) {
+                state.activateSelecting(.camOnly)
                 dismiss()
             }
         }
@@ -597,7 +599,11 @@ struct RevealedAllCompactTypeSelectView: View {
                         else  { state.shortcutTooltip.hide() }
                     }
 
-                    CamOnlySegment(activeId: state.activeCamId) { h in
+                    CamOnlySegment(
+                        activeId: state.activeCamId,
+                        isActive: state.selectionMode == .camOnly,
+                        action: { state.toggleSelecting(.camOnly) }
+                    ) { h in
                         guard let panel = state.panel else { return }
                         if h, let id = state.activeCamId {
                             state.showCameraPreview(deviceId: id, above: panel)

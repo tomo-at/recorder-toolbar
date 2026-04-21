@@ -52,11 +52,13 @@ struct CameraSegment: View {
 // Camera-only button for TypeSelectView — shows live preview thumbnail, no device menu.
 struct CamOnlySegment: View {
     let activeId: String?
+    var isActive: Bool = false
+    var action: () -> Void = {}
     var onHoverChanged: ((Bool) -> Void)? = nil
     @State private var hovering = false
 
     var body: some View {
-        Button {} label: {
+        Button { action() } label: {
             VStack(spacing: 4) {
                 Image(systemName: "person.crop.rectangle.fill")
                     .font(.system(size: 14))
@@ -68,7 +70,7 @@ struct CamOnlySegment: View {
                     .lineLimit(1)
             }
             .frame(width: 64, height: 48)
-            .background(hovering ? Color.highlightPrimary : .clear)
+            .background(isActive || hovering ? Color.highlightPrimary : .clear)
             .cornerRadius(4)
         }
         .buttonStyle(.plain)
