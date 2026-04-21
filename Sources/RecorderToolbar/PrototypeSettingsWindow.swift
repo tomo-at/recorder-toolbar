@@ -239,7 +239,7 @@ struct PrototypeSettingsView: View {
             Divider()
 
             // Add window
-            section(title: "Add window") {
+            section(title: "Multiple Window") {
                 VStack(alignment: .leading, spacing: 4) {
                     ForEach(SettingsState.AddWindowPattern.allCases, id: \.self) { opt in
                         RadioPreviewRow(
