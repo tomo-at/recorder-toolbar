@@ -65,28 +65,28 @@ class ToolbarState: ObservableObject {
     @Published var isWindowRecording:    Bool             = false
     @Published var windowRecordingCount: Int              = 0
     @Published var recordedWindows:      [DetectedWindow] = []
-    private var headerMessageTask:   Task<Void, Never>?
-    private var switchTargetWindow:  DetectedWindow?      = nil
+    var headerMessageTask:   Task<Void, Never>?
+    var switchTargetWindow:  DetectedWindow?      = nil
 
-    private var timer:              AnyCancellable?
-    private var countdownTask:      Task<Void, Never>?
-    private var uploadTask:         Task<Void, Never>?
-    private var cameraPreviewPanel: NSPanel?
-    private var escKeyMonitor:      Any?
-    private var escLocalMonitor:    Any?
-    private var cancellables:       Set<AnyCancellable> = []
+    var timer:              AnyCancellable?
+    var countdownTask:      Task<Void, Never>?
+    var uploadTask:         Task<Void, Never>?
+    var cameraPreviewPanel: NSPanel?
+    var escKeyMonitor:      Any?
+    var escLocalMonitor:    Any?
+    var cancellables:       Set<AnyCancellable> = []
 
     // MARK: – Preview mode
     @Published var isPreviewMode = false
-    private var previewOriginalDefaultStyle:     SettingsState.DefaultStyle?
-    private var previewOriginalRecordingStyle:   SettingsState.RecordingStyle?
-    private var previewOriginalUploadStyle:      SettingsState.UploadStyle?
-    private var previewOriginalAddWindowPattern: SettingsState.AddWindowPattern?
-    private var previewClickMonitor: Any?
-    private var previewCancellables = Set<AnyCancellable>()
+    var previewOriginalDefaultStyle:     SettingsState.DefaultStyle?
+    var previewOriginalRecordingStyle:   SettingsState.RecordingStyle?
+    var previewOriginalUploadStyle:      SettingsState.UploadStyle?
+    var previewOriginalAddWindowPattern: SettingsState.AddWindowPattern?
+    var previewClickMonitor: Any?
+    var previewCancellables = Set<AnyCancellable>()
 
     /// V4 / V5(.selectedRegion) は選択確定後に SelectionConfirmPanel を出す。
-    private var usesSelectionConfirmPanel: Bool {
+    var usesSelectionConfirmPanel: Bool {
         let s = settingsPanel.state
         if s.protoVersion == .v4 { return true }
         if s.protoVersion == .v5 && s.v5RecordingStyle == .selectedRegion { return true }
@@ -94,14 +94,14 @@ class ToolbarState: ObservableObject {
     }
 
     /// V5(.toolbar) recording style shows the pre-recording toolbar when Area is selected.
-    private var usesToolbarRecordingStyle: Bool {
+    var usesToolbarRecordingStyle: Bool {
         let s = settingsPanel.state
         return s.protoVersion == .v5 && s.v5RecordingStyle == .toolbar
     }
 
     /// Styles with camera AND mic both visible in the toolbar use the full-screen window picker
     /// (toolbar hidden, bottom-bar hint shown across the entire display).
-    private var shouldUseFullScreenWindowPicker: Bool {
+    var shouldUseFullScreenWindowPicker: Bool {
         guard settingsPanel.state.protoVersion == .v5 else { return false }
         let style = settingsPanel.state.v5DefaultStyle
         return style == .revealedAll || style == .revealedAllCompact
@@ -264,133 +264,9 @@ class ToolbarState: ObservableObject {
 
     }
 
-    // MARK: – Selection mode (overlay visible, toolbar still in typeSelect)
-
-    /// Toggle the overlay for the given mode.
-    /// - Same mode re-click → cancel selection.
-    /// - Different mode → switch overlay.
-    func toggleSelecting(_ mode: SelectionMode) {
-        settingsPanel.dismiss()
-
-        // 確定済みの選択状態 (windowSelect/displaySelect) からモード切替する場合は
-        // 一度 typeSelect に戻して確定パネル・オーバーレイをリセットする。
-        if appState == .windowSelect || appState == .displaySelect {
-            appState = .typeSelect
-        }
-        if selectionMode == mode {
-            exitSelecting()
-        } else {
-            enterSelecting(mode)
-        }
-    }
-
-    /// Activate a selection mode without toggling (used by horizontal capture type dropdown).
-    func activateSelecting(_ mode: SelectionMode) {
-        settingsPanel.dismiss()
-        if appState == .windowSelect || appState == .displaySelect {
-            appState = .typeSelect
-        }
-        if selectionMode != mode {
-            enterSelecting(mode)
-        }
-    }
-
-    private func enterSelecting(_ mode: SelectionMode) {
-        // Dismiss any confirm/preview panels from a previous mode before entering a new one.
-        selectionConfirmPanel.dismiss()
-        camOnlyPanel.dismiss()
-
-        // Hide overlays for the other modes when switching.
-        switch mode {
-        case .window:  displayOverlay.hide(); areaOverlay.hideImmediate()
-        case .display: overlay.hide();        areaOverlay.hideImmediate()
-        case .area:    overlay.hide();        displayOverlay.hide()
-        case .camOnly: overlay.hide();        displayOverlay.hide(); areaOverlay.hideImmediate()
-        }
-
-        selectionMode = mode
-
-        guard let panel else { return }
-        switch mode {
-        case .window:
-            overlay.show(keepingAbove: panel)
-            if shouldUseFullScreenWindowPicker {
-                panel.orderOut(nil)
-                let screen = NSScreen.main ?? NSScreen.screens[0]
-                windowSelectionBottomBar.show(screen: screen, level: panel.level,
-                                              message: "Select a window to record")
-            }
-        case .display:
-            displayOverlay.show(keepingAbove: panel)
-            if shouldUseFullScreenWindowPicker {
-                panel.orderOut(nil)
-                let screen = NSScreen.main ?? NSScreen.screens[0]
-                windowSelectionBottomBar.show(screen: screen, level: panel.level,
-                                              message: "Select a display to record")
-            }
-        case .area:
-            areaOverlay.show(keepingAbove: panel)
-            // Toolbar recording style: show pre-recording toolbar immediately on Area click.
-            if usesToolbarRecordingStyle {
-                appState = .windowSelect
-            }
-            // selectedRegion: show confirm panel immediately alongside the area overlay.
-            if usesSelectionConfirmPanel {
-                showAreaConfirmPanel()
-                panel.orderOut(nil)
-            }
-        case .camOnly:
-            let screen = panel.screen ?? NSScreen.main ?? NSScreen.screens[0]
-            if usesToolbarRecordingStyle {
-                // Toolbar style: show preview-only panel; toolbar handles controls.
-                let sz = PanelDimensions.camOnlyPreviewSize
-                let rawX = panel.frame.midX - sz.width / 2
-                let origin = NSPoint(
-                    x: max(screen.frame.minX + 8, min(rawX, screen.frame.maxX - sz.width - 8)),
-                    y: panel.frame.maxY + 8
-                )
-                camOnlyPanel.showPreview(origin: origin, above: panel,
-                                         deviceId: activeCamId)
-                appState = .windowSelect
-            } else {
-                // selectedRegion (and all other styles): show confirm panel with controls.
-                let sz = PanelDimensions.camOnlyConfirmSize
-                let rawX = panel.frame.midX - sz.width / 2
-                let origin = NSPoint(
-                    x: max(screen.frame.minX + 8, min(rawX, screen.frame.maxX - sz.width - 8)),
-                    y: panel.frame.maxY + 8
-                )
-                camOnlyPanel.showConfirm(origin: origin, above: panel, state: self,
-                    onCancel: { [weak self] in self?.exitSelecting() },
-                    onRecord: { [weak self] in
-                        guard let self else { return }
-                        self.selectionMode = nil
-                        self.startCountdown()
-                    })
-                panel.orderOut(nil)
-            }
-        }
-    }
-
-    func exitSelecting() {
-        selectionMode = nil
-        switchTargetWindow = nil
-        overlay.hide()
-        displayOverlay.hide()
-        areaOverlay.hide()
-        windowSelectionBottomBar.hide()
-        selectionConfirmPanel.dismiss()
-        camOnlyPanel.dismiss()
-        panel?.orderFrontRegardless()
-        // Reset to typeSelect (e.g. when area/camOnly+toolbar mode was entered but user cancels).
-        if appState == .windowSelect || appState == .displaySelect {
-            appState = .typeSelect
-        }
-    }
-
     // MARK: – State change handler
 
-    private func handleStateChange(to state: AppState) {
+    func handleStateChange(to state: AppState) {
         // Cancel any in-progress countdown when leaving the countdown state.
         if state != .countdown {
             countdownTask?.cancel()
@@ -435,7 +311,7 @@ class ToolbarState: ObservableObject {
 
     // MARK: – Esc monitor
 
-    private func handleEscPress() {
+    func handleEscPress() {
         if selectionMode != nil {
             exitSelecting()
         } else if appState == .windowSelect || appState == .displaySelect || appState == .countdown {
@@ -443,7 +319,7 @@ class ToolbarState: ObservableObject {
         }
     }
 
-    private func updateEscMonitor() {
+    func updateEscMonitor() {
         let needsMonitor = selectionMode != nil
             || appState == .windowSelect
             || appState == .displaySelect
@@ -472,533 +348,5 @@ class ToolbarState: ObservableObject {
             if let token = escKeyMonitor  { NSEvent.removeMonitor(token); escKeyMonitor = nil }
             if let token = escLocalMonitor { NSEvent.removeMonitor(token); escLocalMonitor = nil }
         }
-    }
-
-    // MARK: – Panel dimensions
-
-    enum PanelDimensions {
-        static let v1Width:                  CGFloat = 345
-        static let v2Width:                  CGFloat = 506
-        static let v3Width:                  CGFloat = 510
-        static let v4Width:                  CGFloat = 482
-        static let v5CompactWidth:           CGFloat = 470
-        static let windowSelectWidth:        CGFloat = 389
-        static let recordingWidth:           CGFloat = 297
-        static let horizontalRecordingWidth: CGFloat = 365
-        static let camOnlyConfirmSize        = CGSize(width: 1080, height: 652)
-        static let camOnlyPreviewSize        = CGSize(width: 1080, height: 608)
-        static let selectionConfirmSize      = CGSize(width: 284,  height: 204)
-    }
-
-    // MARK: – Panel resize
-
-    private func resizePanel(for state: AppState) {
-        guard let panel else { return }
-        let s = settingsPanel.state
-        let isHorizontal = s.protoVersion == .v5 && s.v5DefaultStyle == .horizontal
-        let newH: CGFloat = panelHeight(for: s)
-        let newW: CGFloat
-        switch state {
-        case .recording, .countdown:
-            if s.addWindowPattern == .toolbarControls && isWindowRecording {
-                // Count 1: primary window button + Add button + divider
-                // Count 2: primary window button + secondary window button + divider (no Add)
-                let extraH: CGFloat = windowRecordingCount >= 2 ? 215 : 195
-                let extraV: CGFloat = 140  // SegmentButton 64×2 + divider 9 (same for both counts)
-                newW = isHorizontal ? (PanelDimensions.horizontalRecordingWidth + extraH) : (PanelDimensions.recordingWidth + extraV)
-            } else {
-                newW = isHorizontal ? PanelDimensions.horizontalRecordingWidth : PanelDimensions.recordingWidth
-            }
-        case .typeSelect:
-            switch s.protoVersion {
-            case .v1: newW = PanelDimensions.v1Width
-            case .v2: newW = PanelDimensions.v2Width
-            case .v3: newW = PanelDimensions.v3Width
-            case .v4: newW = PanelDimensions.v4Width
-            case .v5: newW = v5TypeSelectWidth(for: s.v5DefaultStyle)
-            }
-        case .windowSelect, .displaySelect:
-            switch s.protoVersion {
-            case .v1, .v2, .v3: newW = PanelDimensions.windowSelectWidth
-            case .v4: newW = PanelDimensions.v4Width
-            case .v5:
-                switch s.v5RecordingStyle {
-                case .selectedRegion:
-                    // typeSelect が出続けるので幅は defaultStyle に合わせる
-                    newW = v5TypeSelectWidth(for: s.v5DefaultStyle)
-                case .toolbar:
-                    newW = isHorizontal ? PanelDimensions.v4Width : PanelDimensions.windowSelectWidth
-                }
-            }
-        }
-        let cx = panel.frame.midX
-        let y  = panel.frame.origin.y
-        panel.setFrame(NSRect(x: cx - newW / 2, y: y, width: newW, height: newH),
-                       display: true, animate: true)
-    }
-
-    private func v5TypeSelectWidth(for style: SettingsState.DefaultStyle) -> CGFloat {
-        switch style {
-        case .stepByStep:         return PanelDimensions.v1Width
-        case .revealedAll:        return PanelDimensions.v2Width
-        case .message:            return PanelDimensions.v4Width
-        case .horizontal:         return PanelDimensions.v4Width
-        case .revealedAllCompact: return PanelDimensions.v5CompactWidth
-        }
-    }
-
-    private func panelHeight(for s: SettingsState) -> CGFloat {
-        switch s.protoVersion {
-        case .v1, .v2, .v3: return 56
-        case .v4:            return 66
-        case .v5:
-            switch s.v5DefaultStyle {
-            case .stepByStep, .revealedAll, .revealedAllCompact: return 56
-            case .message:                                     return 66
-            case .horizontal:                                  return 48
-            }
-        }
-    }
-
-    /// Current toolbar panel height — used by ToolbarView to keep SwiftUI frame in sync.
-    var currentPanelHeight: CGFloat { panelHeight(for: settingsPanel.state) }
-
-    // MARK: – Countdown & Recording
-
-    func startCountdown() {
-        selectionMode = nil
-        if appState == .windowSelect  { overlay.freeze() }
-        if appState == .displaySelect { displayOverlay.freeze() }
-        settingsPanel.dismiss()
-
-        let choice = settingsPanel.state.countdownChoice
-        guard choice != .none else { actuallyStartRecording(); return }
-
-        let startCount = choice == .one ? 1 : 3
-        countdownSeconds = startCount
-        appState = .countdown
-
-        guard let panel else { return }
-        countdownOverlay.show(keepingAbove: panel)
-        countdownOverlay.setNumber(startCount)
-
-        countdownTask = Task { @MainActor [weak self] in
-            guard let self else { return }
-            var remaining = startCount - 1
-            while remaining >= 1 {
-                try? await Task.sleep(nanoseconds: 1_000_000_000)
-                guard !Task.isCancelled else { return }
-                countdownSeconds = remaining
-                countdownOverlay.setNumber(remaining)
-                remaining -= 1
-            }
-            try? await Task.sleep(nanoseconds: 1_000_000_000)
-            guard !Task.isCancelled else { return }
-            NSSound(named: "Tink")?.play()
-            countdownOverlay.hide()
-            countdownTask = nil
-            actuallyStartRecording()
-        }
-    }
-
-    private func actuallyStartRecording() {
-        appState = .recording
-        seconds  = 0
-        paused   = false
-        timer = Timer.publish(every: 1, on: .main, in: .common)
-            .autoconnect()
-            .sink { [weak self] _ in
-                guard let self, !self.paused else { return }
-                self.seconds += 1
-            }
-
-        // If recording was started from window selection, keep overlay active (border only).
-        if overlay.frozenWindowBounds != nil, let panel {
-            isWindowRecording    = true
-            windowRecordingCount = 1
-            overlay.transitionToLightweight(keepingAbove: panel)
-            recordedWindows = overlay.recordedWindowsList
-            // resizePanel was already called via handleStateChange before isWindowRecording was
-            // set, so call it again now that the correct width can be computed.
-            resizePanel(for: .recording)
-            // In toolbar controls mode, hover tracking is only needed during add-mode.
-            if settingsPanel.state.addWindowPattern == .toolbarControls {
-                overlay.pauseTracking()
-            }
-        }
-    }
-
-    func stopRecording(upload: Bool = true) {
-        let wasPreviewMode = isPreviewMode
-        timer?.cancel()
-        timer    = nil
-        seconds  = 0
-        appState = .typeSelect
-
-        // Reset window recording state
-        isWindowRecording    = false
-        windowRecordingCount = 0
-        recordedWindows      = []
-        windowMultiDialog.dismiss()
-        windowHoverDialog.hide()
-        headerMessageTask?.cancel()
-        headerMessageTask    = nil
-        headerOverrideMessage = nil
-
-        if wasPreviewMode {
-            exitPreviewMode()
-            return
-        }
-
-        guard upload else { return }
-        let s = settingsPanel.state
-        let triggersUpload = s.protoVersion == .v1
-            || s.protoVersion == .v2
-            || s.protoVersion == .v5
-        if triggersUpload {
-            startFakeUpload()
-        }
-    }
-
-    private func startFakeUpload() {
-        uploadTask?.cancel()
-        isUploading    = true
-        uploadProgress = 0.0
-        let s = settingsPanel.state
-        // バッジ系の完了表示を出すのは V1 か V5+toolbar のとき。
-        // V2 / V5+menuBarNotification はメニューバーチェック + 通知で完了を示す。
-        let usesToolbarBadges = s.protoVersion == .v1
-            || (s.protoVersion == .v5 && s.v5UploadStyle == .toolbar)
-
-        uploadTask = Task { @MainActor [weak self] in
-            guard let self else { return }
-            let totalSteps = 50    // 5 秒 × 10 steps/s（デバッグ用）
-            for i in 1...totalSteps {
-                try? await Task.sleep(nanoseconds: 100_000_000)
-                guard !Task.isCancelled else { return }
-                self.uploadProgress = Double(i) / Double(totalSteps)
-            }
-            self.isUploading    = false
-            self.uploadProgress = 0.0
-            if usesToolbarBadges {
-                self.settingsPanel.state.settingsBadge   = true
-                self.settingsPanel.state.allVideosCount += 1
-            }
-            if s.v5UploadStyle == .uploadMode {
-                self.uploadComplete = true
-            }
-            if s.v5UploadStyle == .toolbarWithCompleteMessage, let panel = self.panel {
-                self.uploadCompleteBanner.show(above: panel, onViewVideo: { [weak self] in
-                    self?.dismissUploadComplete()
-                }, onDismiss: { [weak self] in
-                    self?.dismissUploadComplete()
-                })
-            }
-            // プレビュー時: ユーザー操作なしで終わるスタイルは自動でPrototype Settingsへ戻す
-            guard self.isPreviewMode else { return }
-            switch s.v5UploadStyle {
-            case .toolbar:
-                // バッジが表示された状態を少し見せてから戻る
-                try? await Task.sleep(nanoseconds: 1_500_000_000)
-                guard !Task.isCancelled else { return }
-                self.dismissUploadComplete()
-            case .menuBarNotification:
-                // AppDelegate がチェックマークを3秒表示するので、それより少し長く待って戻る
-                try? await Task.sleep(nanoseconds: 3_500_000_000)
-                guard !Task.isCancelled else { return }
-                self.dismissUploadComplete()
-            case .toolbarWithCompleteMessage, .uploadMode:
-                break  // バナー/Complete UIのボタンクリックで dismissUploadComplete() が呼ばれる
-            }
-        }
-    }
-
-    func cancelUpload() {
-        uploadTask?.cancel()
-        uploadTask     = nil
-        isUploading    = false
-        uploadProgress = 0
-        uploadComplete = false
-        uploadCompleteBanner.hide()
-        if isPreviewMode { exitPreviewMode() }
-    }
-
-    func dismissUploadComplete() {
-        uploadComplete = false
-        uploadCompleteBanner.hide()
-        if isPreviewMode { exitPreviewMode() }
-    }
-
-    // MARK: – Window multi-recording helpers
-
-    private func setTemporaryHeaderMessage(_ msg: String, duration: TimeInterval = 3) {
-        headerMessageTask?.cancel()
-        headerOverrideMessage = msg
-        headerMessageTask = Task { @MainActor [weak self] in
-            try? await Task.sleep(nanoseconds: UInt64(duration * 1_000_000_000))
-            guard !Task.isCancelled else { return }
-            self?.headerOverrideMessage = nil
-            self?.headerMessageTask = nil
-        }
-    }
-
-    private func handleWindowAdd(_ window: DetectedWindow) {
-        windowRecordingCount += 1
-        overlay.addRecordedWindow(window)
-        recordedWindows = overlay.recordedWindowsList
-        resizePanel(for: appState)
-        if settingsPanel.state.v5DefaultStyle == .message {
-            setTemporaryHeaderMessage("Recording \(windowRecordingCount) windows")
-        }
-    }
-
-    private func handleWindowRemove(_ window: DetectedWindow) {
-        windowRecordingCount = max(1, windowRecordingCount - 1)
-        overlay.removeRecordedWindow(window)
-        recordedWindows = overlay.recordedWindowsList
-        windowHoverDialog.hide()
-        resizePanel(for: appState)
-    }
-
-    private func switchWindowViaHover(_ target: DetectedWindow) {
-        guard let panel else { return }
-        switchTargetWindow = target
-        windowHoverDialog.hide()
-        windowMultiDialog.dismiss()
-        overlay.startChangeWindowSelection(keepingAbove: panel)
-    }
-
-    private func handleWindowSwitchReplace(target: DetectedWindow, with newWindow: DetectedWindow) {
-        overlay.replaceSpecificRecordedWindow(target, with: newWindow)
-        recordedWindows = overlay.recordedWindowsList
-        resizePanel(for: appState)
-    }
-
-    func showToolbarWindowPopup(at buttonFrame: CGRect,
-                                onRemove: @escaping () -> Void,
-                                onSwitch: (() -> Void)?) {
-        guard let panel else { return }
-        toolbarWindowPopup.show(at: buttonFrame, above: panel, onRemove: onRemove, onSwitch: onSwitch)
-    }
-
-    func switchWindowViaToolbar(_ window: DetectedWindow) {
-        guard let panel else { return }
-        switchTargetWindow = window
-        overlay.startChangeWindowSelection(keepingAbove: panel)
-    }
-
-    func addWindowViaToolbar() {
-        guard let panel else { return }
-        overlay.startAddWindowSelection(keepingAbove: panel)
-    }
-
-    func changeWindowViaToolbar() {
-        guard let panel else { return }
-        overlay.startChangeWindowSelection(keepingAbove: panel)
-    }
-
-    func removeWindowViaToolbar(_ window: DetectedWindow) {
-        handleWindowRemove(window)
-    }
-
-    private func handleWindowReplace(with newWindow: DetectedWindow) {
-        overlay.replaceRecordedWindow(with: newWindow)
-        recordedWindows = overlay.recordedWindowsList
-        resizePanel(for: appState)
-    }
-
-    func togglePause() { paused = !paused }
-
-    // MARK: – Camera preview popup
-
-    func showCameraPreview(deviceId: String, above toolbar: NSPanel) {
-        cameraPreviewPanel?.orderOut(nil)
-        cameraPreviewPanel = nil
-
-        let w: CGFloat = 320, h: CGFloat = 240
-
-        let popup = NSPanel.makeFloating(level: .floating)
-
-        let vfx = NSVisualEffectView()
-        vfx.blendingMode         = .behindWindow
-        vfx.material             = .underWindowBackground
-        vfx.state                = .active
-        vfx.wantsLayer           = true
-        vfx.layer?.cornerRadius  = 24
-        vfx.layer?.masksToBounds = true
-
-        let hosting = NSHostingView(rootView: CameraThumb(deviceId: deviceId))
-        hosting.translatesAutoresizingMaskIntoConstraints = false
-        vfx.addSubview(hosting)
-        NSLayoutConstraint.activate([
-            hosting.leadingAnchor.constraint(equalTo: vfx.leadingAnchor),
-            hosting.trailingAnchor.constraint(equalTo: vfx.trailingAnchor),
-            hosting.topAnchor.constraint(equalTo: vfx.topAnchor),
-            hosting.bottomAnchor.constraint(equalTo: vfx.bottomAnchor),
-        ])
-        popup.contentView = vfx
-        popup.setContentSize(CGSize(width: w, height: h))
-
-        let tf = toolbar.frame
-        popup.setFrameOrigin(NSPoint(x: tf.midX - w / 2, y: tf.maxY + 8))
-
-        popup.fadeIn()
-        cameraPreviewPanel = popup
-    }
-
-    func hideCameraPreview() {
-        guard let popup = cameraPreviewPanel else { return }
-        cameraPreviewPanel = nil
-        popup.fadeOut()
-    }
-
-    var timeString: String {
-        String(format: "%02d:%02d", seconds / 60, seconds % 60)
-    }
-
-    // MARK: – Preview actions
-
-    func previewDefaultStyle(_ style: SettingsState.DefaultStyle) {
-        previewOriginalDefaultStyle = settingsPanel.state.v5DefaultStyle
-        settingsPanel.state.v5DefaultStyle = style
-        isPreviewMode = true
-        // Install click monitor after window-close animation to avoid catching the close click
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.35) { [weak self] in
-            guard let self, self.isPreviewMode else { return }
-            self.previewClickMonitor = NSEvent.addGlobalMonitorForEvents(
-                matching: [.leftMouseDown, .rightMouseDown]
-            ) { [weak self] _ in
-                Task { @MainActor [weak self] in
-                    guard let self, self.isPreviewMode else { return }
-                    self.exitPreviewMode()
-                }
-            }
-        }
-    }
-
-    func previewRecordingStyle(_ style: SettingsState.RecordingStyle) {
-        previewOriginalRecordingStyle = settingsPanel.state.v5RecordingStyle
-        settingsPanel.state.v5RecordingStyle = style
-        isPreviewMode = true
-        $appState
-            .filter { $0 == .recording }
-            .first()
-            .receive(on: RunLoop.main)
-            .sink { [weak self] _ in self?.exitPreviewMode() }
-            .store(in: &previewCancellables)
-    }
-
-    func previewUploadStyle(_ style: SettingsState.UploadStyle) {
-        previewOriginalUploadStyle = settingsPanel.state.v5UploadStyle
-        settingsPanel.state.v5UploadStyle = style
-        isPreviewMode = true
-        startFakeUpload()
-    }
-
-    func previewAddWindowPattern(_ pattern: SettingsState.AddWindowPattern) {
-        previewOriginalAddWindowPattern = settingsPanel.state.addWindowPattern
-        settingsPanel.state.addWindowPattern = pattern
-        isPreviewMode = true
-        if let panel, let window = overlay.frontmostWindow() {
-            overlay.show(keepingAbove: panel)
-            overlay.freezeToWindow(window)
-            appState = .windowSelect
-            startCountdown()
-        } else {
-            // Fallback: no window found, simulate recording state manually
-            actuallyStartRecording()
-            isWindowRecording    = true
-            windowRecordingCount = 1
-            resizePanel(for: .recording)
-        }
-    }
-
-    private func exitPreviewMode() {
-        isPreviewMode = false
-        previewCancellables.removeAll()
-        if let m = previewClickMonitor { NSEvent.removeMonitor(m); previewClickMonitor = nil }
-        // Restore original settings values
-        if let v = previewOriginalDefaultStyle     { settingsPanel.state.v5DefaultStyle    = v; previewOriginalDefaultStyle     = nil }
-        if let v = previewOriginalRecordingStyle   { settingsPanel.state.v5RecordingStyle  = v; previewOriginalRecordingStyle   = nil }
-        if let v = previewOriginalUploadStyle      { settingsPanel.state.v5UploadStyle     = v; previewOriginalUploadStyle      = nil }
-        if let v = previewOriginalAddWindowPattern { settingsPanel.state.addWindowPattern  = v; previewOriginalAddWindowPattern = nil }
-        // Fully reset toolbar to typeSelect regardless of current state
-        exitSelecting()
-        selectionConfirmPanel.dismiss()
-        countdownTask?.cancel(); countdownTask = nil; countdownOverlay.hide()
-        cancelUpload()   // isPreviewMode is already false so no recursion
-        if appState == .recording {
-            // Use stopRecording to clean up timer/window-recording state; wasPreviewMode will be false
-            stopRecording(upload: false)
-        } else {
-            appState = .typeSelect
-        }
-        settingsPanel.openPrototypeSettings()
-    }
-
-    // MARK: – Area confirm panel
-
-    /// Show (or reposition) the SelectionConfirmPanel for the live area selection.
-    private func showAreaConfirmPanel() {
-        guard let panel else { return }
-        let origin = confirmPanelOriginForArea(rect: areaOverlay.currentRect, above: panel)
-        let confirmSize = PanelDimensions.selectionConfirmSize
-        areaOverlay.confirmPanelFrame = CGRect(origin: origin, size: confirmSize)
-        selectionConfirmPanel.show(origin: origin, above: panel, state: self,
-            onCancel: { [weak self] in self?.exitSelecting() },
-            onRecord: { [weak self] in
-                guard let self else { return }
-                self.areaOverlay.freeze()
-                self.selectionMode = nil
-                self.startCountdown()
-            })
-    }
-
-    /// Returns the bottom-left origin (AppKit screen coords) for the SelectionConfirmPanel.
-    /// Places the panel inside the selection at bottom-left; if the area is too small,
-    /// places it just below the selection instead.
-    private func confirmPanelOriginForArea(rect: CGRect?, above panel: NSPanel) -> NSPoint {
-        let confirmSize = PanelDimensions.selectionConfirmSize
-        let margin: CGFloat = 8
-
-        if let r = rect,
-           r.width  >= confirmSize.width  + margin * 2,
-           r.height >= confirmSize.height + margin * 2 {
-            return NSPoint(x: r.minX + margin, y: r.minY + margin)
-        }
-
-        if let r = rect {
-            return NSPoint(x: r.minX, y: r.minY - confirmSize.height - margin)
-        }
-
-        return NSPoint(x: panel.frame.minX, y: panel.frame.maxY + margin)
-    }
-
-    // MARK: – View helpers (shared across TypeSelect variants)
-
-    /// Show or hide the hover preview overlay.
-    /// Centralises the `guard let panel` check that was duplicated in every TypeSelect view.
-    func showPreview(_ type: PreviewType?) {
-        guard let panel else { return }
-        if let t = type { previewOverlay.show(t, keepingAbove: panel) }
-        else            { previewOverlay.hide() }
-    }
-
-    /// Show a shortcut tooltip above a toolbar button.
-    /// `buttonCenterX` is measured from the toolbar's left edge.
-    func showTooltip(_ label: String, _ shortcut: String, buttonCenterX: CGFloat) {
-        guard let panel else { return }
-        shortcutTooltip.show(label: label, shortcut: shortcut,
-                             buttonCenterX: buttonCenterX, above: panel)
-    }
-
-    // MARK: – Device loading (shared)
-
-    /// カメラ・マイクデバイスを一括取得。各 View の `.task { await state.loadDevices() }` から呼ぶ。
-    func loadDevices() async {
-        cameraDevices = AVCaptureDevice.cameraDevices()
-        activeCamId   = activeCamId ?? cameraDevices.first?.uniqueID
-        micDevices    = AVCaptureDevice.micDevices()
-        activeMicId   = activeMicId ?? micDevices.first?.uniqueID
     }
 }
