@@ -40,8 +40,7 @@ struct TypeSelectView: View {
                 }
 
                 SegmentButton(icon: "rectangle.dashed", label: "Area",
-                              isActive: state.selectionMode == .area,
-                              isDisabled: state.isAreaDisabled) {
+                              isActive: state.selectionMode == .area) {
                     state.toggleSelecting(.area)
                 }
                 .onHover { h in
@@ -341,8 +340,7 @@ struct TypeSelectViewV2: View {
                     }
 
                     SegmentButton(icon: "rectangle.dashed", label: "Area",
-                                  isActive: state.selectionMode == .area,
-                                  isDisabled: state.isAreaDisabled) {
+                                  isActive: state.selectionMode == .area) {
                         state.toggleSelecting(.area)
                     }
                     .onHover { h in
@@ -460,8 +458,7 @@ struct TypeSelectViewV3: View {
                     }
 
                     SegmentedControlItem(icon: "rectangle.dashed", label: "Area",
-                                         isActive: state.selectionMode == .area,
-                                         isDisabled: state.isAreaDisabled) {
+                                         isActive: state.selectionMode == .area) {
                         state.toggleSelecting(.area)
                     }
                     .onHover { h in

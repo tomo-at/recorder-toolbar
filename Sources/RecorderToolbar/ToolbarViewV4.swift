@@ -53,8 +53,7 @@ struct TypeSelectViewV4: View {
                 }
 
                 SegmentedControlItem(icon: "rectangle.dashed", label: "Area",
-                                     isActive: state.selectionMode == .area,
-                                     isDisabled: state.isAreaDisabled) {
+                                     isActive: state.selectionMode == .area) {
                     state.toggleSelecting(.area)
                 }
                 .onHover { h in

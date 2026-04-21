@@ -63,13 +63,11 @@ final class SettingsState: ObservableObject {
 
     /// V5 の選択確定〜録画 UI のスタイル
     enum RecordingStyle: String, CaseIterable {
-        case toolbar         = "toolbar"
-        case selectToStart   = "selectToStart"
-        case selectedRegion  = "selectedRegion"
+        case toolbar        = "toolbar"
+        case selectedRegion = "selectedRegion"
         var label: String {
             switch self {
             case .toolbar:        return "Toolbar"
-            case .selectToStart:  return "Select to start"
             case .selectedRegion: return "Selected region"
             }
         }

@@ -588,8 +588,7 @@ struct RevealedAllCompactTypeSelectView: View {
                     }
 
                     SegmentButton(icon: "rectangle.dashed", label: "Area",
-                                  isActive: state.selectionMode == .area,
-                                  isDisabled: state.isAreaDisabled) {
+                                  isActive: state.selectionMode == .area) {
                         state.toggleSelecting(.area)
                     }
                     .onHover { h in

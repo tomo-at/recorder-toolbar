@@ -45,7 +45,7 @@ struct V5WindowSelect: View {
     }
     var body: some View {
         switch settings.v5RecordingStyle {
-        case .selectToStart, .selectedRegion:
+        case .selectedRegion:
             V5TypeSelect(state: state)
         case .toolbar:
             if settings.v5DefaultStyle == .horizontal {

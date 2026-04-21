@@ -91,18 +91,6 @@ class ToolbarState: ObservableObject {
         return false
     }
 
-    /// V5(.selectToStart) はオーバーレイ選択 → 即カウントダウン（windowSelect をスキップ）。
-    private var usesSelectToStart: Bool {
-        let s = settingsPanel.state
-        return s.protoVersion == .v5 && s.v5RecordingStyle == .selectToStart
-    }
-
-    /// Area selection is not supported with selectToStart (UI shows disabled button).
-    var isAreaDisabled: Bool {
-        let s = settingsPanel.state
-        return s.protoVersion == .v5 && s.v5RecordingStyle == .selectToStart
-    }
-
     /// V5(.toolbar) recording style shows the pre-recording toolbar when Area is selected.
     private var usesToolbarRecordingStyle: Bool {
         let s = settingsPanel.state
@@ -121,17 +109,12 @@ class ToolbarState: ObservableObject {
         settingsPanel.toolbarState = self
 
         // Window selected: freeze overlay.
-        // - selectToStart: 即 startCountdown（windowSelect スキップ）
         // - selectedRegion: confirm panel 表示
         // - toolbar: windowSelect ツールバーへ遷移
         overlay.onSelect = { [weak self] in
             guard let self else { return }
             self.overlay.freeze()
             self.selectionMode = nil
-            if self.usesSelectToStart {
-                self.startCountdown()
-                return
-            }
             self.appState = .windowSelect
             guard self.usesSelectionConfirmPanel else { return }
             if let bounds = self.overlay.frozenWindowBounds, let panel = self.panel {
@@ -209,7 +192,7 @@ class ToolbarState: ObservableObject {
             guard let self else { return }
             self.areaOverlay.freeze()
             self.selectionMode = nil
-            if self.usesSelectToStart || self.usesSelectionConfirmPanel {
+            if self.usesSelectionConfirmPanel {
                 self.startCountdown()
                 return
             }
@@ -235,10 +218,6 @@ class ToolbarState: ObservableObject {
             guard let self else { return }
             self.displayOverlay.freeze()
             self.selectionMode = nil
-            if self.usesSelectToStart {
-                self.startCountdown()
-                return
-            }
             self.appState = .displaySelect
             guard self.usesSelectionConfirmPanel else { return }
             if let screen = self.displayOverlay.frozenScreen, let panel = self.panel {
@@ -499,7 +478,7 @@ class ToolbarState: ObservableObject {
             case .v4: newW = PanelDimensions.v4Width
             case .v5:
                 switch s.v5RecordingStyle {
-                case .selectToStart, .selectedRegion:
+                case .selectedRegion:
                     // typeSelect が出続けるので幅は defaultStyle に合わせる
                     newW = v5TypeSelectWidth(for: s.v5DefaultStyle)
                 case .toolbar:
