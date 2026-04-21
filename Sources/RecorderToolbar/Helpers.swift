@@ -670,7 +670,7 @@ final class CamOnlyPanelController {
         hosting.wantsLayer = true
         hosting.layer?.backgroundColor = .clear
         p.contentView = hosting
-        p.setContentSize(CGSize(width: 1080, height: 652))
+        p.setContentSize(ToolbarState.PanelDimensions.camOnlyConfirmSize)
         p.setFrameOrigin(origin)
         p.fadeIn()
         p.invalidateShadow()
@@ -687,7 +687,7 @@ final class CamOnlyPanelController {
         hosting.wantsLayer = true
         hosting.layer?.backgroundColor = .clear
         p.contentView = hosting
-        p.setContentSize(CGSize(width: 1080, height: 608))
+        p.setContentSize(ToolbarState.PanelDimensions.camOnlyPreviewSize)
         p.setFrameOrigin(origin)
         p.fadeIn()
         p.invalidateShadow()
@@ -731,7 +731,7 @@ final class SelectionConfirmPanelController {
         hosting.layer?.backgroundColor = .clear
 
         p.contentView = hosting
-        p.setContentSize(CGSize(width: 284, height: 204))
+        p.setContentSize(ToolbarState.PanelDimensions.selectionConfirmSize)
         p.setFrameOrigin(origin)
         p.fadeIn()
         p.invalidateShadow()

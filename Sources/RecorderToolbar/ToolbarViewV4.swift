@@ -209,7 +209,7 @@ struct RecordingViewV4: View {
 
             HStack(spacing: 0) {
                 SegmentButton(icon: "arrow.counterclockwise", label: "Restart") {
-                    state.stopRecording()
+                    state.stopRecording(upload: false)
                 }
                 SegmentButton(
                     icon:  state.paused ? "play.fill"  : "pause.fill",

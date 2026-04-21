@@ -343,7 +343,7 @@ class ToolbarState: ObservableObject {
             let screen = panel.screen ?? NSScreen.main ?? NSScreen.screens[0]
             if usesToolbarRecordingStyle {
                 // Toolbar style: show preview-only panel; toolbar handles controls.
-                let sz = CGSize(width: 1080, height: 608)
+                let sz = PanelDimensions.camOnlyPreviewSize
                 let rawX = panel.frame.midX - sz.width / 2
                 let origin = NSPoint(
                     x: max(screen.frame.minX + 8, min(rawX, screen.frame.maxX - sz.width - 8)),
@@ -354,7 +354,7 @@ class ToolbarState: ObservableObject {
                 appState = .windowSelect
             } else {
                 // selectedRegion (and all other styles): show confirm panel with controls.
-                let sz = CGSize(width: 1080, height: 652)
+                let sz = PanelDimensions.camOnlyConfirmSize
                 let rawX = panel.frame.midX - sz.width / 2
                 let origin = NSPoint(
                     x: max(screen.frame.minX + 8, min(rawX, screen.frame.maxX - sz.width - 8)),
@@ -476,7 +476,7 @@ class ToolbarState: ObservableObject {
 
     // MARK: – Panel dimensions
 
-    private enum PanelDimensions {
+    enum PanelDimensions {
         static let v1Width:                  CGFloat = 345
         static let v2Width:                  CGFloat = 506
         static let v3Width:                  CGFloat = 510
@@ -485,6 +485,9 @@ class ToolbarState: ObservableObject {
         static let windowSelectWidth:        CGFloat = 389
         static let recordingWidth:           CGFloat = 297
         static let horizontalRecordingWidth: CGFloat = 365
+        static let camOnlyConfirmSize        = CGSize(width: 1080, height: 652)
+        static let camOnlyPreviewSize        = CGSize(width: 1080, height: 608)
+        static let selectionConfirmSize      = CGSize(width: 284,  height: 204)
     }
 
     // MARK: – Panel resize
@@ -556,6 +559,9 @@ class ToolbarState: ObservableObject {
             }
         }
     }
+
+    /// Current toolbar panel height — used by ToolbarView to keep SwiftUI frame in sync.
+    var currentPanelHeight: CGFloat { panelHeight(for: settingsPanel.state) }
 
     // MARK: – Countdown & Recording
 
@@ -936,7 +942,7 @@ class ToolbarState: ObservableObject {
     private func showAreaConfirmPanel() {
         guard let panel else { return }
         let origin = confirmPanelOriginForArea(rect: areaOverlay.currentRect, above: panel)
-        let confirmSize = CGSize(width: 284, height: 204)
+        let confirmSize = PanelDimensions.selectionConfirmSize
         areaOverlay.confirmPanelFrame = CGRect(origin: origin, size: confirmSize)
         selectionConfirmPanel.show(origin: origin, above: panel, state: self,
             onCancel: { [weak self] in self?.exitSelecting() },
@@ -952,7 +958,7 @@ class ToolbarState: ObservableObject {
     /// Places the panel inside the selection at bottom-left; if the area is too small,
     /// places it just below the selection instead.
     private func confirmPanelOriginForArea(rect: CGRect?, above panel: NSPanel) -> NSPoint {
-        let confirmSize = CGSize(width: 284, height: 204)
+        let confirmSize = PanelDimensions.selectionConfirmSize
         let margin: CGFloat = 8
 
         if let r = rect,

@@ -10,19 +10,6 @@ struct ToolbarView: View {
         self.settings = state.settingsPanel.state
     }
 
-    private var toolbarHeight: CGFloat {
-        switch settings.protoVersion {
-        case .v1, .v2, .v3: return 56
-        case .v4:           return 66
-        case .v5:
-            switch settings.v5DefaultStyle {
-            case .stepByStep, .revealedAll, .revealedAllCompact: return 56
-            case .message:                                     return 66
-            case .horizontal:                                  return 48
-            }
-        }
-    }
-
     var body: some View {
         Group {
             // Upload mode: replace entire toolbar with upload UI (during and after upload)
@@ -59,6 +46,6 @@ struct ToolbarView: View {
                 }
             }
         }
-        .frame(height: toolbarHeight)
+        .frame(height: state.currentPanelHeight)
     }
 }

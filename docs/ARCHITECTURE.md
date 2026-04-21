@@ -9,19 +9,21 @@ CLAUDE.md から分離した参照テーブル。判断に必要なルールは 
 | ファイル | 内容 |
 |---|---|
 | `AppDelegate.swift` | ツールバー NSPanel 生成・ToolbarState 初期化・メニューバー・通知 |
-| `ToolbarState.swift` | AppState + 全コントローラー所有・カメラプレビュー・デバイス読み込み |
+| `ToolbarState.swift` | AppState 管理・全コントローラー所有・選択モード・カウントダウン・アップロード・ウィンドウ複数録画・Esc モニター・デバイス読み込み・プレビューモード |
 | `ToolbarView.swift` | AppState × ProtoVersion ディスパッチ・V5 組み合わせビュー・共通コンポーネント |
 | `ToolbarViewLegacy.swift` | V1–V3 用全ビュー（TypeSelectView / TypeSelectViewV2 / TypeSelectViewV3 / WindowSelectView / CountdownToolbarView / RecordingView） |
-| `ToolbarViewV4.swift` | V4 用全ビュー（TypeSelectViewV4 / CountdownToolbarViewV4 / RecordingViewV4） |
+| `ToolbarViewV4.swift` | V4 用全ビュー（TypeSelectViewV4 / CountdownToolbarViewV4 / RecordingViewV4 / SelectionConfirmView / CamOnlyConfirmView / CamOnlyPreviewView） |
 | `ToolbarViewHorizontal.swift` | V5 Horizontal スタイル用ビュー群（HorizontalTypeSelectView / HorizontalWindowSelectView / HorizontalRecordingView / RevealedAllCompactTypeSelectView） |
 | `WindowOverlay.swift` | ウィンドウ選択オーバーレイ（DetectedWindow・OverlayState・OverlayController） |
+| `AreaOverlay.swift` | エリア選択オーバーレイ（AreaSelectionState・AreaOverlayController） |
 | `DisplayOverlay.swift` | ディスプレイ選択オーバーレイ |
 | `PreviewOverlay.swift` | TypeSelect ホバープレビューオーバーレイ |
 | `CountdownOverlay.swift` | カウントダウンオーバーレイ |
+| `WindowSelectionBottomBar.swift` | フルスクリーンウィンドウピッカー時の画面下部ヒントバー |
 | `CameraSegment.swift` | CameraSegment / MicSegment / CamOnlySegment / CameraThumb / CameraPreviewView / DeviceMenuView / MicLevelBars |
 | `SettingsPanel.swift` | SettingsPanelController・SettingsState（V5 軸 enum + UserDefaults）・Settings SwiftUI ビュー |
 | `PrototypeSettingsWindow.swift` | V5 独立設定ウィンドウ（DefaultStyle × RecordingStyle × UploadStyle） |
-| `Helpers.swift` | Airtime DS 色トークン・NSPanel/NSWindow ファクトリ・フェードアニメーション・SelectionConfirmPanel |
+| `Helpers.swift` | Airtime DS 色トークン・NSPanel/NSWindow ファクトリ・フェードアニメーション・PanelDimensions 定数・各種パネルコントローラー（ShortcutTooltip / ToolbarWindowPopup / WindowMultiDialog / WindowHoverDialog / UploadCompleteBanner / CamOnlyPanel / SelectionConfirmPanel） |
 
 ---
 
@@ -29,13 +31,21 @@ CLAUDE.md から分離した参照テーブル。判断に必要なルールは 
 
 | クラス | 役割 |
 |---|---|
-| `ToolbarState` | 中央コントローラー。AppState 管理・カメラプレビュー・カウントダウン・デバイス |
+| `ToolbarState` | 中央コントローラー。AppState・SelectionMode 管理、全コントローラー所有、Esc モニター、カウントダウン、アップロード、デバイス |
 | `OverlayController` | ウィンドウ選択オーバーレイ（dim + 穴 + badge） |
 | `DisplayOverlayController` | ディスプレイ選択オーバーレイ（per-screen dim + orange border） |
+| `AreaOverlayController` | エリア選択オーバーレイ（ドラッグ選択・確認パネル連携） |
 | `PreviewOverlayController` | TypeSelect ホバープレビュー（Display/Window/Area） |
 | `CountdownOverlayController` | フルスクリーン カウントダウン数字オーバーレイ |
 | `SettingsPanelController` | Settings パネル本体 + Prototype Settings ウィンドウ管理 |
+| `ShortcutTooltipController` | ツールバーボタンのショートカットツールチップ |
+| `ToolbarWindowPopupController` | 録画中ウィンドウボタンの Remove/Switch ポップアップ |
+| `WindowMultiDialogController` | ホバー時の「Add window」ダイアログ |
+| `WindowHoverDialogController` | 録画済みウィンドウホバー時の Switch/Remove ダイアログ |
+| `UploadCompleteBannerController` | アップロード完了バナー |
+| `CamOnlyPanelController` | Cam only 大プレビューパネル（Confirm / Preview の 2 モード） |
 | `SelectionConfirmPanelController` | V4/V5(.selectedRegion) 用の選択確認パネル |
+| `WindowSelectionBottomBarController` | フルスクリーンウィンドウピッカー時の画面下部ヒントバー |
 
 ---
 
@@ -47,6 +57,9 @@ CLAUDE.md から分離した参照テーブル。判断に必要なルールは 
 | ツールバー幅（typeSelect） | V1: 345 / V2: 506 / V3: 510 / V4: 482 / V5-Compact: 470 px |
 | ツールバー幅（windowSelect） | 389 px（V1–V3）/ 482 px（V4・V5 Horizontal） |
 | ツールバー幅（countdown/recording） | 297 px（通常）/ 365 px（Horizontal） |
+| Cam only Confirm パネル | 1080 × 652 px（カメラ 608 px + コントロールバー 44 px） |
+| Cam only Preview パネル | 1080 × 608 px（16:9 カメラのみ） |
+| SelectionConfirm パネル | 284 × 204 px |
 | Prototype Settings ウィンドウ | 360 × 680 px |
 | カメラプレビューポップアップ | 320 × 240 px |
 | SegmentButton | 64 × 48 px |
