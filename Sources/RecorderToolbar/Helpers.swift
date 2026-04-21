@@ -656,8 +656,7 @@ final class SelectionConfirmPanelController {
     private var panel: NSPanel?
 
     /// Show the confirm panel with its bottom-left at `origin` (AppKit screen coords).
-    /// Panel: 172×216 px, solid #12181a background, 12 px corner radius.
-    func show(origin: NSPoint, above toolbar: NSPanel,
+    func show(origin: NSPoint, above toolbar: NSPanel, state: ToolbarState,
               onCancel: @escaping () -> Void,
               onRecord: @escaping () -> Void) {
         panel?.orderOut(nil)
@@ -666,6 +665,7 @@ final class SelectionConfirmPanelController {
         let p = NSPanel.makeFloating(level: toolbar.level)
 
         let hosting = NSHostingView(rootView: SelectionConfirmView(
+            state: state,
             onCancel: onCancel,
             onRecord: onRecord
         ))
@@ -674,10 +674,10 @@ final class SelectionConfirmPanelController {
         hosting.layer?.backgroundColor = .clear
 
         p.contentView = hosting
-        p.setContentSize(CGSize(width: 172, height: 216))
+        p.setContentSize(CGSize(width: 284, height: 228))
         p.setFrameOrigin(origin)
         p.fadeIn()
-        p.invalidateShadow()   // shadow follows rounded rect alpha
+        p.invalidateShadow()
         panel = p
         toolbar.orderFrontRegardless()
     }

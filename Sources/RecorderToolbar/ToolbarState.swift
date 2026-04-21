@@ -54,6 +54,7 @@ class ToolbarState: ObservableObject {
     let selectionConfirmPanel  = SelectionConfirmPanelController()
     let uploadCompleteBanner   = UploadCompleteBannerController()
     let windowMultiDialog      = WindowMultiDialogController()
+    let windowSelectionBottomBar = WindowSelectionBottomBarController()
     let windowHoverDialog      = WindowHoverDialogController()
     let toolbarWindowPopup     = ToolbarWindowPopupController()
 
@@ -94,6 +95,14 @@ class ToolbarState: ObservableObject {
         return s.protoVersion == .v5 && s.v5RecordingStyle == .selectToStart
     }
 
+    /// Styles with camera AND mic both visible in the toolbar use the full-screen window picker
+    /// (toolbar hidden, bottom-bar hint shown across the entire display).
+    private var shouldUseFullScreenWindowPicker: Bool {
+        guard settingsPanel.state.protoVersion == .v5 else { return false }
+        let style = settingsPanel.state.v5DefaultStyle
+        return style == .revealedAll || style == .revealedAllCompact
+    }
+
     init() {
         settingsPanel.toolbarState = self
 
@@ -114,7 +123,7 @@ class ToolbarState: ObservableObject {
             if let bounds = self.overlay.frozenWindowBounds, let panel = self.panel {
                 let origin = NSPoint(x: bounds.minX + 16,
                                      y: NSScreen.primaryHeight - bounds.maxY + 16)
-                self.selectionConfirmPanel.show(origin: origin, above: panel,
+                self.selectionConfirmPanel.show(origin: origin, above: panel, state: self,
                     onCancel: { [weak self] in self?.appState = .typeSelect },
                     onRecord:  { [weak self] in self?.startCountdown() })
             }
@@ -194,7 +203,7 @@ class ToolbarState: ObservableObject {
             if let screen = self.displayOverlay.frozenScreen, let panel = self.panel {
                 let origin = NSPoint(x: screen.frame.minX + 16,
                                      y: screen.frame.minY + 16)
-                self.selectionConfirmPanel.show(origin: origin, above: panel,
+                self.selectionConfirmPanel.show(origin: origin, above: panel, state: self,
                     onCancel: { [weak self] in self?.appState = .typeSelect },
                     onRecord:  { [weak self] in self?.startCountdown() })
             }
@@ -273,7 +282,13 @@ class ToolbarState: ObservableObject {
 
         guard let panel else { return }
         switch mode {
-        case .window:  overlay.show(keepingAbove: panel)
+        case .window:
+            overlay.show(keepingAbove: panel)
+            if shouldUseFullScreenWindowPicker {
+                panel.orderOut(nil)
+                let screen = NSScreen.main ?? NSScreen.screens[0]
+                windowSelectionBottomBar.show(screen: screen, level: panel.level)
+            }
         case .display: displayOverlay.show(keepingAbove: panel)
         }
     }
@@ -283,6 +298,8 @@ class ToolbarState: ObservableObject {
         switchTargetWindow = nil
         overlay.hide()
         displayOverlay.hide()
+        windowSelectionBottomBar.hide()
+        panel?.orderFrontRegardless()
     }
 
     // MARK: – State change handler
@@ -310,7 +327,14 @@ class ToolbarState: ObservableObject {
             // Hide overlays when returning from a confirmed selection or stopping recording.
             overlay.hide()
             displayOverlay.hide()
-        case .windowSelect, .displaySelect, .countdown, .recording:
+        case .windowSelect, .displaySelect:
+            // Restore toolbar hidden during full-screen window picker.
+            windowSelectionBottomBar.hide()
+            panel?.orderFrontRegardless()
+        case .countdown:
+            windowSelectionBottomBar.hide()
+            panel?.orderFrontRegardless()
+        case .recording:
             break  // overlays are managed by selectionMode / freeze()
         }
         resizePanel(for: state)

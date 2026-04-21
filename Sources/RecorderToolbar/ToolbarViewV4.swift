@@ -231,71 +231,219 @@ struct RecordingViewV4: View {
     }
 }
 
-// ── Selection confirm panel view (V4) ──────────────────────
+// ── Selection confirm panel view (V4 / V5 selectedRegion) ─────────────────
 
 struct SelectionConfirmView: View {
+    @ObservedObject var state: ToolbarState
     let onCancel: () -> Void
     let onRecord: () -> Void
-    @State private var cameraDeviceId: String? = nil
-    @State private var cancelHovering = false
 
-    private let panelBg = Color.bgSecondary
+    // Styles that use MicIconWithLevel (SF Symbol) instead of MicLevelBars (bar graph)
+    private var usesIconMicStyle: Bool {
+        let s = state.settingsPanel.state.v5DefaultStyle
+        return s == .revealedAllCompact || s == .horizontal
+    }
 
     var body: some View {
-        VStack(spacing: 0) {
-            Group {
-                if let id = cameraDeviceId {
-                    CameraThumb(deviceId: id)
-                } else {
-                    Color.black
-                }
-            }
-            .frame(maxWidth: .infinity)
-            .frame(height: 172)
-            .overlay(alignment: .bottom) {
-                Rectangle()
-                    .fill(Color.highlightPrimary)
-                    .frame(height: 1)
-            }
+        ZStack(alignment: .top) {
+            VStack(spacing: 0) {
+                // Camera preview
+                CameraThumb(deviceId: state.activeCamId)
+                    .frame(maxWidth: .infinity)
+                    .frame(height: 160)
+                    .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 12, style: .continuous)
+                            .stroke(Color.highlightPrimary, lineWidth: 1)
+                    )
+                    .padding(6)
 
-            HStack(spacing: 8) {
-                Button(action: onCancel) {
-                    Text("Cancel")
-                        .font(.system(size: 12, weight: .medium))
+                // Controls row
+                HStack(spacing: 8) {
+                    HStack(spacing: 2) {
+                        ConfirmCameraButton(
+                            devices: state.cameraDevices,
+                            activeId: $state.activeCamId
+                        )
+                        ConfirmMicButton(
+                            devices: state.micDevices,
+                            activeId: $state.activeMicId,
+                            usesIconStyle: usesIconMicStyle
+                        )
+                    }
+
+                    Button(action: onRecord) {
+                        HStack(spacing: 4) {
+                            Image(systemName: "record.circle.fill")
+                                .font(.system(size: 13))
+                            Text("Record")
+                                .font(.system(size: 12, weight: .medium))
+                        }
                         .foregroundColor(.white)
-                        .frame(width: 56, height: 28)
-                        .background(cancelHovering ? Color.highlightPrimary : Color.clear)
-                        .cornerRadius(6)
+                        .frame(maxWidth: .infinity)
+                        .frame(height: 52)
+                        .background(Color.accentDestructive)
+                        .clipShape(RoundedRectangle(cornerRadius: 6, style: .continuous))
+                        .overlay(
+                            RoundedRectangle(cornerRadius: 6, style: .continuous)
+                                .stroke(Color.highlightPrimary, lineWidth: 1)
+                        )
+                    }
+                    .buttonStyle(.plain)
                 }
-                .buttonStyle(.plain)
-                .onHover { cancelHovering = $0 }
+                .padding(8)
+                .overlay(alignment: .top) {
+                    Rectangle().fill(Color.highlightPrimary).frame(height: 1)
+                }
+            }
 
-                Button(action: onRecord) {
+            // Overlay: Cancel (left) + Settings (right)
+            HStack {
+                Button(action: onCancel) {
                     HStack(spacing: 4) {
-                        Image(systemName: "record.circle.fill")
-                            .font(.system(size: 12))
-                        Text("Record")
+                        Image(systemName: "chevron.backward")
+                            .font(.system(size: 11, weight: .semibold))
+                        Text("Cancel")
                             .font(.system(size: 12, weight: .medium))
                     }
                     .foregroundColor(.white)
-                    .frame(maxWidth: .infinity)
-                    .frame(height: 28)
-                    .background(Color.recordRed)
-                    .cornerRadius(6)
+                    .padding(.horizontal, 8)
+                    .padding(.vertical, 6)
+                    .background(confirmGlassBg)
+                    .clipShape(RoundedRectangle(cornerRadius: 6, style: .continuous))
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 6, style: .continuous)
+                            .stroke(Color.highlightPrimary, lineWidth: 1)
+                    )
+                }
+                .buttonStyle(.plain)
+
+                Spacer()
+
+                Button {
+                    guard let panel = state.panel else { return }
+                    state.settingsPanel.toggle(toolbar: panel,
+                                               buttonCenterX: panel.frame.midX)
+                } label: {
+                    Image(systemName: "gearshape.fill")
+                        .font(.system(size: 14))
+                        .foregroundColor(.white)
+                        .frame(width: 28, height: 28)
+                        .background(confirmGlassBg)
+                        .clipShape(RoundedRectangle(cornerRadius: 6, style: .continuous))
+                        .overlay(
+                            RoundedRectangle(cornerRadius: 6, style: .continuous)
+                                .stroke(Color.highlightPrimary, lineWidth: 1)
+                        )
                 }
                 .buttonStyle(.plain)
             }
-            .padding(8)
-            .frame(height: 44)
+            .padding(6)
         }
-        .background(panelBg)
-        .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
+        .background(Color.bgPrimary)
+        .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
         .overlay(
-            RoundedRectangle(cornerRadius: 12, style: .continuous)
-                .strokeBorder(Color.highlightPrimary, lineWidth: 1)
+            RoundedRectangle(cornerRadius: 16, style: .continuous)
+                .strokeBorder(Color.white.opacity(0.15), lineWidth: 1)
         )
-        .task {
-            cameraDeviceId = AVCaptureDevice.cameraDevices().first?.uniqueID
+    }
+}
+
+private var confirmGlassBg: some View {
+    ZStack {
+        Color(red: 27/255, green: 35/255, blue: 38/255).opacity(0.65)
+        Color.white.opacity(0.08)
+    }
+}
+
+// ── Compact camera dropdown (confirm panel) ────────────────────────────────
+
+private struct ConfirmCameraButton: View {
+    let devices: [AVCaptureDevice]
+    @Binding var activeId: String?
+    @State private var showMenu = false
+
+    var body: some View {
+        Button { showMenu.toggle() } label: {
+            HStack(spacing: 4) {
+                CameraThumb(deviceId: activeId)
+                    .frame(width: 32, height: 32)
+                    .clipShape(RoundedRectangle(cornerRadius: 8, style: .continuous))
+
+                Image(systemName: "chevron.down")
+                    .font(.system(size: 9, weight: .medium))
+                    .foregroundColor(.contentTertiary)
+                    .frame(width: 16, height: 16)
+                    .rotationEffect(.degrees(showMenu ? 180 : 0))
+                    .animation(.easeInOut(duration: 0.15), value: showMenu)
+            }
+            .padding(.horizontal, 8)
+            .padding(.vertical, 4)
+            .frame(height: 52)
+            .background(Color.white.opacity(0.06))
+            .clipShape(RoundedRectangle(cornerRadius: 6, style: .continuous))
         }
+        .buttonStyle(.plain)
+        .popover(isPresented: $showMenu, arrowEdge: .bottom) {
+            DeviceMenuView(devices: devices, activeId: $activeId)
+        }
+    }
+}
+
+// ── Compact mic dropdown (confirm panel) ──────────────────────────────────
+
+private struct ConfirmMicButton: View {
+    let devices: [AVCaptureDevice]
+    @Binding var activeId: String?
+    let usesIconStyle: Bool
+    @State private var showMenu = false
+    @State private var level: Float = 0
+    @State private var meterTimer: Timer? = nil
+
+    var body: some View {
+        Button { showMenu.toggle() } label: {
+            HStack(spacing: 4) {
+                ZStack {
+                    LinearGradient(
+                        colors: [Color.white.opacity(0.11), Color.white.opacity(0.07)],
+                        startPoint: .top, endPoint: .bottom
+                    )
+                    .clipShape(RoundedRectangle(cornerRadius: 8, style: .continuous))
+
+                    if usesIconStyle {
+                        MicIconWithLevel(size: 20)
+                    } else {
+                        MicLevelBars(level: level)
+                            .frame(width: 10, height: 20)
+                    }
+                }
+                .frame(width: 32, height: 32)
+
+                Image(systemName: "chevron.down")
+                    .font(.system(size: 9, weight: .medium))
+                    .foregroundColor(.contentTertiary)
+                    .frame(width: 16, height: 16)
+                    .rotationEffect(.degrees(showMenu ? 180 : 0))
+                    .animation(.easeInOut(duration: 0.15), value: showMenu)
+            }
+            .padding(.horizontal, 8)
+            .padding(.vertical, 4)
+            .frame(height: 52)
+            .background(Color.white.opacity(0.06))
+            .clipShape(RoundedRectangle(cornerRadius: 6, style: .continuous))
+        }
+        .buttonStyle(.plain)
+        .popover(isPresented: $showMenu, arrowEdge: .bottom) {
+            DeviceMenuView(devices: devices, activeId: $activeId)
+        }
+        .onAppear {
+            guard !usesIconStyle else { return }
+            var t: Float = 0
+            meterTimer = Timer.scheduledTimer(withTimeInterval: 0.05, repeats: true) { _ in
+                t += 0.04
+                level = 0.15 + abs(sin(t)) * 0.5
+            }
+        }
+        .onDisappear { meterTimer?.invalidate(); meterTimer = nil }
     }
 }
