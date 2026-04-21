@@ -670,7 +670,7 @@ final class CamOnlyPanelController {
         hosting.wantsLayer = true
         hosting.layer?.backgroundColor = .clear
         p.contentView = hosting
-        p.setContentSize(CGSize(width: 284, height: 244))
+        p.setContentSize(CGSize(width: 1080, height: 652))
         p.setFrameOrigin(origin)
         p.fadeIn()
         p.invalidateShadow()
@@ -687,7 +687,7 @@ final class CamOnlyPanelController {
         hosting.wantsLayer = true
         hosting.layer?.backgroundColor = .clear
         p.contentView = hosting
-        p.setContentSize(CGSize(width: 284, height: 200))
+        p.setContentSize(CGSize(width: 1080, height: 608))
         p.setFrameOrigin(origin)
         p.fadeIn()
         p.invalidateShadow()

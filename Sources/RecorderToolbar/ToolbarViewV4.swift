@@ -462,7 +462,7 @@ struct CamOnlyConfirmView: View {
         VStack(spacing: 0) {
             CameraThumb(deviceId: state.activeCamId)
                 .frame(maxWidth: .infinity)
-                .frame(height: 200)
+                .frame(height: 608)
 
             HStack(spacing: 6) {
                 Button(action: onCancel) {
@@ -538,7 +538,7 @@ struct CamOnlyPreviewView: View {
 
     var body: some View {
         CameraThumb(deviceId: deviceId)
-            .frame(width: 284, height: 200)
+            .frame(maxWidth: .infinity, maxHeight: .infinity)
             .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
             .overlay(
                 RoundedRectangle(cornerRadius: 16, style: .continuous)

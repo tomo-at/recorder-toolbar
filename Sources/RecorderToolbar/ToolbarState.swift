@@ -337,19 +337,26 @@ class ToolbarState: ObservableObject {
                 showAreaConfirmPanel()
             }
         case .camOnly:
+            let screen = panel.screen ?? NSScreen.main ?? NSScreen.screens[0]
             if usesToolbarRecordingStyle {
                 // Toolbar style: show preview-only panel; toolbar handles controls.
-                let sz = CGSize(width: 284, height: 200)
-                let origin = NSPoint(x: panel.frame.midX - sz.width / 2,
-                                     y: panel.frame.maxY + 8)
+                let sz = CGSize(width: 1080, height: 608)
+                let rawX = panel.frame.midX - sz.width / 2
+                let origin = NSPoint(
+                    x: max(screen.frame.minX + 8, min(rawX, screen.frame.maxX - sz.width - 8)),
+                    y: panel.frame.maxY + 8
+                )
                 camOnlyPanel.showPreview(origin: origin, above: panel,
                                          deviceId: activeCamId)
                 appState = .windowSelect
             } else {
                 // selectedRegion (and all other styles): show confirm panel with controls.
-                let sz = CGSize(width: 284, height: 244)
-                let origin = NSPoint(x: panel.frame.midX - sz.width / 2,
-                                     y: panel.frame.maxY + 8)
+                let sz = CGSize(width: 1080, height: 652)
+                let rawX = panel.frame.midX - sz.width / 2
+                let origin = NSPoint(
+                    x: max(screen.frame.minX + 8, min(rawX, screen.frame.maxX - sz.width - 8)),
+                    y: panel.frame.maxY + 8
+                )
                 camOnlyPanel.showConfirm(origin: origin, above: panel, state: self,
                     onCancel: { [weak self] in self?.exitSelecting() },
                     onRecord: { [weak self] in
