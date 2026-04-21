@@ -674,7 +674,7 @@ final class SelectionConfirmPanelController {
         hosting.layer?.backgroundColor = .clear
 
         p.contentView = hosting
-        p.setContentSize(CGSize(width: 284, height: 228))
+        p.setContentSize(CGSize(width: 284, height: 204))
         p.setFrameOrigin(origin)
         p.fadeIn()
         p.invalidateShadow()

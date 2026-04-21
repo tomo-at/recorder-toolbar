@@ -24,6 +24,8 @@
 		AA00000000000000000002AE /* ToolbarViewV5.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA00000000000000000001AE /* ToolbarViewV5.swift */; };
 		AA00000000000000000002AF /* WindowOverlay.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA00000000000000000001AF /* WindowOverlay.swift */; };
 		AA00000000000000000002B0 /* main.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA00000000000000000001B0 /* main.swift */; };
+		AA00000000000000000002B2 /* WindowSelectionBottomBar.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA00000000000000000001B3 /* WindowSelectionBottomBar.swift */; };
+		AA00000000000000000002B3 /* AreaOverlay.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA00000000000000000001B4 /* AreaOverlay.swift */; };
 		AA00000000000000000002B1 /* assets/icon-menu.png in Resources */ = {isa = PBXBuildFile; fileRef = AA00000000000000000001B1 /* assets/icon-menu.png */; };
 /* End PBXBuildFile section */
 
@@ -45,6 +47,8 @@
 		AA00000000000000000001AD /* ToolbarViewV4.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ToolbarViewV4.swift; sourceTree = "<group>"; };
 		AA00000000000000000001AE /* ToolbarViewV5.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ToolbarViewV5.swift; sourceTree = "<group>"; };
 		AA00000000000000000001AF /* WindowOverlay.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WindowOverlay.swift; sourceTree = "<group>"; };
+		AA00000000000000000001B3 /* WindowSelectionBottomBar.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WindowSelectionBottomBar.swift; sourceTree = "<group>"; };
+		AA00000000000000000001B4 /* AreaOverlay.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AreaOverlay.swift; sourceTree = "<group>"; };
 		AA00000000000000000001B0 /* main.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = main.swift; sourceTree = "<group>"; };
 		AA00000000000000000001B1 /* assets/icon-menu.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = "assets/icon-menu.png"; sourceTree = "<group>"; };
 		AA00000000000000000001B2 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
@@ -88,6 +92,8 @@
 				AA00000000000000000001AD /* ToolbarViewV4.swift */,
 				AA00000000000000000001AE /* ToolbarViewV5.swift */,
 				AA00000000000000000001AF /* WindowOverlay.swift */,
+				AA00000000000000000001B3 /* WindowSelectionBottomBar.swift */,
+				AA00000000000000000001B4 /* AreaOverlay.swift */,
 				AA00000000000000000001B0 /* main.swift */,
 				AA00000000000000000001B1 /* assets/icon-menu.png */,
 				AA00000000000000000001B2 /* Info.plist */,
@@ -189,6 +195,8 @@
 				AA00000000000000000002AD /* ToolbarViewV4.swift in Sources */,
 				AA00000000000000000002AE /* ToolbarViewV5.swift in Sources */,
 				AA00000000000000000002AF /* WindowOverlay.swift in Sources */,
+				AA00000000000000000002B2 /* WindowSelectionBottomBar.swift in Sources */,
+				AA00000000000000000002B3 /* AreaOverlay.swift in Sources */,
 				AA00000000000000000002B0 /* main.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;

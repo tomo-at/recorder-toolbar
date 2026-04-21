@@ -18,6 +18,7 @@ enum AppState {
 enum SelectionMode {
     case window
     case display
+    case area
 }
 
 @MainActor
@@ -57,6 +58,7 @@ class ToolbarState: ObservableObject {
     let windowSelectionBottomBar = WindowSelectionBottomBarController()
     let windowHoverDialog      = WindowHoverDialogController()
     let toolbarWindowPopup     = ToolbarWindowPopupController()
+    let areaOverlay            = AreaOverlayController()
 
     @Published var isWindowRecording:    Bool             = false
     @Published var windowRecordingCount: Int              = 0
@@ -189,6 +191,26 @@ class ToolbarState: ObservableObject {
             }
         }
 
+        // Area dragged: freeze overlay, proceed like window selection.
+        areaOverlay.onSelect = { [weak self] in
+            guard let self else { return }
+            self.areaOverlay.freeze()
+            self.selectionMode = nil
+            if self.usesSelectToStart {
+                self.startCountdown()
+                return
+            }
+            self.appState = .windowSelect
+            guard self.usesSelectionConfirmPanel else { return }
+            if let panel = self.panel {
+                let origin = NSPoint(x: panel.frame.minX, y: panel.frame.maxY + 8)
+                self.selectionConfirmPanel.show(origin: origin, above: panel, state: self,
+                    onCancel: { [weak self] in self?.appState = .typeSelect },
+                    onRecord:  { [weak self] in self?.startCountdown() })
+            }
+        }
+        areaOverlay.onCancel = { [weak self] in self?.exitSelecting() }
+
         // Display selected: same pattern.
         displayOverlay.onSelect = { [weak self] in
             guard let self else { return }
@@ -272,10 +294,11 @@ class ToolbarState: ObservableObject {
     }
 
     private func enterSelecting(_ mode: SelectionMode) {
-        // Hide the other overlay if switching modes.
+        // Hide overlays for the other modes when switching.
         switch mode {
-        case .window:  displayOverlay.hide()
-        case .display: overlay.hide()
+        case .window:  displayOverlay.hide(); areaOverlay.hideImmediate()
+        case .display: overlay.hide();        areaOverlay.hideImmediate()
+        case .area:    overlay.hide();        displayOverlay.hide()
         }
 
         selectionMode = mode
@@ -287,9 +310,19 @@ class ToolbarState: ObservableObject {
             if shouldUseFullScreenWindowPicker {
                 panel.orderOut(nil)
                 let screen = NSScreen.main ?? NSScreen.screens[0]
-                windowSelectionBottomBar.show(screen: screen, level: panel.level)
+                windowSelectionBottomBar.show(screen: screen, level: panel.level,
+                                              message: "Select a window to record")
             }
-        case .display: displayOverlay.show(keepingAbove: panel)
+        case .display:
+            displayOverlay.show(keepingAbove: panel)
+            if shouldUseFullScreenWindowPicker {
+                panel.orderOut(nil)
+                let screen = NSScreen.main ?? NSScreen.screens[0]
+                windowSelectionBottomBar.show(screen: screen, level: panel.level,
+                                              message: "Select a display to record")
+            }
+        case .area:
+            areaOverlay.show(keepingAbove: panel)
         }
     }
 
@@ -298,6 +331,7 @@ class ToolbarState: ObservableObject {
         switchTargetWindow = nil
         overlay.hide()
         displayOverlay.hide()
+        areaOverlay.hide()
         windowSelectionBottomBar.hide()
         panel?.orderFrontRegardless()
     }
@@ -327,12 +361,15 @@ class ToolbarState: ObservableObject {
             // Hide overlays when returning from a confirmed selection or stopping recording.
             overlay.hide()
             displayOverlay.hide()
+            areaOverlay.hideImmediate()
         case .windowSelect, .displaySelect:
             // Restore toolbar hidden during full-screen window picker.
             windowSelectionBottomBar.hide()
             panel?.orderFrontRegardless()
+            // Keep areaOverlay visible when frozen (area selection was confirmed).
         case .countdown:
             windowSelectionBottomBar.hide()
+            areaOverlay.hideImmediate()
             panel?.orderFrontRegardless()
         case .recording:
             break  // overlays are managed by selectionMode / freeze()

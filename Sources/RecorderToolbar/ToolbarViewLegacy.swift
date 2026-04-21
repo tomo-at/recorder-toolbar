@@ -39,12 +39,15 @@ struct TypeSelectView: View {
                     else  { state.shortcutTooltip.hide() }
                 }
 
-                SegmentButton(icon: "rectangle.dashed", label: "Area") {}
-                    .onHover { h in
-                        state.showPreview(h ? .area : nil)
-                        if h { state.showTooltip("Record Area", "⇧⌘8", buttonCenterX: 168) }
-                        else  { state.shortcutTooltip.hide() }
-                    }
+                SegmentButton(icon: "rectangle.dashed", label: "Area",
+                              isActive: state.selectionMode == .area) {
+                    state.toggleSelecting(.area)
+                }
+                .onHover { h in
+                    state.showPreview(h ? .area : nil)
+                    if h { state.showTooltip("Record Area", "⇧⌘8", buttonCenterX: 168) }
+                    else  { state.shortcutTooltip.hide() }
+                }
 
                 CamOnlySegment(activeId: state.activeCamId) { h in
                     guard let panel = state.panel else { return }
@@ -336,12 +339,15 @@ struct TypeSelectViewV2: View {
                         else  { state.shortcutTooltip.hide() }
                     }
 
-                    SegmentButton(icon: "rectangle.dashed", label: "Area") {}
-                        .onHover { h in
-                            state.showPreview(h ? .area : nil)
-                            if h { state.showTooltip("Record Area", "⇧⌘8", buttonCenterX: 168) }
-                            else  { state.shortcutTooltip.hide() }
-                        }
+                    SegmentButton(icon: "rectangle.dashed", label: "Area",
+                                  isActive: state.selectionMode == .area) {
+                        state.toggleSelecting(.area)
+                    }
+                    .onHover { h in
+                        state.showPreview(h ? .area : nil)
+                        if h { state.showTooltip("Record Area", "⇧⌘8", buttonCenterX: 168) }
+                        else  { state.shortcutTooltip.hide() }
+                    }
 
                     CamOnlySegment(activeId: state.activeCamId) { h in
                         guard let panel = state.panel else { return }
@@ -448,12 +454,15 @@ struct TypeSelectViewV3: View {
                         else  { state.shortcutTooltip.hide() }
                     }
 
-                    SegmentedControlItem(icon: "rectangle.dashed", label: "Area") {}
-                        .onHover { h in
-                            state.showPreview(h ? .area : nil)
-                            if h { state.showTooltip("Record Area", "⇧⌘8", buttonCenterX: 170) }
-                            else  { state.shortcutTooltip.hide() }
-                        }
+                    SegmentedControlItem(icon: "rectangle.dashed", label: "Area",
+                                         isActive: state.selectionMode == .area) {
+                        state.toggleSelecting(.area)
+                    }
+                    .onHover { h in
+                        state.showPreview(h ? .area : nil)
+                        if h { state.showTooltip("Record Area", "⇧⌘8", buttonCenterX: 170) }
+                        else  { state.shortcutTooltip.hide() }
+                    }
 
                     SegmentedControlItem(icon: "person.crop.rectangle.fill",
                                          label: "Cam only") {}

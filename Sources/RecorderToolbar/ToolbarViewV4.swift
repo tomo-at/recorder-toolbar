@@ -20,6 +20,7 @@ struct TypeSelectViewV4: View {
         switch state.selectionMode {
         case .display: return "Click a display to start recording"
         case .window:  return "Click a window to start recording"
+        case .area:    return "Drag to select a recording area"
         case nil:      return "Choose a recording type"
         }
     }
@@ -51,12 +52,15 @@ struct TypeSelectViewV4: View {
                     else  { state.shortcutTooltip.hide() }
                 }
 
-                SegmentedControlItem(icon: "rectangle.dashed", label: "Area") {}
-                    .onHover { h in
-                        state.showPreview(h ? .area : nil)
-                        if h { state.showTooltip("Record Area", "⇧⌘8", buttonCenterX: 160) }
-                        else  { state.shortcutTooltip.hide() }
-                    }
+                SegmentedControlItem(icon: "rectangle.dashed", label: "Area",
+                                     isActive: state.selectionMode == .area) {
+                    state.toggleSelecting(.area)
+                }
+                .onHover { h in
+                    state.showPreview(h ? .area : nil)
+                    if h { state.showTooltip("Record Area", "⇧⌘8", buttonCenterX: 160) }
+                    else  { state.shortcutTooltip.hide() }
+                }
 
                 SegmentedControlItem(icon: "person.crop.rectangle.fill", label: "Cam only") {}
                     .onHover { h in
@@ -281,7 +285,7 @@ struct SelectionConfirmView: View {
                         }
                         .foregroundColor(.white)
                         .frame(maxWidth: .infinity)
-                        .frame(height: 52)
+                        .frame(height: 28)
                         .background(Color.accentDestructive)
                         .clipShape(RoundedRectangle(cornerRadius: 6, style: .continuous))
                         .overlay(
@@ -300,13 +304,9 @@ struct SelectionConfirmView: View {
             // Overlay: Cancel (left) + Settings (right)
             HStack {
                 Button(action: onCancel) {
-                    HStack(spacing: 4) {
-                        Image(systemName: "chevron.backward")
-                            .font(.system(size: 11, weight: .semibold))
-                        Text("Cancel")
-                            .font(.system(size: 12, weight: .medium))
-                    }
-                    .foregroundColor(.white)
+                    Text("Cancel")
+                        .font(.system(size: 12, weight: .medium))
+                        .foregroundColor(.white)
                     .padding(.horizontal, 8)
                     .padding(.vertical, 6)
                     .background(confirmGlassBg)
@@ -367,19 +367,19 @@ private struct ConfirmCameraButton: View {
         Button { showMenu.toggle() } label: {
             HStack(spacing: 4) {
                 CameraThumb(deviceId: activeId)
-                    .frame(width: 32, height: 32)
-                    .clipShape(RoundedRectangle(cornerRadius: 8, style: .continuous))
+                    .frame(width: 20, height: 20)
+                    .clipShape(RoundedRectangle(cornerRadius: 5, style: .continuous))
 
                 Image(systemName: "chevron.down")
                     .font(.system(size: 9, weight: .medium))
                     .foregroundColor(.contentTertiary)
-                    .frame(width: 16, height: 16)
+                    .frame(width: 12, height: 12)
                     .rotationEffect(.degrees(showMenu ? 180 : 0))
                     .animation(.easeInOut(duration: 0.15), value: showMenu)
             }
             .padding(.horizontal, 8)
             .padding(.vertical, 4)
-            .frame(height: 52)
+            .frame(height: 28)
             .background(Color.white.opacity(0.06))
             .clipShape(RoundedRectangle(cornerRadius: 6, style: .continuous))
         }
@@ -408,27 +408,27 @@ private struct ConfirmMicButton: View {
                         colors: [Color.white.opacity(0.11), Color.white.opacity(0.07)],
                         startPoint: .top, endPoint: .bottom
                     )
-                    .clipShape(RoundedRectangle(cornerRadius: 8, style: .continuous))
+                    .clipShape(RoundedRectangle(cornerRadius: 5, style: .continuous))
 
                     if usesIconStyle {
-                        MicIconWithLevel(size: 20)
+                        MicIconWithLevel(size: 14)
                     } else {
                         MicLevelBars(level: level)
-                            .frame(width: 10, height: 20)
+                            .frame(width: 7, height: 14)
                     }
                 }
-                .frame(width: 32, height: 32)
+                .frame(width: 20, height: 20)
 
                 Image(systemName: "chevron.down")
                     .font(.system(size: 9, weight: .medium))
                     .foregroundColor(.contentTertiary)
-                    .frame(width: 16, height: 16)
+                    .frame(width: 12, height: 12)
                     .rotationEffect(.degrees(showMenu ? 180 : 0))
                     .animation(.easeInOut(duration: 0.15), value: showMenu)
             }
             .padding(.horizontal, 8)
             .padding(.vertical, 4)
-            .frame(height: 52)
+            .frame(height: 28)
             .background(Color.white.opacity(0.06))
             .clipShape(RoundedRectangle(cornerRadius: 6, style: .continuous))
         }
