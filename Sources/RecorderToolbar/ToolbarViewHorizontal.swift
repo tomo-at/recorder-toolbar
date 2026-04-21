@@ -252,7 +252,8 @@ struct HorizontalCaptureSheet: View {
     @State private var displayItems: [HSheetItem] = []
     @State private var windowItems: [HSheetItem] = []
 
-    private let cols = [GridItem(.fixed(148)), GridItem(.fixed(148))]
+    private let cols = [GridItem(.fixed(ToolbarState.PanelDimensions.hSheetCellSize.width)),
+                        GridItem(.fixed(ToolbarState.PanelDimensions.hSheetCellSize.width))]
 
     var body: some View {
         VStack(spacing: 0) {
@@ -266,10 +267,11 @@ struct HorizontalCaptureSheet: View {
                 }
                 .padding(8)
             }
-            .frame(height: 312)
+            .frame(height: ToolbarState.PanelDimensions.hSheetScrollHeight)
             sheetFooter
         }
-        .frame(width: 324, height: 400)
+        .frame(width: ToolbarState.PanelDimensions.hSheetSize.width,
+               height: ToolbarState.PanelDimensions.hSheetSize.height)
         .background(Color.bgPrimary)
         .task { loadItems() }
     }
@@ -322,14 +324,15 @@ struct HorizontalCaptureSheet: View {
                         Color.white.opacity(0.08)
                     }
                 }
-                .frame(width: 148, height: 84)
+                .frame(width: ToolbarState.PanelDimensions.hSheetCellSize.width,
+                       height: ToolbarState.PanelDimensions.hSheetCellSize.height)
                 .clipShape(RoundedRectangle(cornerRadius: 6, style: .continuous))
 
                 Text(item.name)
                     .font(.system(size: 12))
                     .foregroundColor(.white)
                     .lineLimit(1)
-                    .frame(width: 148, alignment: .center)
+                    .frame(width: ToolbarState.PanelDimensions.hSheetCellSize.width, alignment: .center)
             }
         }
         .buttonStyle(.plain)

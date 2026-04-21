@@ -8,22 +8,33 @@ CLAUDE.md から分離した参照テーブル。判断に必要なルールは 
 
 | ファイル | 内容 |
 |---|---|
+| `main.swift` | アプリエントリポイント（NSApplication.main） |
 | `AppDelegate.swift` | ツールバー NSPanel 生成・ToolbarState 初期化・メニューバー・通知 |
-| `ToolbarState.swift` | AppState 管理・全コントローラー所有・選択モード・カウントダウン・アップロード・ウィンドウ複数録画・Esc モニター・デバイス読み込み・プレビューモード |
-| `ToolbarView.swift` | AppState × ProtoVersion ディスパッチ・V5 組み合わせビュー・共通コンポーネント |
+| `ToolbarState.swift` | 中央コントローラー。全コントローラー所有・AppState 管理・Esc モニター・デバイス読み込み |
+| `ToolbarState+Selection.swift` | 選択モード制御（toggleSelecting / enterSelecting / exitSelecting / selectWindowFromSheet / selectDisplayFromSheet） |
+| `ToolbarState+Recording.swift` | 録画・カウントダウン・アップロード・stopRecording |
+| `ToolbarState+WindowRecording.swift` | 複数ウィンドウ録画（add / remove / switch / toolbar controls パターン） |
+| `ToolbarState+PanelLayout.swift` | PanelDimensions 定数・resizePanel・panelHeight |
+| `ToolbarState+CameraPreview.swift` | カメラプレビューポップアップ表示制御 |
+| `ToolbarState+PreviewMode.swift` | TypeSelect ホバー時のオーバーレイプレビュー制御 |
+| `ToolbarState+AreaConfirm.swift` | エリア確認パネル表示制御 |
+| `ToolbarState+ViewHelpers.swift` | ショートカットツールチップ・ツールバーウィンドウポップアップ表示ヘルパー |
+| `ToolbarView.swift` | AppState × ProtoVersion ディスパッチ・V5 組み合わせビュー |
+| `ToolbarComponents.swift` | 共通 UI コンポーネント（SegmentButton / UploadProgressBarView / ToolbarHeader / ToolbarDivider / CloseSection） |
 | `ToolbarViewLegacy.swift` | V1–V3 用全ビュー（TypeSelectView / TypeSelectViewV2 / TypeSelectViewV3 / WindowSelectView / CountdownToolbarView / RecordingView） |
 | `ToolbarViewV4.swift` | V4 用全ビュー（TypeSelectViewV4 / CountdownToolbarViewV4 / RecordingViewV4 / SelectionConfirmView / CamOnlyConfirmView / CamOnlyPreviewView） |
-| `ToolbarViewHorizontal.swift` | V5 Horizontal スタイル用ビュー群（HorizontalTypeSelectView / HorizontalWindowSelectView / HorizontalRecordingView / RevealedAllCompactTypeSelectView） |
+| `ToolbarViewV5.swift` | V5 ディスパッチビュー（V5TypeSelect / V5WindowSelect / V5Countdown / V5Recording / UploadModeView） |
+| `ToolbarViewHorizontal.swift` | V5 Horizontal / RevealedAllCompact ビュー群（HorizontalTypeSelectView / HorizontalCaptureSheet / RevealedAllCompactTypeSelectView） |
 | `WindowOverlay.swift` | ウィンドウ選択オーバーレイ（DetectedWindow・OverlayState・OverlayController） |
 | `AreaOverlay.swift` | エリア選択オーバーレイ（AreaSelectionState・AreaOverlayController） |
-| `DisplayOverlay.swift` | ディスプレイ選択オーバーレイ |
+| `DisplayOverlay.swift` | ディスプレイ選択オーバーレイ（DisplayOverlayController） |
 | `PreviewOverlay.swift` | TypeSelect ホバープレビューオーバーレイ |
 | `CountdownOverlay.swift` | カウントダウンオーバーレイ |
 | `WindowSelectionBottomBar.swift` | フルスクリーンウィンドウピッカー時の画面下部ヒントバー |
 | `CameraSegment.swift` | CameraSegment / MicSegment / CamOnlySegment / CameraThumb / CameraPreviewView / DeviceMenuView / MicLevelBars |
 | `SettingsPanel.swift` | SettingsPanelController・SettingsState（V5 軸 enum + UserDefaults）・Settings SwiftUI ビュー |
-| `PrototypeSettingsWindow.swift` | V5 独立設定ウィンドウ（DefaultStyle × RecordingStyle × UploadStyle） |
-| `Helpers.swift` | Airtime DS 色トークン・NSPanel/NSWindow ファクトリ・フェードアニメーション・PanelDimensions 定数・各種パネルコントローラー（ShortcutTooltip / ToolbarWindowPopup / WindowMultiDialog / WindowHoverDialog / UploadCompleteBanner / CamOnlyPanel / SelectionConfirmPanel） |
+| `PrototypeSettingsWindow.swift` | V5 独立設定ウィンドウ（DefaultStyle × RecordingStyle × UploadStyle × AddWindow） |
+| `Helpers.swift` | Airtime DS 色トークン・NSPanel/NSWindow ファクトリ・フェードアニメーション・各種パネルコントローラー（ShortcutTooltip / ToolbarWindowPopup / WindowMultiDialog / WindowHoverDialog / UploadCompleteBanner / CamOnlyPanel / SelectionConfirmPanel） |
 
 ---
 
@@ -63,6 +74,9 @@ CLAUDE.md から分離した参照テーブル。判断に必要なルールは 
 | Prototype Settings ウィンドウ | 360 × 680 px |
 | カメラプレビューポップアップ | 320 × 240 px |
 | SegmentButton | 64 × 48 px |
+| HorizontalCaptureSheet（シート全体） | 324 × 400 px |
+| HorizontalCaptureSheet（スクロール領域） | 高さ 312 px |
+| HorizontalCaptureSheet（サムネイルセル） | 148 × 84 px |
 
 ---
 

@@ -13,9 +13,13 @@ extension ToolbarState {
         static let windowSelectWidth:        CGFloat = 389
         static let recordingWidth:           CGFloat = 297
         static let horizontalRecordingWidth: CGFloat = 365
+        static let defaultHeight:            CGFloat = 56
         static let camOnlyConfirmSize        = CGSize(width: 1080, height: 652)
         static let camOnlyPreviewSize        = CGSize(width: 1080, height: 608)
         static let selectionConfirmSize      = CGSize(width: 284,  height: 204)
+        static let hSheetSize                = CGSize(width: 324,  height: 400)
+        static let hSheetScrollHeight:       CGFloat = 312
+        static let hSheetCellSize            = CGSize(width: 148,  height: 84)
     }
 
     // MARK: – Panel resize
