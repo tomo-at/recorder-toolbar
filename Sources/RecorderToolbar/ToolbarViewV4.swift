@@ -446,7 +446,68 @@ private struct ConfirmMicButton: View {
     }
 }
 
-// MARK: – Cam-only: large preview + controls (selectedRegion and default styles)
+// MARK: – Drag & resize helpers (Cam-only panels)
+
+private struct WindowDragNSView: NSViewRepresentable {
+    func makeNSView(context: Context) -> _WDView { _WDView() }
+    func updateNSView(_ v: _WDView, context: Context) {}
+
+    class _WDView: NSView {
+        override func mouseDragged(with e: NSEvent) {
+            guard let w = window else { return }
+            let o = w.frame.origin
+            w.setFrameOrigin(NSPoint(x: o.x + e.deltaX, y: o.y - e.deltaY))
+        }
+        override func resetCursorRects() { addCursorRect(bounds, cursor: .openHand) }
+    }
+}
+
+private struct ResizeGripNSView: NSViewRepresentable {
+    func makeNSView(context: Context) -> _RGView { _RGView() }
+    func updateNSView(_ v: _RGView, context: Context) {}
+
+    class _RGView: NSView {
+        private var startMouse: CGPoint = .zero
+        private var startFrame: CGRect = .zero
+
+        override func mouseDown(with e: NSEvent) {
+            guard let w = window else { return }
+            startMouse = NSEvent.mouseLocation
+            startFrame = w.frame
+        }
+        override func mouseDragged(with e: NSEvent) {
+            guard let w = window else { return }
+            let cur = NSEvent.mouseLocation
+            let dx = cur.x - startMouse.x
+            let dy = cur.y - startMouse.y
+            var f = startFrame
+            f.size.width  = max(480, f.size.width + dx)
+            f.size.height = max(300, f.size.height - dy)
+            f.origin.y    = startFrame.maxY - f.size.height
+            w.setFrame(f, display: true)
+        }
+        override func resetCursorRects() { addCursorRect(bounds, cursor: .crosshair) }
+    }
+}
+
+private struct WindowDrag: View {
+    var body: some View { WindowDragNSView() }
+}
+
+private struct ResizeGripButton: View {
+    var body: some View {
+        ZStack {
+            ResizeGripNSView()
+            Image(systemName: "arrow.up.left.and.arrow.down.right")
+                .font(.system(size: 11, weight: .semibold))
+                .foregroundColor(.white.opacity(0.5))
+                .allowsHitTesting(false)
+        }
+        .frame(width: 28, height: 28)
+    }
+}
+
+// MARK: – Cam-only: large preview + controls (selectedRegion style)
 
 struct CamOnlyConfirmView: View {
     @ObservedObject var state: ToolbarState
@@ -460,62 +521,66 @@ struct CamOnlyConfirmView: View {
 
     var body: some View {
         VStack(spacing: 0) {
-            CameraThumb(deviceId: state.activeCamId)
-                .frame(maxWidth: .infinity)
-                .frame(height: 608)
+            ZStack(alignment: .bottomTrailing) {
+                CameraThumb(deviceId: state.activeCamId)
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
+                    .overlay(WindowDrag())
+                ResizeGripButton().padding(8)
+            }
 
-            HStack(spacing: 6) {
-                Button(action: onCancel) {
-                    Text("Cancel")
-                        .font(.system(size: 12, weight: .medium))
+            ZStack {
+                HStack {
+                    Button(action: onCancel) {
+                        Text("Cancel")
+                            .font(.system(size: 12, weight: .medium))
+                            .foregroundColor(.white)
+                            .frame(height: 28)
+                            .padding(.horizontal, 10)
+                            .background(Color.white.opacity(0.06))
+                            .clipShape(RoundedRectangle(cornerRadius: 6, style: .continuous))
+                    }
+                    .buttonStyle(.plain)
+                    Spacer()
+                    Button(action: onRecord) {
+                        HStack(spacing: 4) {
+                            Image(systemName: "record.circle.fill")
+                                .font(.system(size: 13))
+                            Text("Record")
+                                .font(.system(size: 12, weight: .medium))
+                        }
                         .foregroundColor(.white)
                         .frame(height: 28)
                         .padding(.horizontal, 10)
-                        .background(Color.white.opacity(0.06))
+                        .background(Color.accentDestructive)
                         .clipShape(RoundedRectangle(cornerRadius: 6, style: .continuous))
-                }
-                .buttonStyle(.plain)
-
-                Spacer()
-
-                ConfirmCameraButton(
-                    devices: state.cameraDevices,
-                    activeId: $state.activeCamId
-                )
-                ConfirmMicButton(
-                    devices: state.micDevices,
-                    activeId: $state.activeMicId,
-                    usesIconStyle: usesIconMicStyle
-                )
-
-                Button {
-                    guard let panel = state.panel else { return }
-                    state.settingsPanel.toggle(toolbar: panel,
-                                               buttonCenterX: panel.frame.midX)
-                } label: {
-                    Image(systemName: "gearshape.fill")
-                        .font(.system(size: 14))
-                        .foregroundColor(.white)
-                        .frame(width: 28, height: 28)
-                        .background(Color.white.opacity(0.06))
-                        .clipShape(RoundedRectangle(cornerRadius: 6, style: .continuous))
-                }
-                .buttonStyle(.plain)
-
-                Button(action: onRecord) {
-                    HStack(spacing: 4) {
-                        Image(systemName: "record.circle.fill")
-                            .font(.system(size: 13))
-                        Text("Record")
-                            .font(.system(size: 12, weight: .medium))
                     }
-                    .foregroundColor(.white)
-                    .frame(height: 28)
-                    .padding(.horizontal, 10)
-                    .background(Color.accentDestructive)
-                    .clipShape(RoundedRectangle(cornerRadius: 6, style: .continuous))
+                    .buttonStyle(.plain)
                 }
-                .buttonStyle(.plain)
+
+                HStack(spacing: 6) {
+                    ConfirmCameraButton(
+                        devices: state.cameraDevices,
+                        activeId: $state.activeCamId
+                    )
+                    ConfirmMicButton(
+                        devices: state.micDevices,
+                        activeId: $state.activeMicId,
+                        usesIconStyle: usesIconMicStyle
+                    )
+                    Button {
+                        guard let panel = state.panel else { return }
+                        state.settingsPanel.toggle(toolbar: panel,
+                                                   buttonCenterX: panel.frame.midX)
+                    } label: {
+                        Image(systemName: "gearshape.fill")
+                            .font(.system(size: 14))
+                            .foregroundColor(.white)
+                            .frame(width: 28, height: 28)
+                            .background(Color.white.opacity(0.06))
+                            .clipShape(RoundedRectangle(cornerRadius: 6, style: .continuous))
+                    }
+                    .buttonStyle(.plain)
+                }
             }
             .padding(8)
             .overlay(alignment: .top) {
@@ -537,12 +602,16 @@ struct CamOnlyPreviewView: View {
     let deviceId: String?
 
     var body: some View {
-        CameraThumb(deviceId: deviceId)
-            .frame(maxWidth: .infinity, maxHeight: .infinity)
-            .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
-            .overlay(
-                RoundedRectangle(cornerRadius: 16, style: .continuous)
-                    .strokeBorder(Color.white.opacity(0.15), lineWidth: 1)
-            )
+        ZStack(alignment: .bottomTrailing) {
+            CameraThumb(deviceId: deviceId)
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
+                .overlay(WindowDrag())
+            ResizeGripButton().padding(8)
+        }
+        .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
+        .overlay(
+            RoundedRectangle(cornerRadius: 16, style: .continuous)
+                .strokeBorder(Color.white.opacity(0.15), lineWidth: 1)
+        )
     }
 }
