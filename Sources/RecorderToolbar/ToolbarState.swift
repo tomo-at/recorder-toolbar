@@ -125,6 +125,7 @@ class ToolbarState: ObservableObject {
                 self.selectionConfirmPanel.show(origin: origin, above: panel, state: self,
                     onCancel: { [weak self] in self?.appState = .typeSelect },
                     onRecord:  { [weak self] in self?.startCountdown() })
+                panel.orderOut(nil)
             }
         }
         overlay.onCancel = { [weak self] in self?.exitSelecting() }
@@ -228,6 +229,7 @@ class ToolbarState: ObservableObject {
                 self.selectionConfirmPanel.show(origin: origin, above: panel, state: self,
                     onCancel: { [weak self] in self?.appState = .typeSelect },
                     onRecord:  { [weak self] in self?.startCountdown() })
+                panel.orderOut(nil)
             }
         }
         displayOverlay.onCancel = { [weak self] in self?.exitSelecting() }
@@ -335,6 +337,7 @@ class ToolbarState: ObservableObject {
             // selectedRegion: show confirm panel immediately alongside the area overlay.
             if usesSelectionConfirmPanel {
                 showAreaConfirmPanel()
+                panel.orderOut(nil)
             }
         case .camOnly:
             let screen = panel.screen ?? NSScreen.main ?? NSScreen.screens[0]
@@ -364,6 +367,7 @@ class ToolbarState: ObservableObject {
                         self.selectionMode = nil
                         self.startCountdown()
                     })
+                panel.orderOut(nil)
             }
         }
     }
@@ -411,6 +415,7 @@ class ToolbarState: ObservableObject {
             displayOverlay.hide()
             areaOverlay.hideImmediate()
             camOnlyPanel.dismiss()
+            panel?.orderFrontRegardless()
         case .windowSelect, .displaySelect:
             // Restore toolbar hidden during full-screen window picker.
             windowSelectionBottomBar.hide()
