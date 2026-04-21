@@ -77,6 +77,12 @@ final class DisplayOverlayController {
         state.isSelected = true
     }
 
+    /// Directly freeze to a given screen without requiring a hover event.
+    func freezeToScreen(_ screen: NSScreen) {
+        state.hoveredScreen = screen
+        freeze()
+    }
+
     func hide() {
         stopTracking()
         screenOverlays.forEach { $0.dismiss(animated: true) }

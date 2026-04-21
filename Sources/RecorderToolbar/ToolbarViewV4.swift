@@ -446,83 +446,6 @@ private struct ConfirmMicButton: View {
     }
 }
 
-// MARK: – Drag & resize helpers (Cam-only panels)
-
-private struct WindowDragNSView: NSViewRepresentable {
-    func makeNSView(context: Context) -> _WDView { _WDView() }
-    func updateNSView(_ v: _WDView, context: Context) {}
-
-    class _WDView: NSView {
-        override func mouseDragged(with e: NSEvent) {
-            guard let w = window else { return }
-            let o = w.frame.origin
-            w.setFrameOrigin(NSPoint(x: o.x + e.deltaX, y: o.y - e.deltaY))
-        }
-        override func resetCursorRects() { addCursorRect(bounds, cursor: .openHand) }
-    }
-}
-
-private struct ResizeGripNSView: NSViewRepresentable {
-    /// Height of any fixed-height area below the camera (e.g. controls bar).
-    /// The camera portion is resized at 16:9; this value is added on top unchanged.
-    var fixedBottomHeight: CGFloat = 0
-
-    func makeNSView(context: Context) -> _RGView { _RGView(fixedBottomHeight: fixedBottomHeight) }
-    func updateNSView(_ v: _RGView, context: Context) {}
-
-    class _RGView: NSView {
-        private let fixedBottomHeight: CGFloat
-        private var startMouse: CGPoint = .zero
-        private var startFrame: CGRect = .zero
-        private var aspectRatio: CGFloat = 16.0 / 9.0   // width / cameraHeight
-
-        init(fixedBottomHeight: CGFloat) {
-            self.fixedBottomHeight = fixedBottomHeight
-            super.init(frame: .zero)
-        }
-        required init?(coder: NSCoder) { fatalError() }
-
-        override func mouseDown(with e: NSEvent) {
-            guard let w = window else { return }
-            startMouse = NSEvent.mouseLocation
-            startFrame = w.frame
-            let cameraH = startFrame.height - fixedBottomHeight
-            if cameraH > 0 { aspectRatio = startFrame.width / cameraH }
-        }
-        override func mouseDragged(with e: NSEvent) {
-            guard let w = window else { return }
-            let dx = NSEvent.mouseLocation.x - startMouse.x
-            let newWidth      = max(480, startFrame.width + dx)
-            let newCameraH    = (newWidth / aspectRatio).rounded()
-            let newHeight     = newCameraH + fixedBottomHeight
-            var f = startFrame
-            f.size.width  = newWidth
-            f.size.height = newHeight
-            f.origin.y    = startFrame.maxY - newHeight
-            w.setFrame(f, display: true)
-        }
-        override func resetCursorRects() { addCursorRect(bounds, cursor: .crosshair) }
-    }
-}
-
-private struct WindowDrag: View {
-    var body: some View { WindowDragNSView() }
-}
-
-private struct ResizeGripButton: View {
-    var fixedBottomHeight: CGFloat = 0
-    var body: some View {
-        ZStack {
-            ResizeGripNSView(fixedBottomHeight: fixedBottomHeight)
-            Image(systemName: "arrow.up.left.and.arrow.down.right")
-                .font(.system(size: 11, weight: .semibold))
-                .foregroundColor(.white.opacity(0.5))
-                .allowsHitTesting(false)
-        }
-        .frame(width: 28, height: 28)
-    }
-}
-
 // MARK: – Cam-only: large preview + controls (selectedRegion style)
 
 struct CamOnlyConfirmView: View {
@@ -537,13 +460,8 @@ struct CamOnlyConfirmView: View {
 
     var body: some View {
         VStack(spacing: 0) {
-            ZStack(alignment: .bottomTrailing) {
-                CameraThumb(deviceId: state.activeCamId)
-                    .frame(maxWidth: .infinity, maxHeight: .infinity)
-                    .overlay(WindowDrag())
-                // fixedBottomHeight = controls bar (44px) so camera stays 16:9
-                ResizeGripButton(fixedBottomHeight: 44).padding(8)
-            }
+            CameraThumb(deviceId: state.activeCamId)
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
 
             ZStack {
                 HStack {
@@ -619,12 +537,8 @@ struct CamOnlyPreviewView: View {
     let deviceId: String?
 
     var body: some View {
-        ZStack(alignment: .bottomTrailing) {
-            CameraThumb(deviceId: deviceId)
-                .frame(maxWidth: .infinity, maxHeight: .infinity)
-                .overlay(WindowDrag())
-            ResizeGripButton().padding(8)
-        }
+        CameraThumb(deviceId: deviceId)
+            .frame(maxWidth: .infinity, maxHeight: .infinity)
         .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
         .overlay(
             RoundedRectangle(cornerRadius: 16, style: .continuous)

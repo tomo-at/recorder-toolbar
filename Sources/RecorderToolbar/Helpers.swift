@@ -656,6 +656,10 @@ final class UploadCompleteBannerController {
 
 final class CamOnlyPanelController {
     private var panel: NSPanel?
+    private var eventMonitors: [Any] = []
+    private var isDragging = false
+    private var startMouse: CGPoint = .zero
+    private var startOrigin: CGPoint = .zero
 
     /// Show a large camera preview with Cancel/Cam/Mic/Settings/Record controls.
     func showConfirm(origin: NSPoint, above toolbar: NSPanel, state: ToolbarState,
@@ -676,6 +680,7 @@ final class CamOnlyPanelController {
         p.invalidateShadow()
         panel = p
         toolbar.orderFrontRegardless()
+        installDragMonitor(panel: p)
     }
 
     /// Show a large camera preview with no controls (toolbar handles recording).
@@ -693,14 +698,54 @@ final class CamOnlyPanelController {
         p.invalidateShadow()
         panel = p
         toolbar.orderFrontRegardless()
+        installDragMonitor(panel: p)
+    }
+
+    private func installDragMonitor(panel: NSPanel) {
+        removeMonitors()
+
+        // Local monitors intercept THIS app's events — needed for clicks on our own nonactivatingPanel.
+        // Global monitors only receive events targeted at OTHER applications.
+        let down = NSEvent.addLocalMonitorForEvents(matching: .leftMouseDown) { [weak self, weak panel] event in
+            guard let self, let panel else { return event }
+            let mouse = NSEvent.mouseLocation
+            guard panel.frame.contains(mouse) else { self.isDragging = false; return event }
+            self.startMouse = mouse
+            self.startOrigin = panel.frame.origin
+            self.isDragging = true
+            return event
+        }
+
+        let dragged = NSEvent.addLocalMonitorForEvents(matching: .leftMouseDragged) { [weak self, weak panel] event in
+            guard let self, self.isDragging, let panel else { return event }
+            let mouse = NSEvent.mouseLocation
+            panel.setFrameOrigin(NSPoint(x: self.startOrigin.x + mouse.x - self.startMouse.x,
+                                         y: self.startOrigin.y + mouse.y - self.startMouse.y))
+            return event
+        }
+
+        let up = NSEvent.addLocalMonitorForEvents(matching: .leftMouseUp) { [weak self] event in
+            self?.isDragging = false
+            return event
+        }
+
+        eventMonitors = [down, dragged, up].compactMap { $0 }
+    }
+
+    private func removeMonitors() {
+        eventMonitors.forEach { NSEvent.removeMonitor($0) }
+        eventMonitors = []
+        isDragging = false
     }
 
     private func dismissImmediate() {
+        removeMonitors()
         panel?.orderOut(nil)
         panel = nil
     }
 
     func dismiss() {
+        removeMonitors()
         guard let p = panel else { return }
         panel = nil
         p.fadeOut(resetAlpha: true)

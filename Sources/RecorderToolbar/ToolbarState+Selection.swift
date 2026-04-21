@@ -34,6 +34,7 @@ extension ToolbarState {
         }
     }
 
+
     func enterSelecting(_ mode: SelectionMode) {
         // Dismiss any confirm/preview panels from a previous mode before entering a new one.
         selectionConfirmPanel.dismiss()
@@ -109,6 +110,24 @@ extension ToolbarState {
                 panel.orderOut(nil)
             }
         }
+    }
+
+    // MARK: – Direct selection from sheet (horizontal style)
+
+    /// Select a specific window directly from the sheet tile — no hover required.
+    func selectWindowFromSheet(_ window: DetectedWindow) {
+        settingsPanel.dismiss()
+        enterSelecting(.window)
+        overlay.freezeToWindow(window)
+        overlay.selectCurrent()
+    }
+
+    /// Select a specific display directly from the sheet tile — no hover required.
+    func selectDisplayFromSheet(_ screen: NSScreen) {
+        settingsPanel.dismiss()
+        enterSelecting(.display)
+        displayOverlay.freezeToScreen(screen)
+        displayOverlay.onSelect?()
     }
 
     func exitSelecting() {

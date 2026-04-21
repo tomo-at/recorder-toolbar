@@ -636,6 +636,17 @@ struct PerScreenOverlayView: View {
             holeCX = r.midX; holeCY = r.midY
             holeW  = r.width; holeH  = r.height
         }
+        .onAppear {
+            // Sheet-based selection: freezeToWindow fires before this view is mounted,
+            // so onChange(of: frozenWindow) never triggers. Initialize hole from frozenWindow
+            // on first appear so the overlay reveals (not dims) the selected window.
+            guard holeW == 0, let w = state.frozenWindow else { return }
+            let screenRect = CGRect(origin: .zero, size: screen.frame.size)
+            let r = adjustedFrame(for: w)
+            guard screenRect.intersects(r) else { return }
+            holeCX = r.midX; holeCY = r.midY
+            holeW  = r.width; holeH  = r.height
+        }
     }
 
     /// Even-odd canvas mask: full rect minus the hole rect → hole is transparent.

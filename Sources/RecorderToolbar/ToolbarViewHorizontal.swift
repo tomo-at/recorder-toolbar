@@ -186,15 +186,18 @@ struct HCaptureTypeButton: View {
     @ObservedObject var state: ToolbarState
     @State private var hovering = false
     @State private var showMenu = false
+    @State private var sheetTab: HSheetTab = .display  // lifted so dropdown label tracks sheet tab
 
     private var label: String {
         if state.appState == .displaySelect || state.selectionMode == .display { return "Display" }
-        return "Window"
+        if state.appState == .windowSelect  || state.selectionMode == .window  { return "Window"  }
+        return sheetTab == .display ? "Display" : "Window"
     }
 
     private var icon: String {
-        if state.appState == .displaySelect || state.selectionMode == .display { return "display" }
-        return "macwindow"
+        if state.appState == .displaySelect || state.selectionMode == .display { return "display"   }
+        if state.appState == .windowSelect  || state.selectionMode == .window  { return "macwindow" }
+        return sheetTab == .display ? "display" : "macwindow"
     }
 
     var body: some View {
@@ -223,70 +226,206 @@ struct HCaptureTypeButton: View {
         .buttonStyle(.plain)
         .onHover { hovering = $0 }
         .popover(isPresented: $showMenu, arrowEdge: .bottom) {
-            CaptureTypeMenuView(state: state)
+            HorizontalCaptureSheet(state: state, tab: $sheetTab)
+                .preferredColorScheme(.dark)
         }
     }
 }
 
-/// Popover menu for capture type selection.
-struct CaptureTypeMenuView: View {
+// MARK: – Horizontal capture sheet (replaces dropdown for Horizontal style)
+
+enum HSheetTab { case display, window }
+
+private struct HSheetItem: Identifiable {
+    let id: Int
+    let name: String
+    var thumbnail: NSImage?
+    var detectedWindow: DetectedWindow?
+    var screen: NSScreen?
+}
+
+struct HorizontalCaptureSheet: View {
     @ObservedObject var state: ToolbarState
     @Environment(\.dismiss) private var dismiss
 
+    @Binding var tab: HSheetTab
+    @State private var displayItems: [HSheetItem] = []
+    @State private var windowItems: [HSheetItem] = []
+
+    private let cols = [GridItem(.fixed(148)), GridItem(.fixed(148))]
+
     var body: some View {
         VStack(spacing: 0) {
-            captureRow(icon: "display", label: "Display",
-                       isActive: state.selectionMode == .display
-                                 || state.appState == .displaySelect) {
-                state.activateSelecting(.display)
-                dismiss()
+            sheetHeader
+            Divider()
+            ScrollView {
+                LazyVGrid(columns: cols, spacing: 12) {
+                    ForEach(tab == .display ? displayItems : windowItems) { item in
+                        sheetCell(item: item)
+                    }
+                }
+                .padding(8)
             }
-            captureRow(icon: "macwindow", label: "Window",
-                       isActive: state.selectionMode == .window
-                                 || state.appState == .windowSelect) {
-                state.activateSelecting(.window)
-                dismiss()
-            }
-            captureRow(icon: "rectangle.dashed", label: "Area", isActive: false) {
-                dismiss()
-            }
-            captureRow(icon: "person.crop.rectangle.fill", label: "Cam only",
-                       isActive: state.selectionMode == .camOnly) {
-                state.activateSelecting(.camOnly)
-                dismiss()
-            }
+            .frame(height: 312)
+            sheetFooter
         }
-        .padding(4)
-        .background(Color.deviceMenuBg)
-        .cornerRadius(8)
-        .frame(minWidth: 160)
+        .frame(width: 324, height: 400)
+        .background(Color.bgPrimary)
+        .task { loadItems() }
+    }
+
+    // MARK: – Header: segmented Display | Window
+
+    private var sheetHeader: some View {
+        HStack(spacing: 4) {
+            segTab("Display", sel: tab == .display) { tab = .display }
+            segTab("Window",  sel: tab == .window)  { tab = .window  }
+        }
+        .padding(8)
+        .frame(height: 44)
     }
 
     @ViewBuilder
-    private func captureRow(icon: String, label: String, isActive: Bool,
-                            action: @escaping () -> Void) -> some View {
+    private func segTab(_ label: String, sel: Bool, action: @escaping () -> Void) -> some View {
         Button(action: action) {
-            HStack(spacing: 8) {
-                Image(systemName: icon)
-                    .font(.system(size: 14))
-                    .foregroundColor(.white)
-                    .frame(width: 20, height: 20)
-                Text(label)
-                    .font(.system(size: 12))
-                    .foregroundColor(.white)
-                Spacer()
-                if isActive {
-                    Image(systemName: "checkmark")
-                        .font(.system(size: 10, weight: .bold))
-                        .foregroundColor(.accentTeal)
-                }
-            }
-            .padding(.horizontal, 10)
-            .padding(.vertical, 7)
-            .contentShape(Rectangle())
+            Text(label)
+                .font(.system(size: 13, weight: .medium))
+                .foregroundColor(sel ? Color.contentPrimary : .contentTertiary)
+                .frame(maxWidth: .infinity)
+                .frame(height: 28)
+                .background(sel ? Color.highlightPrimary : Color.clear)
+                .clipShape(RoundedRectangle(cornerRadius: 6, style: .continuous))
+                .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
-        .background(isActive ? Color.white.opacity(0.06) : .clear)
+    }
+
+    // MARK: – Grid cell (display or window)
+
+    @ViewBuilder
+    private func sheetCell(item: HSheetItem) -> some View {
+        Button {
+            dismiss()
+            if tab == .window, let w = item.detectedWindow {
+                state.selectWindowFromSheet(w)
+            } else if tab == .display, let s = item.screen {
+                state.selectDisplayFromSheet(s)
+            }
+        } label: {
+            VStack(spacing: 6) {
+                Group {
+                    if let img = item.thumbnail {
+                        Image(nsImage: img)
+                            .resizable()
+                            .aspectRatio(contentMode: .fit)
+                    } else {
+                        Color.white.opacity(0.08)
+                    }
+                }
+                .frame(width: 148, height: 84)
+                .clipShape(RoundedRectangle(cornerRadius: 6, style: .continuous))
+
+                Text(item.name)
+                    .font(.system(size: 12))
+                    .foregroundColor(.white)
+                    .lineLimit(1)
+                    .frame(width: 148, alignment: .center)
+            }
+        }
+        .buttonStyle(.plain)
+    }
+
+    // MARK: – Footer: Area + Cam only
+
+    private var sheetFooter: some View {
+        HStack(spacing: 12) {
+            footerBtn(icon: "rectangle.dashed",        label: "Area") {
+                state.activateSelecting(.area); dismiss()
+            }
+            footerBtn(icon: "person.crop.rectangle.fill", label: "Cam only") {
+                state.activateSelecting(.camOnly); dismiss()
+            }
+        }
+        .padding(.horizontal, 8)
+        .frame(height: 44)
+        .overlay(alignment: .top) {
+            Rectangle().fill(Color.highlightPrimary).frame(height: 1)
+        }
+    }
+
+    @ViewBuilder
+    private func footerBtn(icon: String, label: String, action: @escaping () -> Void) -> some View {
+        Button(action: action) {
+            HStack(spacing: 6) {
+                Image(systemName: icon).font(.system(size: 12))
+                Text(label).font(.system(size: 12, weight: .medium))
+            }
+            .foregroundColor(.white)
+            .frame(maxWidth: .infinity)
+            .frame(height: 28)
+            .background(Color.white.opacity(0.08))
+            .clipShape(RoundedRectangle(cornerRadius: 6, style: .continuous))
+            .overlay(
+                RoundedRectangle(cornerRadius: 6, style: .continuous)
+                    .strokeBorder(Color.highlightPrimary, lineWidth: 1)
+            )
+        }
+        .buttonStyle(.plain)
+    }
+
+    // MARK: – Data loading
+
+    private func loadItems() {
+        // Displays: real screenshots via CoreGraphics
+        displayItems = NSScreen.screens.map { screen in
+            let displayID = (screen.deviceDescription[.init("NSScreenNumber")] as? NSNumber)?
+                .uint32Value ?? CGMainDisplayID()
+            var item = HSheetItem(id: Int(displayID), name: screen.localizedName)
+            item.screen = screen
+            if let cg = CGDisplayCreateImage(displayID) {
+                item.thumbnail = NSImage(cgImage: cg, size: .zero)
+            }
+            return item
+        }
+
+        // Windows: on-screen normal windows (layer 0)
+        guard let list = CGWindowListCopyWindowInfo(
+            [.excludeDesktopElements, .optionOnScreenOnly], kCGNullWindowID
+        ) as? [[CFString: Any]] else { return }
+
+        var items: [HSheetItem] = []
+        for info in list {
+            guard
+                let wid   = info[kCGWindowNumber] as? Int,
+                let owner = info[kCGWindowOwnerName] as? String,
+                let layer = info[kCGWindowLayer] as? Int,
+                layer == 0
+            else { continue }
+
+            let title = info[kCGWindowName]      as? String ?? ""
+            let pid   = info[kCGWindowOwnerPID]  as? pid_t  ?? 0
+            let icon  = NSRunningApplication(processIdentifier: pid)?.icon
+
+            var bounds = CGRect.zero
+            if let bd = info[kCGWindowBounds] as? [String: Any],
+               let r  = CGRect(dictionaryRepresentation: bd as CFDictionary) {
+                bounds = r
+            }
+
+            var item = HSheetItem(id: wid, name: owner)
+            item.detectedWindow = DetectedWindow(id: wid, appName: owner, title: title,
+                                                  appIcon: icon, bounds: bounds, ownerPID: pid)
+
+            if let cg = CGWindowListCreateImage(
+                CGRect.null, .optionIncludingWindow, CGWindowID(wid), .bestResolution
+            ) {
+                item.thumbnail = NSImage(cgImage: cg, size: .zero)
+            } else {
+                item.thumbnail = icon
+            }
+            items.append(item)
+        }
+        windowItems = items
     }
 }
 
