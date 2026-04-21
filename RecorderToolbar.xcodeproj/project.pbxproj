@@ -35,6 +35,7 @@
 		AA00000000000000000002B9 /* ToolbarState+Selection.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA00000000000000000001BA /* ToolbarState+Selection.swift */; };
 		AA00000000000000000002BA /* ToolbarState+ViewHelpers.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA00000000000000000001BB /* ToolbarState+ViewHelpers.swift */; };
 		AA00000000000000000002BB /* ToolbarState+WindowRecording.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA00000000000000000001BC /* ToolbarState+WindowRecording.swift */; };
+		AA00000000000000000002BC /* PanelControllers.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA00000000000000000001BD /* PanelControllers.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -65,6 +66,7 @@
 		AA00000000000000000001BA /* ToolbarState+Selection.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "ToolbarState+Selection.swift"; sourceTree = "<group>"; };
 		AA00000000000000000001BB /* ToolbarState+ViewHelpers.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "ToolbarState+ViewHelpers.swift"; sourceTree = "<group>"; };
 		AA00000000000000000001BC /* ToolbarState+WindowRecording.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "ToolbarState+WindowRecording.swift"; sourceTree = "<group>"; };
+		AA00000000000000000001BD /* PanelControllers.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PanelControllers.swift; sourceTree = "<group>"; };
 		AA00000000000000000001B0 /* main.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = main.swift; sourceTree = "<group>"; };
 		AA00000000000000000001B1 /* assets/icon-menu.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = "assets/icon-menu.png"; sourceTree = "<group>"; };
 		AA00000000000000000001B2 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
@@ -118,6 +120,7 @@
 				AA00000000000000000001BA /* ToolbarState+Selection.swift */,
 				AA00000000000000000001BB /* ToolbarState+ViewHelpers.swift */,
 				AA00000000000000000001BC /* ToolbarState+WindowRecording.swift */,
+				AA00000000000000000001BD /* PanelControllers.swift */,
 				AA00000000000000000001B0 /* main.swift */,
 				AA00000000000000000001B1 /* assets/icon-menu.png */,
 				AA00000000000000000001B2 /* Info.plist */,
@@ -229,6 +232,7 @@
 				AA00000000000000000002B9 /* ToolbarState+Selection.swift in Sources */,
 				AA00000000000000000002BA /* ToolbarState+ViewHelpers.swift in Sources */,
 				AA00000000000000000002BB /* ToolbarState+WindowRecording.swift in Sources */,
+				AA00000000000000000002BC /* PanelControllers.swift in Sources */,
 				AA00000000000000000002B0 /* main.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
