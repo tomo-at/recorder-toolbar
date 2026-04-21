@@ -166,8 +166,21 @@ final class AreaOverlayController {
     /// AppKit rect of the frozen selection (set in freeze()).
     private(set) var frozenRect: CGRect? = nil
 
-    var onSelect: (() -> Void)? = nil
-    var onCancel: (() -> Void)? = nil
+    /// AppKit rect of the live selection (updated continuously while dragging).
+    var currentRect: CGRect? {
+        guard let state = selectionState, let screen = activeScreen else { return nil }
+        let r = state.selRect
+        return CGRect(
+            x: r.minX + screen.frame.minX,
+            y: screen.frame.maxY - r.maxY,
+            width: r.width, height: r.height
+        )
+    }
+
+    var onSelect:    (() -> Void)? = nil
+    var onCancel:    (() -> Void)? = nil
+    var onDragStart: (() -> Void)? = nil
+    var onDragEnd:   (() -> Void)? = nil
 
     // MARK: – Lifecycle
 
@@ -334,6 +347,7 @@ final class AreaOverlayController {
         let handle = hitHandle(at: localPt, in: state.selRect)
         activeDrag = ActiveDrag(handle: handle, startPt: localPt, startRect: state.selRect)
         setCursor(for: handle, pressed: true)
+        onDragStart?()
     }
 
     private func handleMouseDrag(to apkPt: NSPoint) {
@@ -355,6 +369,7 @@ final class AreaOverlayController {
         }
         activeDrag = nil
         updateCursor(at: apkPt)
+        onDragEnd?()
     }
 
     // MARK: – Drag math

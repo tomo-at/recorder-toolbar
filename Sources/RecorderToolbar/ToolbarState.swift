@@ -204,23 +204,30 @@ class ToolbarState: ObservableObject {
         }
 
         // Area confirmed (Enter key): freeze overlay, proceed like window/display selection.
+        // For usesSelectionConfirmPanel: the confirm panel is already visible; Enter = Record.
         areaOverlay.onSelect = { [weak self] in
             guard let self else { return }
             self.areaOverlay.freeze()
             self.selectionMode = nil
-            if self.usesSelectToStart {
+            if self.usesSelectToStart || self.usesSelectionConfirmPanel {
                 self.startCountdown()
                 return
             }
             self.appState = .windowSelect
-            guard self.usesSelectionConfirmPanel else { return }
-            guard let panel = self.panel else { return }
-            let origin = self.confirmPanelOriginForArea(above: panel)
-            self.selectionConfirmPanel.show(origin: origin, above: panel, state: self,
-                onCancel: { [weak self] in self?.appState = .typeSelect },
-                onRecord:  { [weak self] in self?.startCountdown() })
         }
         areaOverlay.onCancel = { [weak self] in self?.exitSelecting() }
+
+        // Drag start: hide confirm panel so it doesn't obstruct the selection.
+        areaOverlay.onDragStart = { [weak self] in
+            guard let self, self.usesSelectionConfirmPanel else { return }
+            self.selectionConfirmPanel.dismiss()
+        }
+        // Drag end: re-show confirm panel at the updated position.
+        areaOverlay.onDragEnd = { [weak self] in
+            guard let self, self.usesSelectionConfirmPanel,
+                  self.selectionMode == .area else { return }
+            self.showAreaConfirmPanel()
+        }
 
         // Display selected: same pattern.
         displayOverlay.onSelect = { [weak self] in
@@ -305,6 +312,9 @@ class ToolbarState: ObservableObject {
     }
 
     private func enterSelecting(_ mode: SelectionMode) {
+        // Dismiss any confirm panel from a previous mode before entering a new one.
+        selectionConfirmPanel.dismiss()
+
         // Hide overlays for the other modes when switching.
         switch mode {
         case .window:  displayOverlay.hide(); areaOverlay.hideImmediate()
@@ -338,6 +348,10 @@ class ToolbarState: ObservableObject {
             if usesToolbarRecordingStyle {
                 appState = .windowSelect
             }
+            // selectedRegion: show confirm panel immediately alongside the area overlay.
+            if usesSelectionConfirmPanel {
+                showAreaConfirmPanel()
+            }
         }
     }
 
@@ -348,6 +362,7 @@ class ToolbarState: ObservableObject {
         displayOverlay.hide()
         areaOverlay.hide()
         windowSelectionBottomBar.hide()
+        selectionConfirmPanel.dismiss()
         panel?.orderFrontRegardless()
         // Reset to typeSelect (e.g. when area+toolbar mode was entered but user cancels).
         if appState == .windowSelect || appState == .displaySelect {
@@ -892,29 +907,39 @@ class ToolbarState: ObservableObject {
         settingsPanel.openPrototypeSettings()
     }
 
-    // MARK: – Area confirm panel placement
+    // MARK: – Area confirm panel
 
-    /// Returns the bottom-left origin (AppKit screen coords) for the SelectionConfirmPanel
-    /// when the selection was made via area overlay.
+    /// Show (or reposition) the SelectionConfirmPanel for the live area selection.
+    private func showAreaConfirmPanel() {
+        guard let panel else { return }
+        let origin = confirmPanelOriginForArea(rect: areaOverlay.currentRect, above: panel)
+        selectionConfirmPanel.show(origin: origin, above: panel, state: self,
+            onCancel: { [weak self] in self?.exitSelecting() },
+            onRecord: { [weak self] in
+                guard let self else { return }
+                self.areaOverlay.freeze()
+                self.selectionMode = nil
+                self.startCountdown()
+            })
+    }
+
+    /// Returns the bottom-left origin (AppKit screen coords) for the SelectionConfirmPanel.
     /// Places the panel inside the selection at bottom-left; if the area is too small,
     /// places it just below the selection instead.
-    private func confirmPanelOriginForArea(above panel: NSPanel) -> NSPoint {
+    private func confirmPanelOriginForArea(rect: CGRect?, above panel: NSPanel) -> NSPoint {
         let confirmSize = CGSize(width: 284, height: 204)
         let margin: CGFloat = 8
 
-        if let frozen = areaOverlay.frozenRect,
-           frozen.width  >= confirmSize.width  + margin * 2,
-           frozen.height >= confirmSize.height + margin * 2 {
-            // Inside the selection at bottom-left
-            return NSPoint(x: frozen.minX + margin, y: frozen.minY + margin)
+        if let r = rect,
+           r.width  >= confirmSize.width  + margin * 2,
+           r.height >= confirmSize.height + margin * 2 {
+            return NSPoint(x: r.minX + margin, y: r.minY + margin)
         }
 
-        // Outside: fall back to just below the frozen rect, or above the toolbar
-        if let frozen = areaOverlay.frozenRect {
-            return NSPoint(x: frozen.minX, y: frozen.minY - confirmSize.height - margin)
+        if let r = rect {
+            return NSPoint(x: r.minX, y: r.minY - confirmSize.height - margin)
         }
 
-        // Last resort: above the toolbar (original placement)
         return NSPoint(x: panel.frame.minX, y: panel.frame.maxY + margin)
     }
 
