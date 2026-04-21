@@ -51,13 +51,31 @@ final class AreaScreenOverlayWindow {
     init(screen: NSScreen, level: NSWindow.Level, state: AreaSelectionState) {
         self.screen = screen
         self.screenState = state
-        let w = NSWindow.makeOverlay(frame: screen.frame, level: level)
+
+        // Use NSPanel with .nonactivatingPanel so the overlay absorbs mouse events
+        // (blocking interaction with underlying apps) without stealing keyboard focus.
+        let p = NSPanel(
+            contentRect: screen.frame,
+            styleMask: [.borderless, .nonactivatingPanel],
+            backing: .buffered,
+            defer: false
+        )
+        p.level                   = level
+        p.backgroundColor         = .clear
+        p.isOpaque                = false
+        p.hasShadow               = false
+        p.ignoresMouseEvents      = false   // block underlying-app interaction
+        p.isFloatingPanel         = false
+        p.collectionBehavior      = [.canJoinAllSpaces, .stationary, .fullScreenAuxiliary]
+        p.isReleasedWhenClosed    = false
+        p.acceptsMouseMovedEvents = true    // needed for local mouseMoved monitor
+
         let hosting = NSHostingView(
             rootView: AreaOverlayView(screenSize: screen.frame.size, state: state)
         )
         hosting.frame = CGRect(origin: .zero, size: screen.frame.size)
-        w.contentView = hosting
-        self.win = w
+        p.contentView = hosting
+        self.win = p
     }
 
     func show() { win?.fadeIn(duration: 0.15) }
@@ -208,21 +226,33 @@ final class AreaOverlayController {
     }
 
     // MARK: – Monitors
+    //
+    // The overlay panel has ignoresMouseEvents = false, so all mouse events over the
+    // overlay area are delivered to our app — local monitors fire, global monitors do not.
+    // Global monitors are kept only for the Enter key (keyboard focus may be elsewhere).
 
     private func startMonitors() {
-        moveMonitor = NSEvent.addGlobalMonitorForEvents(matching: .mouseMoved) { [weak self] _ in
+        // Mouse events: local monitors since the overlay absorbs them from other apps.
+        moveMonitor = NSEvent.addLocalMonitorForEvents(matching: .mouseMoved) { [weak self] e in
             Task { @MainActor [weak self] in self?.updateCursor(at: NSEvent.mouseLocation) }
+            return e
         }
-        downMonitor = NSEvent.addGlobalMonitorForEvents(matching: .leftMouseDown) { [weak self] _ in
-            Task { @MainActor [weak self] in self?.handleMouseDown(at: NSEvent.mouseLocation) }
+        downMonitor = NSEvent.addLocalMonitorForEvents(matching: .leftMouseDown) { [weak self] e in
+            let pt = NSEvent.mouseLocation
+            Task { @MainActor [weak self] in self?.handleMouseDown(at: pt) }
+            return e
         }
-        dragMonitor = NSEvent.addGlobalMonitorForEvents(matching: .leftMouseDragged) { [weak self] _ in
-            Task { @MainActor [weak self] in self?.handleMouseDrag(to: NSEvent.mouseLocation) }
+        dragMonitor = NSEvent.addLocalMonitorForEvents(matching: .leftMouseDragged) { [weak self] e in
+            let pt = NSEvent.mouseLocation
+            Task { @MainActor [weak self] in self?.handleMouseDrag(to: pt) }
+            return e
         }
-        upMonitor = NSEvent.addGlobalMonitorForEvents(matching: .leftMouseUp) { [weak self] _ in
-            Task { @MainActor [weak self] in self?.handleMouseUp(at: NSEvent.mouseLocation) }
+        upMonitor = NSEvent.addLocalMonitorForEvents(matching: .leftMouseUp) { [weak self] e in
+            let pt = NSEvent.mouseLocation
+            Task { @MainActor [weak self] in self?.handleMouseUp(at: pt) }
+            return e
         }
-        // Enter key (keyCode 36 = Return, 76 = numpad Enter) confirms the selection.
+        // Enter key: keep both global + local since keyboard focus may be in another app.
         enterGlobalMonitor = NSEvent.addGlobalMonitorForEvents(matching: .keyDown) { [weak self] e in
             guard e.keyCode == 36 || e.keyCode == 76 else { return }
             Task { @MainActor [weak self] in self?.onSelect?() }
